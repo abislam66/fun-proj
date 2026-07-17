@@ -95,10 +95,7 @@ export function FilterBar({
         <Chip
           active={filters.payments.includes("card")}
           onClick={() =>
-            update(
-              "payments",
-              toggle<PaymentFilter>(filters.payments, "card"),
-            )
+            update("payments", toggle<PaymentFilter>(filters.payments, "card"))
           }
         >
           Accepts card
