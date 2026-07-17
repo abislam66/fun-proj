@@ -7,11 +7,14 @@
 
 ## Current status
 
-- **Phase:** pre-implementation. SDD complete; **Cherry Compass** design system documented (`DESIGN.md`) — mobile-first with **first-class desktop** split explorer. No application code yet.
-- **Next up:**
-  1. Commit the baseline (`Specs/`, `CLAUDE.md`, `DESIGN.md`, `Context/`, `public/pins/`, `docs/design/`) — nothing is versioned yet.
-  2. Create the two Supabase projects (`tueats-prod` in the existing Pro org, `tueats-dev` in a free org) and configure Resend SMTP in both.
-  3. Milestone ①: scaffold the Next.js app per `Specs/architecture-planning.md` + `DESIGN.md`, then the KML importer (`seed:kml`) and the map rendering real trucks.
+- **Phase:** Phase 1 implementation. Non-UI foundation and mock-functional frontend are in progress.
+- **Next up:** Verify the Phase 1 UI, then connect it to Supabase/Drizzle and implement the map and cuisine pins.
+
+---
+
+## 2026-07-17 — Phase 1 UI foundation
+
+Scaffolded the Next.js 15, React 19, strict TypeScript, Tailwind 4 toolchain and minimal App Router shell. Added self-hosted design fonts and CSS tokens, venue-generic domain types, cuisine and zone configuration, typed mock fixtures, and mock venue/report/admin repository contracts.
 
 ---
 

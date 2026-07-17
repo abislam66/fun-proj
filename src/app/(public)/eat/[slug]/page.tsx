@@ -1,51 +1,68 @@
 import { notFound } from "next/navigation";
 
+import { VenueDetail } from "@/components/venues/venue-detail";
 import { getVenueBySlug } from "@/lib/db/queries";
+import { getMockVenueBySlug } from "@/lib/venue-fixtures";
+import type { Venue } from "@/lib/venues";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
 };
 
-/**
- * Data-only venue detail shell — UI agent owns presentation.
- * ISR + tag revalidation via getVenueBySlug cache tags.
- */
-export default async function VenueDetailPage({ params }: PageProps) {
+export default async function VenueDetailPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
-  const venue = await getVenueBySlug(slug);
+  const query = await searchParams;
+  const fixture = getMockVenueBySlug(slug);
+  const row = fixture ? null : await getVenueBySlug(slug);
 
-  if (!venue) {
+  if (!fixture && !row) {
     notFound();
   }
 
-  return (
-    <main className="mx-auto max-w-[40rem] px-md py-xl">
-      <p className="text-micro text-ink-muted">Data shell · UI forthcoming</p>
-      <h1 className="font-display text-title mt-sm">{venue.name}</h1>
-      {venue.status === "retired" ? (
-        <p className="mt-sm text-ink-secondary">Closed</p>
-      ) : null}
-      <p className="mt-md text-ink-secondary">
-        {venue.description ?? "No description yet."}
-      </p>
-      <pre className="text-micro mt-xl overflow-auto text-ink-muted">
-        {JSON.stringify(
-          {
-            slug: venue.slug,
-            type: venue.type,
-            zoneKey: venue.zoneKey,
-            cuisines: venue.cuisines,
-            hours: venue.hours,
-            acceptsCash: venue.acceptsCash,
-            acceptsCard: venue.acceptsCard,
-            lastVerifiedAt: venue.lastVerifiedAt,
-          },
-          null,
-          2,
-        )}
-      </pre>
-    </main>
-  );
+  const venue: Venue = fixture ?? {
+    id: row!.id,
+    slug: row!.slug,
+    type: row!.type,
+    name: row!.name,
+    description: row!.description,
+    status: row!.status === "retired" ? "retired" : "published",
+    zoneKey:
+      row!.zoneKey === "norris" ||
+      row!.zoneKey === "montgomery" ||
+      row!.zoneKey === "twelfth" ||
+      row!.zoneKey === "other"
+        ? row!.zoneKey
+        : null,
+    location:
+      [row!.building, row!.floor].filter(Boolean).join(" · ") ||
+      "Near Temple Main Campus",
+    building: row!.building,
+    floor: row!.floor,
+    acceptsCash: row!.acceptsCash,
+    acceptsCard: row!.acceptsCard,
+    cuisines: row!.cuisines.filter(
+      (value): value is Venue["cuisines"][number] =>
+        value === "american" ||
+        value === "caribbean" ||
+        value === "chinese" ||
+        value === "fruit" ||
+        value === "halal" ||
+        value === "mexican" ||
+        value === "other",
+    ),
+    hours: row!.hours,
+    lastVerifiedAt: row!.lastVerifiedAt?.toISOString().slice(0, 10) ?? null,
+  };
+  const backPath =
+    query.from?.startsWith("/") && !query.from.startsWith("//")
+      ? query.from
+      : "/";
+
+  return <VenueDetail backPath={backPath} venue={venue} />;
 }

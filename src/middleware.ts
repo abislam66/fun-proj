@@ -10,6 +10,13 @@ export async function middleware(request: NextRequest) {
     request: { headers: request.headers },
   });
 
+  const isMockSignIn = request.nextUrl.pathname === "/admin/sign-in";
+  const hasMockSession =
+    request.cookies.get("tueats_phase1_admin_mock")?.value === "1";
+  if (isMockSignIn || hasMockSession) {
+    return response;
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
