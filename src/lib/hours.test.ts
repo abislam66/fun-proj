@@ -1,0 +1,100 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  getCampusParts,
+  getOpenStatus,
+  isHoursUnknown,
+  isInRange,
+  isOpenNow,
+  type VenueHours,
+} from "./hours";
+
+const weekdayHours = (open: string, close: string): VenueHours => ({
+  mon: [{ open, close }],
+  tue: [{ open, close }],
+  wed: [{ open, close }],
+  thu: [{ open, close }],
+  fri: [{ open, close }],
+});
+
+/** Build a Date that is that wall-clock time in America/New_York on a known weekday. */
+function atCampusLocal(isoUtc: string): Date {
+  return new Date(isoUtc);
+}
+
+describe("isInRange", () => {
+  it("handles normal daytime ranges", () => {
+    expect(isInRange(12 * 60, { open: "11:00", close: "15:00" })).toBe(true);
+    expect(isInRange(10 * 60, { open: "11:00", close: "15:00" })).toBe(false);
+    expect(isInRange(15 * 60, { open: "11:00", close: "15:00" })).toBe(false);
+  });
+
+  it("handles midnight-spanning ranges", () => {
+    expect(isInRange(23 * 60, { open: "22:00", close: "02:00" })).toBe(true);
+    expect(isInRange(1 * 60, { open: "22:00", close: "02:00" })).toBe(true);
+    expect(isInRange(3 * 60, { open: "22:00", close: "02:00" })).toBe(false);
+  });
+});
+
+describe("getOpenStatus", () => {
+  it("returns Hours unknown when hours are null or empty", () => {
+    expect(getOpenStatus(null).kind).toBe("unknown");
+    expect(getOpenStatus({}).kind).toBe("unknown");
+    expect(isHoursUnknown(null)).toBe(true);
+    // Never "Closed" for unknown
+    expect(getOpenStatus(null).label).toBe("Hours unknown");
+  });
+
+  it("reports open with hedged wording during posted hours", () => {
+    // 2026-07-15 is a Wednesday; 16:00 UTC = 12:00 EDT
+    const now = atCampusLocal("2026-07-15T16:00:00.000Z");
+    const status = getOpenStatus(weekdayHours("11:00", "15:00"), now);
+    expect(status.kind).toBe("open");
+    expect(status.label).toMatch(/usually/);
+    expect(isOpenNow(weekdayHours("11:00", "15:00"), now)).toBe(true);
+  });
+
+  it("reports closed outside posted hours", () => {
+    // 20:00 UTC = 16:00 EDT — after 15:00 close
+    const now = atCampusLocal("2026-07-15T20:00:00.000Z");
+    const status = getOpenStatus(weekdayHours("11:00", "15:00"), now);
+    expect(status.kind).toBe("closed");
+    expect(status.label).toMatch(/Closed/);
+  });
+
+  it("stays correct across a DST spring-forward boundary", () => {
+    // 2026-03-08 is DST start in US; Monday after the change.
+    // 15:00 UTC = 11:00 EDT (UTC-4)
+    const afterSpringForward = atCampusLocal("2026-03-09T15:00:00.000Z");
+    const parts = getCampusParts(afterSpringForward);
+    expect(parts.weekday).toBe("mon");
+    expect(parts.minutes).toBe(11 * 60);
+
+    const status = getOpenStatus(
+      weekdayHours("10:00", "14:00"),
+      afterSpringForward,
+    );
+    expect(status.kind).toBe("open");
+  });
+
+  it("stays correct across a DST fall-back boundary", () => {
+    // 2026-11-01 is DST end; Monday after — 16:00 UTC = 11:00 EST (UTC-5)
+    const afterFallBack = atCampusLocal("2026-11-02T16:00:00.000Z");
+    const parts = getCampusParts(afterFallBack);
+    expect(parts.weekday).toBe("mon");
+    expect(parts.minutes).toBe(11 * 60);
+
+    const status = getOpenStatus(weekdayHours("10:00", "14:00"), afterFallBack);
+    expect(status.kind).toBe("open");
+  });
+
+  it("handles midnight-spanning open status into the next calendar day", () => {
+    const hours: VenueHours = {
+      fri: [{ open: "22:00", close: "02:00" }],
+    };
+    // Saturday 01:00 EDT = 05:00 UTC
+    const saturdayEarly = atCampusLocal("2026-07-18T05:00:00.000Z");
+    expect(getCampusParts(saturdayEarly).weekday).toBe("sat");
+    expect(getOpenStatus(hours, saturdayEarly).kind).toBe("open");
+  });
+});
