@@ -134,9 +134,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
     const saved = persist();
     if (!saved) return;
     const now = new Date();
-    updateMockAdminState((current) =>
-      verifyMockVenue(current, saved.id, now),
-    );
+    updateMockAdminState((current) => verifyMockVenue(current, saved.id, now));
     setDraft((current) => ({
       ...current,
       lastVerifiedAt: now.toISOString(),
@@ -374,9 +372,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
               </Field>
               <Field label="Building / landmark">
                 <Input
-                  onChange={(event) =>
-                    setField("building", event.target.value)
-                  }
+                  onChange={(event) => setField("building", event.target.value)}
                   value={draft.building}
                 />
               </Field>
@@ -518,9 +514,7 @@ function PaymentField({
       <span>{label}</span>
       <select
         className="admin-select"
-        onChange={(event) =>
-          onChange(event.target.value as MockPaymentValue)
-        }
+        onChange={(event) => onChange(event.target.value as MockPaymentValue)}
         value={value}
       >
         <option value="unknown">Unknown</option>

@@ -2,10 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import {
-  INITIAL_ADMIN_STATE,
-  type MockAdminState,
-} from "@/lib/admin-mock";
+import { INITIAL_ADMIN_STATE, type MockAdminState } from "@/lib/admin-mock";
 
 const STORAGE_KEY = "tueats-phase1-admin";
 const listeners = new Set<() => void>();

@@ -6,6 +6,8 @@
 | Item | Context / why deferred | Revisit when |
 |------|------------------------|--------------|
 | **Adoption measurement** | The overview's goal (200+ unique weekly visitors) has **no measurement mechanism specced** — v1 ships with no analytics, and the privacy disclosure promises none without updating it first. | Before public launch (end of features Phase 2) — pick a privacy-friendly, first-party option and update `auth-security.md` disclosure. |
+| Production UI wiring | Phase 1 public/admin screens currently use typed browser mocks so the complete frontend could be reviewed before Supabase setup; server-side Drizzle queries, actions, and auth boundaries already exist separately. | Before the Phase 1 soft launch — replace mock adapters with the real read/write/auth paths and remove mock-session/browser-storage behavior. |
+| Explorer map and cuisine pins | The UI deliberately reserves an isolated responsive map slot; MapLibre, locate controls, attribution, and cuisine pins were excluded from this frontend unit. | Next Phase 1 implementation unit, after production venue reads are connected. |
 | Custom domain | Running on `tueats.vercel.app`; a domain is the only potential new spend. | At public launch, if the project has traction worth branding. |
 | Owner-claimed listings | Venue owners correcting data / replying to reviews — deferred to keep verification + moderation burden near zero. | A real venue owner actually asks. |
 | Menu photos on venue pages | Full menu CMS rejected (stale-data trap); cuisine tags + description chosen instead. | Post-launch feedback shows "what do they serve?" is still unanswered. |

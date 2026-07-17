@@ -26,7 +26,9 @@ const reportLabels = {
 export function AdminDashboard() {
   const state = useMockAdminState();
   const [search, setSearch] = useState("");
-  const [venueFilter, setVenueFilter] = useState<"all" | MockVenueStatus>("all");
+  const [venueFilter, setVenueFilter] = useState<"all" | MockVenueStatus>(
+    "all",
+  );
   const [reportFilter, setReportFilter] = useState<"all" | MockReportStatus>(
     "open",
   );
@@ -48,7 +50,9 @@ export function AdminDashboard() {
   const published = state.venues.filter(
     (venue) => venue.status === "published",
   ).length;
-  const drafts = state.venues.filter((venue) => venue.status === "draft").length;
+  const drafts = state.venues.filter(
+    (venue) => venue.status === "draft",
+  ).length;
   const openReports = state.reports.filter(
     (report) => report.status === "open",
   ).length;
@@ -57,9 +61,7 @@ export function AdminDashboard() {
   ).length;
 
   function updateReport(id: string, status: MockReportStatus) {
-    updateMockAdminState((current) =>
-      setMockReportStatus(current, id, status),
-    );
+    updateMockAdminState((current) => setMockReportStatus(current, id, status));
   }
 
   return (
@@ -69,8 +71,8 @@ export function AdminDashboard() {
           <p className="eyebrow">Operations snapshot</p>
           <h1>Venue management</h1>
           <p>
-            Local mock data only. Changes persist in this browser and do not call
-            production actions.
+            Local mock data only. Changes persist in this browser and do not
+            call production actions.
           </p>
         </div>
         <div className="admin-heading-actions">

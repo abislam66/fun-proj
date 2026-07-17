@@ -7,8 +7,19 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Non-UI foundation and mock-functional frontend are in progress.
-- **Next up:** Verify the Phase 1 UI, then connect it to Supabase/Drizzle and implement the map and cuisine pins.
+- **Phase:** Phase 1 implementation. The full mock-functional public and admin UI is complete and verified; map/pins and production data/auth wiring remain.
+- **Next up:**
+  1. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to the existing Drizzle/Supabase server boundary.
+  2. Implement the MapLibre campus map and cuisine pins against the explorer's isolated map slot.
+  3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+
+---
+
+## 2026-07-17 — Phase 1 mock-functional UI complete
+
+Built the Cherry Compass frontend across the responsive explorer, URL-persisted search and filters, mobile sheet detents, venue detail/report flow, about page, mock admin OTP flow, dense venue editor, lifecycle controls, and problem-report queue. The desktop explorer uses an intentional list/map split; the map side is an isolated placeholder with no MapLibre or pin implementation.
+
+Verification passed: TypeScript, ESLint, Prettier, 32 Vitest tests, production build, and 4 Chromium Playwright flows covering desktop filtering, mobile sheet behavior, detail/report/back-state, and admin sign-in/editing.
 
 ---
 

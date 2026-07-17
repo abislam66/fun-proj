@@ -594,7 +594,11 @@ a.button {
   place-items: center;
   padding: var(--spacing-lg);
   background:
-    linear-gradient(90deg, var(--color-cherry-deep) 0.35rem, transparent 0.35rem),
+    linear-gradient(
+      90deg,
+      var(--color-cherry-deep) 0.35rem,
+      transparent 0.35rem
+    ),
     var(--color-canvas);
 }
 

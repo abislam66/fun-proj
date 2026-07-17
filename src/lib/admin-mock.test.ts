@@ -80,8 +80,8 @@ describe("mock admin venue logic", () => {
       status: "published",
       lastVerifiedAt: "2026-07-17T14:00:00.000Z",
     });
-    expect(actioned.reports.find((report) => report.id === "report-2")?.status).toBe(
-      "actioned",
-    );
+    expect(
+      actioned.reports.find((report) => report.id === "report-2")?.status,
+    ).toBe("actioned");
   });
 });

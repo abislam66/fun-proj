@@ -245,7 +245,9 @@ export function saveMockVenue(
     draft.slug ||
     uniqueMockSlug(
       baseSlug,
-      state.venues.filter((venue) => venue.id !== id).map((venue) => venue.slug),
+      state.venues
+        .filter((venue) => venue.id !== id)
+        .map((venue) => venue.slug),
     );
   const venue = {
     ...draft,

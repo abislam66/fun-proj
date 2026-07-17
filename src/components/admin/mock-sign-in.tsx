@@ -42,7 +42,9 @@ export function MockSignIn() {
           <span>Admin</span>
         </div>
         <span className="mock-badge">Mock authentication</span>
-        <h1>{step === "email" ? "Sign in to manage venues" : "Check your email"}</h1>
+        <h1>
+          {step === "email" ? "Sign in to manage venues" : "Check your email"}
+        </h1>
         <p>
           {step === "email"
             ? "Phase 1 preview only. No email is sent and no account is created."
