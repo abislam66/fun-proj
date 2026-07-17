@@ -747,31 +747,30 @@ button {
   margin-top: var(--spacing-md);
 }
 
-.cuisine-tags,
-.payments {
+.cuisine-tags {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 0.35rem;
 }
 
-.cuisine-tag,
-.payment {
+.cuisine-tag {
   display: inline-flex;
   align-items: center;
   padding: 0.2rem 0.45rem;
   border-radius: var(--radius-sm);
-  background: var(--color-canvas);
-  color: var(--color-ink-secondary);
-  font-family: var(--font-data), monospace;
-  font-size: var(--text-micro);
-}
-
-.cuisine-tag {
   background: var(--color-cherry-soft);
   color: var(--color-cherry-deep);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+  font-weight: 500;
+  line-height: 1.2;
 }
 
-.payment-unknown,
+.cash-only-tag {
+  background: color-mix(in srgb, var(--color-warning) 16%, white);
+  color: var(--color-warning);
+}
+
 .unknown-value {
   color: var(--color-ink-muted);
   font-size: var(--text-small);
@@ -900,9 +899,19 @@ button {
 }
 
 .detail-status {
+  flex-direction: column;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--spacing-md);
   margin-top: var(--spacing-lg);
+}
+
+.detail-tags,
+.venue-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .detail-section {
@@ -921,6 +930,12 @@ button {
 .about-page section p {
   margin: 0;
   color: var(--color-ink-secondary);
+}
+
+.detail-section > .location-landmark {
+  margin-top: var(--spacing-xs);
+  color: var(--color-ink);
+  font-weight: 700;
 }
 
 .detail-grid > .detail-section:last-child {
@@ -1149,11 +1164,19 @@ button {
     padding-left: var(--spacing-xl);
   }
 
+  /* Chips fit the list pane; visible overflow lets absolute menus escape the row. */
+  .filter-scroll {
+    overflow: visible;
+  }
+
   .filter-popover {
     position: absolute;
+    top: calc(100% + var(--spacing-sm));
     right: auto;
     left: 0;
     width: 17rem;
+    margin-top: 0;
+    z-index: 50;
   }
 
   .detail-page,

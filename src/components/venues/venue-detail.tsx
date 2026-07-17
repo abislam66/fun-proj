@@ -5,7 +5,7 @@ import { ReportProblemForm } from "@/components/venues/report-problem-form";
 import {
   CuisineTags,
   OpenStatus,
-  PaymentMethods,
+  PaymentTag,
 } from "@/components/venues/venue-bits";
 import { WEEKDAY_KEYS, type VenueHours } from "@/lib/hours";
 import type { Venue } from "@/lib/venues";
@@ -94,8 +94,11 @@ export function VenueDetail({
           <p className="eyebrow">{venue.type}</p>
           <h1>{venue.name}</h1>
           <div className="detail-status">
+            <div className="detail-tags">
+              <CuisineTags cuisines={venue.cuisines} />
+              <PaymentTag card={venue.acceptsCard} />
+            </div>
             <OpenStatus venue={venue} />
-            <CuisineTags cuisines={venue.cuisines} />
           </div>
         </header>
 
@@ -104,15 +107,12 @@ export function VenueDetail({
           <p>{venue.description ?? "No description has been added yet."}</p>
         </section>
 
-        <section className="detail-grid">
-          <div className="detail-section">
-            <h2>Location</h2>
-            <p>{venue.location}</p>
-          </div>
-          <div className="detail-section">
-            <h2>Payment</h2>
-            <PaymentMethods card={venue.acceptsCard} cash={venue.acceptsCash} />
-          </div>
+        <section className="detail-section">
+          <h2>Location</h2>
+          <p>{venue.location}</p>
+          {venue.building ? (
+            <p className="location-landmark">Near {venue.building}</p>
+          ) : null}
         </section>
 
         <section className="detail-section">
@@ -125,7 +125,7 @@ export function VenueDetail({
 
         <section className="verification-block">
           <div>
-            <span className="eyebrow">Last checked</span>
+            <span className="eyebrow">Last updated</span>
             <strong>{verified ?? "Not yet verified"}</strong>
           </div>
           {venue.status !== "retired" ? (

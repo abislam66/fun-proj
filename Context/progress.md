@@ -15,9 +15,15 @@
 
 ---
 
+## 2026-07-17 — Nearby landmark location context
+
+Added optional nearby-building context to venue locations using the existing building/landmark field. Explorer rows now pair the campus corridor with a landmark (for example, “Montgomery Avenue · Near Student Center”), detail pages show the landmark beneath the street location, and the admin editor exposes a clearer nearby-landmark label.
+
+---
+
 ## 2026-07-17 — Venue row visual corrections
 
-Updated venue cuisine tags to use the Cherry Compass selected-chip palette, replaced the compact `$` payment label with the clearer `Cash` label, aligned filter-chip corners with the cuisine-tag shape, removed the redundant Explore navigation link, and simplified the wordmark by removing its trailing dot.
+Updated venue cuisine tags to use the Cherry Compass selected-chip palette, aligned filter-chip corners with the cuisine-tag shape, removed the redundant Explore navigation link, and simplified the wordmark by removing its trailing dot. Payment UI now treats cash as the baseline: only cash-only vendors get a warning chip beside cuisine tags, while the useful filter asks whether a venue accepts cards. Detail verification copy now reads “Last updated.”
 
 ---
 

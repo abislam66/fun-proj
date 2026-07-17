@@ -92,20 +92,17 @@ export function FilterBar({
             ))}
           </div>
         </details>
-        {(["cash", "card"] as PaymentFilter[]).map((payment) => (
-          <Chip
-            active={filters.payments.includes(payment)}
-            key={payment}
-            onClick={() =>
-              update(
-                "payments",
-                toggle<PaymentFilter>(filters.payments, payment),
-              )
-            }
-          >
-            {payment === "cash" ? "Cash" : "Card"}
-          </Chip>
-        ))}
+        <Chip
+          active={filters.payments.includes("card")}
+          onClick={() =>
+            update(
+              "payments",
+              toggle<PaymentFilter>(filters.payments, "card"),
+            )
+          }
+        >
+          Accepts card
+        </Chip>
       </div>
     </div>
   );

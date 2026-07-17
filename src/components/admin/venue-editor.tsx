@@ -370,9 +370,10 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
                   value={draft.lng}
                 />
               </Field>
-              <Field label="Building / landmark">
+              <Field label="Nearby building or landmark">
                 <Input
                   onChange={(event) => setField("building", event.target.value)}
+                  placeholder="Student Center"
                   value={draft.building}
                 />
               </Field>

@@ -5,7 +5,7 @@ import type { Venue } from "@/lib/venues";
 import {
   CuisineTags,
   OpenStatus,
-  PaymentMethods,
+  PaymentTag,
   VenueLocation,
 } from "@/components/venues/venue-bits";
 
@@ -27,11 +27,6 @@ export function VenueRow({
             <h2>{venue.name}</h2>
             <div className="venue-meta">
               <VenueLocation venue={venue} />
-              <span aria-hidden="true">·</span>
-              <PaymentMethods
-                card={venue.acceptsCard}
-                cash={venue.acceptsCash}
-              />
             </div>
           </div>
           <span className="row-arrow" aria-hidden="true">
@@ -39,7 +34,10 @@ export function VenueRow({
           </span>
         </div>
         <div className="venue-row-bottom">
-          <CuisineTags cuisines={venue.cuisines} />
+          <div className="venue-tags">
+            <CuisineTags cuisines={venue.cuisines} />
+            <PaymentTag card={venue.acceptsCard} />
+          </div>
           <OpenStatus venue={venue} />
         </div>
       </Link>

@@ -28,29 +28,21 @@ export function OpenStatus({ venue }: { venue: Venue }) {
   );
 }
 
-export function PaymentMethods({
-  cash,
-  card,
-}: {
-  cash: boolean | null;
-  card: boolean | null;
-}) {
-  const known = cash !== null || card !== null;
-  if (!known) {
-    return <span className="payment payment-unknown">Payment unknown</span>;
+export function PaymentTag({ card }: { card: boolean | null }) {
+  if (card !== false) {
+    return null;
   }
-  return (
-    <span className="payments" aria-label="Accepted payment methods">
-      {cash ? <span className="payment">Cash</span> : null}
-      {card ? <span className="payment">Card</span> : null}
-    </span>
-  );
+
+  return <span className="cuisine-tag cash-only-tag">Cash Only</span>;
 }
 
 export function VenueLocation({ venue }: { venue: Venue }) {
+  const zone = venue.zoneKey ? ZONES[venue.zoneKey].label : "Near campus";
+
   return (
     <span className="venue-location">
-      {venue.zoneKey ? ZONES[venue.zoneKey].label : "Near campus"}
+      {zone}
+      {venue.building ? ` · Near ${venue.building}` : ""}
     </span>
   );
 }
