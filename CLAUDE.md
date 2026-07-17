@@ -17,17 +17,17 @@ The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD a
 
 ## Which spec answers what
 
-| Question | Read |
-|---|---|
-| Scope, goals, milestones, constraints | `Specs/overview.md` |
-| Domain facts, business rules, pitfalls (gyro-truck dedup, wall-clock hours, zones) | `Specs/domain-knowledge.md` |
-| What to build, per phase, with acceptance criteria | `Specs/features.md` |
-| Stack, folder layout, schema, caching, write path | `Specs/architecture-planning.md` |
-| Auth, roles, PII rules, security hard rules | `Specs/auth-security.md` |
-| Versions, naming, style, test priorities | `Specs/conventions.md` |
-| Environments, migrations, CI/CD, env vars | `Specs/deployment.md` |
-| AI features (deferred + gated — do not implement) | `Specs/llm-integration.md` |
-| Visual / UI decisions (colors, type, pins, motion) | `DESIGN.md` |
+| Question                                                                           | Read                             |
+| ---------------------------------------------------------------------------------- | -------------------------------- |
+| Scope, goals, milestones, constraints                                              | `Specs/overview.md`              |
+| Domain facts, business rules, pitfalls (gyro-truck dedup, wall-clock hours, zones) | `Specs/domain-knowledge.md`      |
+| What to build, per phase, with acceptance criteria                                 | `Specs/features.md`              |
+| Stack, folder layout, schema, caching, write path                                  | `Specs/architecture-planning.md` |
+| Auth, roles, PII rules, security hard rules                                        | `Specs/auth-security.md`         |
+| Versions, naming, style, test priorities                                           | `Specs/conventions.md`           |
+| Environments, migrations, CI/CD, env vars                                          | `Specs/deployment.md`            |
+| AI features (deferred + gated — do not implement)                                  | `Specs/llm-integration.md`       |
+| Visual / UI decisions (colors, type, pins, motion)                                 | `DESIGN.md`                      |
 
 ## Design System
 
