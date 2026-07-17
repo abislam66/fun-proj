@@ -1,0 +1,14 @@
+.next
+coverage
+node_modules
+playwright-report
+pnpm-lock.yaml
+test-results
+drizzle
+
+# Protected or pre-existing documentation is outside the app formatting scope.
+Context/backlog.md
+DESIGN.md
+README.md
+Specs/
+docs/
