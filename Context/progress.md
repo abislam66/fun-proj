@@ -7,11 +7,37 @@
 
 ## Current status
 
-- **Phase:** pre-implementation. SDD complete; **Cherry Compass** design system documented (`DESIGN.md`) — mobile-first with **first-class desktop** split explorer. No application code yet.
+- **Phase:** Phase 1 implementation. The full mock-functional public and admin UI is complete and verified; map/pins and production data/auth wiring remain.
 - **Next up:**
-  1. Commit the baseline (`Specs/`, `CLAUDE.md`, `DESIGN.md`, `Context/`, `public/pins/`, `docs/design/`) — nothing is versioned yet.
-  2. Create the two Supabase projects (`tueats-prod` in the existing Pro org, `tueats-dev` in a free org) and configure Resend SMTP in both.
-  3. Milestone ①: scaffold the Next.js app per `Specs/architecture-planning.md` + `DESIGN.md`, then the KML importer (`seed:kml`) and the map rendering real trucks.
+  1. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to the existing Drizzle/Supabase server boundary.
+  2. Implement the MapLibre campus map and cuisine pins against the explorer's isolated map slot.
+  3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+
+---
+
+## 2026-07-17 — Nearby landmark location context
+
+Added optional nearby-building context to venue locations using the existing building/landmark field. Explorer rows now pair the campus corridor with a landmark (for example, “Montgomery Avenue · Near Student Center”), detail pages show the landmark beneath the street location, and the admin editor exposes a clearer nearby-landmark label.
+
+---
+
+## 2026-07-17 — Venue row visual corrections
+
+Updated venue cuisine tags to use the Cherry Compass selected-chip palette, aligned filter-chip corners with the cuisine-tag shape, removed the redundant Explore navigation link, and simplified the wordmark by removing its trailing dot. Payment UI now treats cash as the baseline: only cash-only vendors get a warning chip beside cuisine tags, while the useful filter asks whether a venue accepts cards. Detail verification copy now reads “Last updated.”
+
+---
+
+## 2026-07-17 — Phase 1 mock-functional UI complete
+
+Built the Cherry Compass frontend across the responsive explorer, URL-persisted search and filters, mobile sheet detents, venue detail/report flow, about page, mock admin OTP flow, dense venue editor, lifecycle controls, and problem-report queue. The desktop explorer uses an intentional list/map split; the map side is an isolated placeholder with no MapLibre or pin implementation.
+
+Verification passed: TypeScript, ESLint, Prettier, 32 Vitest tests, production build, and 4 Chromium Playwright flows covering desktop filtering, mobile sheet behavior, detail/report/back-state, and admin sign-in/editing.
+
+---
+
+## 2026-07-17 — Phase 1 UI foundation
+
+Scaffolded the Next.js 15, React 19, strict TypeScript, Tailwind 4 toolchain and minimal App Router shell. Added self-hosted design fonts and CSS tokens, venue-generic domain types, cuisine and zone configuration, typed mock fixtures, and mock venue/report/admin repository contracts.
 
 ---
 

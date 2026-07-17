@@ -1,19 +1,19 @@
-export default function HomePage() {
+import { VenueExplorer } from "@/components/venues/venue-explorer";
+import { MOCK_VENUES } from "@/lib/venue-fixtures";
+
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function HomePage({ searchParams }: PageProps) {
+  const values = await searchParams;
+  const params = new URLSearchParams();
+  Object.entries(values).forEach(([key, value]) => {
+    if (Array.isArray(value)) value.forEach((item) => params.append(key, item));
+    else if (value !== undefined) params.set(key, value);
+  });
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[40rem] flex-col justify-center px-md py-xl">
-      <p className="text-small font-medium text-ink-secondary">
-        Temple&apos;s unofficial off-meal-plan food guide
-      </p>
-      <h1 className="font-display text-display mt-sm">
-        Tu<span className="text-cherry">Eats</span>
-      </h1>
-      <p className="mt-md text-ink-secondary">
-        The venue explorer is coming next. This foundation intentionally ships
-        without map or directory UI.
-      </p>
-      <p className="text-micro mt-xl text-ink-muted">
-        Unofficial and not affiliated with Temple University.
-      </p>
-    </main>
+    <VenueExplorer initialQuery={params.toString()} venues={MOCK_VENUES} />
   );
 }
