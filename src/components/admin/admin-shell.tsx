@@ -13,7 +13,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="admin-shell">
       <header className="admin-header">
         <div className="admin-brand">
-          <Wordmark compact />
+          <Wordmark />
           <span className="admin-brand-divider" aria-hidden="true" />
           <span>Admin</span>
         </div>

@@ -31,11 +31,9 @@ export function OpenStatus({ venue }: { venue: Venue }) {
 export function PaymentMethods({
   cash,
   card,
-  compact = false,
 }: {
   cash: boolean | null;
   card: boolean | null;
-  compact?: boolean;
 }) {
   const known = cash !== null || card !== null;
   if (!known) {
@@ -43,10 +41,8 @@ export function PaymentMethods({
   }
   return (
     <span className="payments" aria-label="Accepted payment methods">
-      {cash ? <span className="payment">{compact ? "$" : "Cash"}</span> : null}
-      {card ? (
-        <span className="payment">{compact ? "Card" : "Card"}</span>
-      ) : null}
+      {cash ? <span className="payment">Cash</span> : null}
+      {card ? <span className="payment">Card</span> : null}
     </span>
   );
 }

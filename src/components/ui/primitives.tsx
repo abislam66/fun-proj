@@ -9,12 +9,11 @@ function join(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
 
-export function Wordmark({ compact = false }: { compact?: boolean }) {
+export function Wordmark() {
   return (
     <Link className="wordmark" href="/" aria-label="TuEats home">
       <span>Tu</span>
       <span className="wordmark-accent">Eats</span>
-      {!compact ? <span className="wordmark-dot" aria-hidden="true" /> : null}
     </Link>
   );
 }

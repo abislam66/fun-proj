@@ -15,6 +15,12 @@
 
 ---
 
+## 2026-07-17 — Venue row visual corrections
+
+Updated venue cuisine tags to use the Cherry Compass selected-chip palette, replaced the compact `$` payment label with the clearer `Cash` label, aligned filter-chip corners with the cuisine-tag shape, removed the redundant Explore navigation link, and simplified the wordmark by removing its trailing dot.
+
+---
+
 ## 2026-07-17 — Phase 1 mock-functional UI complete
 
 Built the Cherry Compass frontend across the responsive explorer, URL-persisted search and filters, mobile sheet detents, venue detail/report flow, about page, mock admin OTP flow, dense venue editor, lifecycle controls, and problem-report queue. The desktop explorer uses an intentional list/map split; the map side is an isolated placeholder with no MapLibre or pin implementation.

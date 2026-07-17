@@ -7,7 +7,6 @@ export function SiteHeader() {
     <header className="site-header">
       <Wordmark />
       <nav aria-label="Primary navigation">
-        <Link href="/">Explore</Link>
         <Link href="/about">About</Link>
       </nav>
     </header>

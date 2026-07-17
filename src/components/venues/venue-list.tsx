@@ -31,7 +31,6 @@ export function VenueRow({
               <PaymentMethods
                 card={venue.acceptsCard}
                 cash={venue.acceptsCash}
-                compact
               />
             </div>
           </div>
