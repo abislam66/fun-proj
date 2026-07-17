@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TuEats — Cherry Compass design preview</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,800&f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --color-cherry: #9D2235;
+      --color-cherry-hover: #B52A3F;
+      --color-cherry-deep: #6E1826;
+      --color-cherry-soft: #F8ECEF;
+      --color-canvas: #F5F5F4;
+      --color-surface: #FFFFFF;
+      --color-surface-raised: #FAFAF9;
+      --color-ink: #1C1917;
+      --color-ink-secondary: #57534E;
+      --color-ink-muted: #A8A29E;
+      --color-border: #E7E5E4;
+      --color-open: #3F6F5A;
+      --color-open-soft: #E8F2EC;
+      --color-closed: #78716C;
+      --color-unknown: #A8A29E;
+      --color-warning: #B45309;
+      --font-display: "Cabinet Grotesk", system-ui, sans-serif;
+      --font-body: "Satoshi", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--color-canvas);
+      color: var(--color-ink);
+      line-height: 1.5;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+    h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; }
+    h1 { font-size: 32px; line-height: 40px; margin: 0 0 8px; }
+    h2 { font-size: 22px; line-height: 28px; margin: 48px 0 16px; }
+    .lede { color: var(--color-ink-secondary); max-width: 36rem; margin: 0 0 8px; }
+    .wordmark { font-family: var(--font-display); font-weight: 800; font-size: 28px; }
+    .wordmark .eats { color: var(--color-cherry); }
+    .disclaimer { font-size: 13px; color: var(--color-ink-muted); margin-top: 8px; }
+
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+    .swatch {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .swatch .chip { height: 56px; }
+    .swatch .meta { padding: 8px 10px; font-size: 11px; font-family: var(--font-mono); }
+    .swatch .name { font-family: var(--font-body); font-size: 13px; font-weight: 500; display: block; margin-bottom: 2px; }
+
+    .type-specimens { display: grid; gap: 20px; }
+    .specimen {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .specimen .label { font-size: 11px; font-family: var(--font-mono); color: var(--color-ink-muted); margin-bottom: 8px; }
+    .display { font-family: var(--font-display); font-size: 32px; line-height: 40px; font-weight: 700; }
+    .title { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 700; }
+    .body { font-size: 16px; line-height: 24px; }
+    .mono-status { font-family: var(--font-mono); font-size: 13px; color: var(--color-open); }
+
+    .pins {
+      display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-end;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 28px 24px 20px;
+    }
+    .pin-item { text-align: center; min-width: 64px; }
+    .pin-item .glyph { display: flex; justify-content: center; align-items: flex-end; height: 52px; margin-bottom: 10px; }
+    .pin-item .glyph svg { display: block; height: 48px; width: auto; }
+    .pin-item span { font-size: 12px; color: var(--color-ink-secondary); }
+
+    .ui-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+    .btn {
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: default;
+      background: var(--color-cherry);
+      color: #fff;
+    }
+    .btn.secondary {
+      background: var(--color-surface);
+      color: var(--color-ink);
+      border: 1px solid var(--color-border);
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+    }
+    .chip.active { background: var(--color-cherry-soft); border-color: var(--color-cherry); color: var(--color-cherry-deep); }
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--color-open-soft);
+      color: var(--color-open);
+    }
+    .badge.closed { background: var(--color-closed-soft, #F5F5F4); color: var(--color-closed); }
+    .badge.unknown { background: #F5F5F4; color: var(--color-unknown); }
+
+    /* Phone mock: home */
+    .mocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 16px; }
+    .phone {
+      background: #1C1917;
+      border-radius: 28px;
+      padding: 12px;
+      box-shadow: 0 16px 40px rgba(28, 25, 23, 0.18);
+    }
+    .phone-screen {
+      background: var(--color-canvas);
+      border-radius: 20px;
+      height: 520px;
+      position: relative;
+      overflow: hidden;
+    }
+    .map-plane {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, #EEEEEA 0%, #E4E4E0 100%);
+      background-image:
+        radial-gradient(circle at 30% 40%, #D9E2E8 0 8%, transparent 9%),
+        radial-gradient(circle at 70% 55%, #D9E2E8 0 6%, transparent 7%),
+        linear-gradient(90deg, transparent 48%, #E7E5E4 48.5%, #E7E5E4 51.5%, transparent 52%),
+        linear-gradient(0deg, transparent 35%, #E7E5E4 35.5%, #E7E5E4 38%, transparent 38.5%),
+        linear-gradient(180deg, #EEEEEA, #E8E8E4);
+    }
+    .map-pin {
+      position: absolute;
+      height: 40px;
+      width: auto;
+      transform: translate(-50%, -100%);
+      filter: drop-shadow(0 1px 2px rgba(28, 25, 23, 0.28));
+      pointer-events: none;
+    }
+    .map-pin svg { display: block; height: 40px; width: auto; }
+    .map-pin.selected { height: 48px; z-index: 1; }
+    .map-pin.selected svg { height: 48px; }
+    .top-bar {
+      position: absolute;
+      top: 12px; left: 12px; right: 12px;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .top-bar .wm { font-family: var(--font-display); font-weight: 800; font-size: 18px; background: rgba(255,255,255,0.92); padding: 6px 10px; border-radius: 8px; }
+    .top-bar .wm span { color: var(--color-cherry); }
+    .locate {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--color-border);
+      display: grid; place-items: center;
+      font-size: 14px;
+      color: var(--color-ink-secondary);
+    }
+    .sheet {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 38%;
+      background: var(--color-surface);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -8px 32px rgba(28,25,23,0.12);
+      padding: 10px 16px 16px;
+      z-index: 3;
+    }
+    .handle { width: 36px; height: 4px; background: var(--color-border); border-radius: 999px; margin: 0 auto 12px; }
+    .search {
+      width: 100%;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: var(--color-ink-muted);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .row:last-child { border-bottom: none; }
+    .row .name { font-weight: 700; font-size: 14px; }
+    .row .meta { font-size: 12px; color: var(--color-ink-secondary); }
+
+    /* Detail mock */
+    .detail {
+      padding: 20px 16px;
+      height: 100%;
+      background: var(--color-surface);
+      overflow: auto;
+    }
+    .detail .back { font-size: 13px; color: var(--color-cherry); margin-bottom: 16px; }
+    .detail h3 { margin: 0 0 8px; font-size: 28px; line-height: 34px; }
+    .detail .status { font-family: var(--font-mono); font-size: 12px; color: var(--color-open); margin-bottom: 12px; }
+    .detail .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .detail p { font-size: 15px; color: var(--color-ink-secondary); margin: 0 0 16px; }
+    .hours {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: var(--color-canvas);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .verify { font-size: 11px; font-family: var(--font-mono); color: var(--color-ink-muted); }
+    .report { font-size: 13px; color: var(--color-ink-secondary); margin-top: 20px; text-decoration: underline; }
+
+    .section-note { font-size: 13px; color: var(--color-ink-muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="wordmark">Tu<span class="eats">Eats</span></p>
+    <h1>Cherry Compass</h1>
+    <p class="lede">Design system preview — Temple-adjacent cherry, cool stone neutrals, Cabinet Grotesk + Satoshi + JetBrains Mono. Unofficial; not affiliated with Temple University.</p>
+    <p class="disclaimer">Source of truth: <code>DESIGN.md</code> · Pins: <code>public/pins/</code> · Map notes: <code>docs/design/map-and-pins.md</code></p>
+
+    <h2>Color</h2>
+    <div class="swatches" id="swatches"></div>
+
+    <h2>Typography</h2>
+    <div class="type-specimens">
+      <div class="specimen">
+        <div class="label">DISPLAY · Cabinet Grotesk 32/40</div>
+        <div class="display">Richie’s Lunch Box</div>
+      </div>
+      <div class="specimen">
+        <div class="label">TITLE · Cabinet Grotesk 22/28</div>
+        <div class="title">Norris St corridor · 12 open</div>
+      </div>
+      <div class="specimen">
+        <div class="label">BODY · Satoshi 16/24</div>
+        <div class="body">Halal plates, chicken over rice, and the line that always looks longer than it is. Cash and card.</div>
+      </div>
+      <div class="specimen">
+        <div class="label">DATA · JetBrains Mono 13/18</div>
+        <div class="mono-status">Open · usually until 3:00</div>
+      </div>
+    </div>
+
+    <h2>Pins</h2>
+    <div class="pins">
+      <div class="pin-item">
+        <div class="glyph" aria-hidden="true">
+          <svg width="56" height="44" viewBox="0 0 56 44" fill="none"><path d="M28 42L22 30h12L28 42z" fill="#9D2235"/><rect x="2" y="2" width="52" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="52" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="28" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Halal</text></svg>
+        </div>
+        <span>Halal</span>
+      </div>
+      <div class="pin-item">
+        <div class="glyph" aria-hidden="true">
+          <svg width="48" height="44" viewBox="0 0 48 44" fill="none"><path d="M24 42L18 30h12L24 42z" fill="#9D2235"/><rect x="2" y="2" width="44" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="44" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="24" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Mex</text></svg>
+        </div>
+        <span>Mexican</span>
+      </div>
+      <div class="pin-item">
+        <div class="glyph" aria-hidden="true">
+          <svg width="52" height="44" viewBox="0 0 52 44" fill="none"><path d="M26 42L20 30h12L26 42z" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="26" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Amer</text></svg>
+        </div>
+        <span>American</span>
+      </div>
+      <div class="pin-item">
+        <div class="glyph" aria-hidden="true">
+          <svg width="52" height="44" viewBox="0 0 52 44" fill="none"><path d="M26 42L20 30h12L26 42z" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="26" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Chin</text></svg>
+        </div>
+        <span>Chinese</span>
+      </div>
+      <div class="pin-item">
+        <div class="glyph" aria-hidden="true">
+          <svg width="52" height="44" viewBox="0 0 52 44" fill="none"><path d="M26 42L20 30h12L26 42z" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="26" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Fruit</text></svg>
+        </div>
+        <span>Fruit</span>
+      </div>
+      <div class="pin-item">
+        <div class="glyph" aria-hidden="true">
+          <svg width="64" height="52" viewBox="0 0 64 52" fill="none"><path d="M32 50L24 34h16L32 50z" fill="#9D2235"/><rect x="2" y="2" width="60" height="32" rx="16" fill="#9D2235"/><rect x="2" y="2" width="60" height="32" rx="16" stroke="#FFFFFF" stroke-width="3" fill="none"/><text x="32" y="24" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">Halal</text></svg>
+        </div>
+        <span>Selected</span>
+      </div>
+    </div>
+    <p class="section-note">Cuisine pills only — open status stays on the list / mini-card. Same cherry fill for every venue.</p>
+
+    <h2>UI primitives</h2>
+    <div class="ui-row">
+      <button class="btn" type="button">Primary</button>
+      <button class="btn secondary" type="button">Secondary</button>
+      <span class="chip">Cuisine</span>
+      <span class="chip active">Open now</span>
+      <span class="badge">Open · usually until 3:00</span>
+      <span class="badge closed">Closed · opens 11:00</span>
+      <span class="badge unknown">Hours unknown</span>
+    </div>
+
+    <h2>Screen mocks</h2>
+    <div class="mocks">
+      <div>
+        <p class="section-note" style="margin-bottom:8px">Home · map + bottom sheet (peek)</p>
+        <div class="phone"><div class="phone-screen">
+          <div class="map-plane"></div>
+          <div class="map-pin" style="top:34%; left:38%" aria-hidden="true">
+            <svg viewBox="0 0 56 44" fill="none"><path d="M28 42L22 30h12L28 42z" fill="#9D2235"/><rect x="2" y="2" width="52" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="52" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="28" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Halal</text></svg>
+          </div>
+          <div class="map-pin selected" style="top:40%; left:52%" aria-hidden="true">
+            <svg viewBox="0 0 64 52" fill="none"><path d="M32 50L24 34h16L32 50z" fill="#9D2235"/><rect x="2" y="2" width="60" height="32" rx="16" fill="#9D2235"/><rect x="2" y="2" width="60" height="32" rx="16" stroke="#FFFFFF" stroke-width="3" fill="none"/><text x="32" y="24" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">Halal</text></svg>
+          </div>
+          <div class="map-pin" style="top:36%; left:68%" aria-hidden="true">
+            <svg viewBox="0 0 48 44" fill="none"><path d="M24 42L18 30h12L24 42z" fill="#9D2235"/><rect x="2" y="2" width="44" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="44" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="24" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Mex</text></svg>
+          </div>
+          <div class="map-pin" style="top:52%; left:42%" aria-hidden="true">
+            <svg viewBox="0 0 52 44" fill="none"><path d="M26 42L20 30h12L26 42z" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="26" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Amer</text></svg>
+          </div>
+          <div class="map-pin" style="top:56%; left:60%" aria-hidden="true">
+            <svg viewBox="0 0 52 44" fill="none"><path d="M26 42L20 30h12L26 42z" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" fill="#9D2235"/><rect x="2" y="2" width="48" height="28" rx="14" stroke="#FFFFFF" stroke-width="2" fill="none"/><text x="26" y="21" text-anchor="middle" font-family="Satoshi, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FFFFFF">Fruit</text></svg>
+          </div>
+          <div class="top-bar">
+            <div class="wm">Tu<span>Eats</span></div>
+            <div class="locate" title="Locate">◎</div>
+          </div>
+          <div class="sheet">
+            <div class="handle"></div>
+            <div class="search">Search trucks or cuisine…</div>
+            <div class="row">
+              <div>
+                <div class="name">Famous NY Gyro</div>
+                <div class="meta">Halal · Norris St</div>
+              </div>
+              <span class="badge">Open</span>
+            </div>
+            <div class="row">
+              <div>
+                <div class="name">Richie’s Lunch Box</div>
+                <div class="meta">American · Montgomery</div>
+              </div>
+              <span class="badge">Open</span>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <div>
+        <p class="section-note" style="margin-bottom:8px">Venue detail · typography-led</p>
+        <div class="phone"><div class="phone-screen">
+          <div class="detail">
+            <div class="back">← Map</div>
+            <h3>Famous NY Gyro</h3>
+            <div class="status">Open · usually until 3:00</div>
+            <div class="tags">
+              <span class="chip active">Halal</span>
+              <span class="chip">Norris St</span>
+              <span class="chip">Cash · Card</span>
+            </div>
+            <p>Chicken over rice, lamb gyro, and the classic Temple sidewalk lunch. Line moves fast after the noon rush.</p>
+            <div class="hours">
+              Mon–Fri 11:00–15:00<br />
+              Sat–Sun Hours unknown
+            </div>
+            <div class="verify">Last verified · Jul 2026</div>
+            <div class="report">Report a problem</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const colors = [
+      ["Cherry", "#9D2235"],
+      ["Cherry hover", "#B52A3F"],
+      ["Cherry soft", "#F8ECEF"],
+      ["Canvas", "#F5F5F4"],
+      ["Surface", "#FFFFFF"],
+      ["Ink", "#1C1917"],
+      ["Ink secondary", "#57534E"],
+      ["Ink muted", "#A8A29E"],
+      ["Border", "#E7E5E4"],
+      ["Open", "#3F6F5A"],
+      ["Open soft", "#E8F2EC"],
+      ["Closed", "#78716C"],
+      ["Warning", "#B45309"],
+    ];
+    const root = document.getElementById("swatches");
+    for (const [name, hex] of colors) {
+      const el = document.createElement("div");
+      el.className = "swatch";
+      el.innerHTML = `<div class="chip" style="background:${hex}"></div><div class="meta"><span class="name">${name}</span>${hex}</div>`;
+      root.appendChild(el);
+    }
+  </script>
+</body>
+</html>
