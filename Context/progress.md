@@ -9,9 +9,18 @@
 
 - **Phase:** Phase 1 implementation. The mock-functional public/admin UI **and the interactive MapLibre campus map** are complete and verified; production data/auth wiring remains.
 - **Next up:**
-  1. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to the existing Drizzle/Supabase server boundary.
-  2. Run the KML seed workflow and replace mock fixtures with reviewed development data.
-  3. Reconcile the campus coordinate envelope: `CAMPUS_BOUNDS` (Zod) is far tighter than the `venues` DB CHECK box, and the KML seed bypasses Zod entirely — verify against real placemarks before publishing.
+  1. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to the existing Drizzle/Supabase server boundary (needs live Supabase credentials).
+  2. Run the KML seed workflow against dev and replace mock fixtures with reviewed development data (needs a live DB).
+
+---
+
+## 2026-07-18 — Coordinate-bounds reconciliation + seed hardening
+
+Closed the two mapping-correctness follow-ups surfaced by the audit. Split the campus geometry into two config values: `CAMPUS_BOUNDS` stays the tight map viewport box, and a new `CAMPUS_COORDINATE_BOUNDS` (mirrors the `venues` lat/lng DB CHECK: lat 39.96–40.02, lng −75.18–−75.13) is now the single source of truth for coordinate validation. Zod `venueInputSchema` and the mock-admin validator point at it, so a legit truck near Broad St / Cecil B. Moore no longer passes the seed yet fails an admin edit.
+
+Extracted the KML parse/dedup/bounds logic into pure `src/lib/seed/kml.ts` (unit-tested): parsing now skips off-campus and malformed points instead of inserting garbage drafts, and dedup tightened its coordinate epsilon to ~5m so distinct-but-close trucks (the five gyro carts) stay separate while re-run idempotency holds via exact-name match; a ~25m review radius logs distinct neighbours for a manual glance. `scripts/seed-kml.ts` is now a thin wrapper over the tested module.
+
+Verification: TypeScript, ESLint, Prettier, 41 Vitest tests (+9), production build.
 
 ---
 
