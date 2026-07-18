@@ -7,11 +7,7 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Mock-functional public + admin UI and the campus MapLibre map (cuisine pins, locate, attribution) are in place. Production data/auth wiring and KML seed remain.
-- **Next up:**
-  1. Continue frontend polish against `DESIGN.md` where needed.
-  2. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to Drizzle/Supabase when credentials are available.
-  3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+
 
 ---
 

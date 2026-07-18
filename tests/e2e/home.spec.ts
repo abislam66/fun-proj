@@ -15,17 +15,23 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
   await expect(page.getByText("OpenStreetMap")).toBeVisible();
   await expect(page.getByText("Temple Main Campus")).toBeVisible();
 
+  const results = page.locator(".desktop-results");
+  const cuisine = results.getByRole("button", { name: "Cuisine", exact: true });
+  await cuisine.click();
+  await expect(
+    results.getByRole("region", { name: "Cuisine filters" }),
+  ).toBeVisible();
+  await results.getByRole("button", { name: "Halal", exact: true }).click();
+  await expect(page).toHaveURL(/cuisine=halal/);
+  await expect(results.getByText("Compass Kitchen")).toBeVisible();
+  await expect(results.getByText("Cherry Cart")).toBeHidden();
+
   const search = page.getByRole("searchbox", {
     name: "Search venues or cuisines",
   });
   await search.fill("halal");
   await expect(page).toHaveURL(/q=halal/);
-  await expect(
-    page.locator(".desktop-results").getByText("Compass Kitchen"),
-  ).toBeVisible();
-  await expect(
-    page.locator(".desktop-results").getByText("Cherry Cart"),
-  ).toBeHidden();
+  await expect(results.getByText("Compass Kitchen")).toBeVisible();
 });
 
 test("desktop map pin opens mini-card", async ({ page }) => {

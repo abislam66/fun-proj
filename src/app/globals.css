@@ -741,8 +741,6 @@ button {
 }
 
 .filter-area {
-  position: relative;
-  z-index: 5;
   padding: 0 var(--spacing-md) var(--spacing-md);
   border-bottom: 1px solid var(--color-border);
 }
@@ -780,53 +778,24 @@ button {
   display: none;
 }
 
-.filter-menu {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.filter-menu summary {
-  list-style: none;
-}
-
-.filter-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.filter-popover {
-  position: fixed;
-  z-index: 40;
-  right: var(--spacing-md);
-  left: var(--spacing-md);
-  display: grid;
-  gap: 0.25rem;
-  max-height: 16rem;
+/* In-flow expand panel — pushes results down; never overlays the list. */
+.filter-panel {
   margin-top: var(--spacing-sm);
   padding: var(--spacing-sm);
-  overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: 0 12px 28px rgba(28, 25, 23, 0.12);
-}
-
-.filter-popover label {
-  display: flex;
-  min-height: 2.5rem;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 0 var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-small);
-  cursor: pointer;
-}
-
-.filter-popover label:hover {
   background: var(--color-surface-raised);
 }
 
-.filter-popover input {
-  accent-color: var(--color-cherry);
+.filter-panel-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.filter-panel-options .chip {
+  min-height: 2.25rem;
+  font-size: var(--text-small);
 }
 
 .results-summary {
@@ -1356,21 +1325,6 @@ button {
   .results-summary {
     padding-right: var(--spacing-xl);
     padding-left: var(--spacing-xl);
-  }
-
-  /* Chips fit the list pane; visible overflow lets absolute menus escape the row. */
-  .filter-scroll {
-    overflow: visible;
-  }
-
-  .filter-popover {
-    position: absolute;
-    top: calc(100% + var(--spacing-sm));
-    right: auto;
-    left: 0;
-    width: 17rem;
-    margin-top: 0;
-    z-index: 50;
   }
 
   .detail-page,
