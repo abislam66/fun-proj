@@ -7,7 +7,9 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Find your next campus bite." }),
   ).toBeVisible();
-  await expect(page.getByText("Interactive map coming later")).toBeVisible();
+  await expect(
+    page.getByRole("application", { name: /Map of food near Temple/ }),
+  ).toBeVisible();
 
   const search = page.getByRole("searchbox", {
     name: "Search venues or cuisines",
