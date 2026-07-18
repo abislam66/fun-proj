@@ -1,4 +1,4 @@
-import { CAMPUS_BOUNDS } from "@/config/site";
+import { CAMPUS_COORDINATE_BOUNDS } from "@/config/site";
 import type { CuisineKey } from "@/config/cuisines";
 import type { ZoneKey } from "@/config/zones";
 import { WEEKDAY_KEYS, type VenueHours } from "@/lib/hours";
@@ -196,17 +196,17 @@ export function validateMockVenue(
   if (!venue.name.trim()) errors.name = "Enter a venue name.";
   if (
     !Number.isFinite(lat) ||
-    lat < CAMPUS_BOUNDS.south ||
-    lat > CAMPUS_BOUNDS.north
+    lat < CAMPUS_COORDINATE_BOUNDS.south ||
+    lat > CAMPUS_COORDINATE_BOUNDS.north
   ) {
-    errors.lat = `Use a latitude from ${CAMPUS_BOUNDS.south} to ${CAMPUS_BOUNDS.north}.`;
+    errors.lat = `Use a latitude from ${CAMPUS_COORDINATE_BOUNDS.south} to ${CAMPUS_COORDINATE_BOUNDS.north}.`;
   }
   if (
     !Number.isFinite(lng) ||
-    lng < CAMPUS_BOUNDS.west ||
-    lng > CAMPUS_BOUNDS.east
+    lng < CAMPUS_COORDINATE_BOUNDS.west ||
+    lng > CAMPUS_COORDINATE_BOUNDS.east
   ) {
-    errors.lng = `Use a longitude from ${CAMPUS_BOUNDS.west} to ${CAMPUS_BOUNDS.east}.`;
+    errors.lng = `Use a longitude from ${CAMPUS_COORDINATE_BOUNDS.west} to ${CAMPUS_COORDINATE_BOUNDS.east}.`;
   }
 
   if (forPublish && !venue.zoneKey) {
