@@ -47,18 +47,23 @@ export function Input({
 export function Chip({
   active = false,
   children,
+  className,
   onClick,
+  "aria-expanded": ariaExpanded,
+  ...props
 }: {
   active?: boolean;
   children: ReactNode;
   onClick?: () => void;
-}) {
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type" | "onClick">) {
   return (
     <button
-      aria-pressed={active}
-      className={join("chip", active && "chip-active")}
+      aria-expanded={ariaExpanded}
+      aria-pressed={ariaExpanded === undefined ? active : undefined}
+      className={join("chip", active && "chip-active", className)}
       onClick={onClick}
       type="button"
+      {...props}
     >
       {children}
     </button>
