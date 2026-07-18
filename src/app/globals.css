@@ -638,6 +638,18 @@ button {
   transform: translate(-50%, -50%);
 }
 
+.map-fallback-quiet {
+  top: auto;
+  bottom: calc(var(--spacing-md) + 1.25rem);
+  left: var(--spacing-md);
+  transform: none;
+  padding: 0.35rem 0.55rem;
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+  color: var(--color-ink-muted);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
 /* Cuisine pill pins — cherry label + stem; tip is the coordinate */
 .cuisine-pin {
   cursor: pointer;

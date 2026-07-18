@@ -18,7 +18,18 @@ const MAX_BOUNDS: [[number, number], [number, number]] = [
   [CAMPUS_BOUNDS.east + 0.02, CAMPUS_BOUNDS.north + 0.014],
 ];
 
-const STYLE_WATCHDOG_MS = 12000;
+/** Solid Positron-ish canvas so pins still render if the tile style never arrives. */
+const FALLBACK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [
+    {
+      id: "background",
+      type: "background",
+      paint: { "background-color": "#EEEEEA" },
+    },
+  ],
+};
 
 export function VenueMap({
   venues,
@@ -36,12 +47,29 @@ export function VenueMap({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [map, setMap] = useState<MapLibreMap | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [basemapFailed, setBasemapFailed] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
+    let cancelled = false;
     let instance: MapLibreMap;
+    let usedFallback = false;
+
+    function attach(ready: MapLibreMap) {
+      if (cancelled) return;
+      ready.resize();
+      setMap(ready);
+    }
+
+    function useFallbackBasemap(reason: string) {
+      if (usedFallback || cancelled || !mapRef.current) return;
+      usedFallback = true;
+      setBasemapFailed(true);
+      console.warn("[VenueMap] basemap unavailable, using solid fallback:", reason);
+      mapRef.current.setStyle(FALLBACK_STYLE);
+    }
+
     try {
       instance = new maplibregl.Map({
         container: containerRef.current,
@@ -55,32 +83,72 @@ export function VenueMap({
         dragRotate: false,
         pitchWithRotate: false,
       });
-    } catch {
-      // e.g. WebGL unavailable — the list still carries the full experience.
-      setFailed(true);
-      return;
+    } catch (error) {
+      // e.g. WebGL unavailable — try a second time with the solid style.
+      try {
+        instance = new maplibregl.Map({
+          container: containerRef.current,
+          style: FALLBACK_STYLE,
+          center: DEFAULT_VIEWPORT.center,
+          zoom: DEFAULT_VIEWPORT.zoom,
+          minZoom: 13.5,
+          maxZoom: 19,
+          maxBounds: MAX_BOUNDS,
+          attributionControl: false,
+          dragRotate: false,
+          pitchWithRotate: false,
+        });
+        usedFallback = true;
+        setBasemapFailed(true);
+      } catch {
+        setBasemapFailed(true);
+        return;
+      }
     }
+
     instance.touchZoomRotate.disableRotation();
     mapRef.current = instance;
 
-    // The list renders even if tiles never arrive; surface a quiet fallback.
-    const watchdog = window.setTimeout(() => {
-      if (!instance.isStyleLoaded()) setFailed(true);
-    }, STYLE_WATCHDOG_MS);
-
-    instance.on("load", () => {
-      window.clearTimeout(watchdog);
-      setFailed(false);
-      setMap(instance);
+    instance.on("load", () => attach(instance));
+    instance.on("error", (event) => {
+      const message = event.error?.message ?? "unknown map error";
+      // Style/tile fetch failures shouldn't blank the whole map — keep pins.
+      if (!instance.isStyleLoaded()) {
+        useFallbackBasemap(message);
+      }
     });
 
+    // Container can mount at 0×0 under the sheet/split; resize when it settles.
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.resize();
+    });
+    observer.observe(containerRef.current);
+
+    // If the remote style never arrives, fall back so pins still show.
+    const watchdog = window.setTimeout(() => {
+      if (!cancelled && mapRef.current && !mapRef.current.isStyleLoaded()) {
+        useFallbackBasemap("style load timed out");
+      }
+    }, 8000);
+
     return () => {
+      cancelled = true;
       window.clearTimeout(watchdog);
+      observer.disconnect();
       instance.remove();
       mapRef.current = null;
       setMap(null);
     };
   }, []);
+
+  // Re-attach after a setStyle(fallback) — 'load' fires again.
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const ready = mapRef.current;
+    if (ready.isStyleLoaded() && !map) {
+      setMap(ready);
+    }
+  }, [basemapFailed, map]);
 
   return (
     <div className="venue-map">
@@ -130,9 +198,9 @@ export function VenueMap({
 
       <MapAttribution />
 
-      {failed ? (
-        <p className="map-fallback" role="status">
-          Map couldn’t load — browse the list instead.
+      {basemapFailed ? (
+        <p className="map-fallback map-fallback-quiet" role="status">
+          Basemap offline — pins still work.
         </p>
       ) : null}
     </div>
