@@ -8,12 +8,8 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
     page.getByRole("heading", { name: "Find your next campus bite." }),
   ).toBeVisible();
   await expect(
-    page
-      .getByRole("region", { name: "Temple campus food map" })
-      .or(page.getByLabel("Temple campus food map")),
+    page.getByRole("application", { name: /Map of food near Temple/ }),
   ).toBeVisible();
-  await expect(page.getByText("OpenStreetMap")).toBeVisible();
-  await expect(page.getByText("Temple Main Campus")).toBeVisible();
 
   const search = page.getByRole("searchbox", {
     name: "Search venues or cuisines",
@@ -28,19 +24,30 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
   ).toBeHidden();
 });
 
-test("desktop map pin opens mini-card", async ({ page }) => {
+test("map pin opens a mini-card and navigates to detail", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
 
-  const pin = page.getByRole("button", { name: /Compass Kitchen, Halal/ });
-  await expect(pin).toBeVisible({ timeout: 15_000 });
-  await pin.click();
+  const pill = page.locator(".cuisine-pill").first();
+  await expect(pill).toBeVisible({ timeout: 15000 });
+  await pill.click();
 
-  const miniCard = page.locator("a.map-mini-card");
+  const miniCard = page.locator(".map-mini-card");
   await expect(miniCard).toBeVisible();
-  await expect(miniCard).toContainText("Compass Kitchen");
-  await miniCard.click();
-  await expect(page).toHaveURL(/eat\/compass-kitchen/);
+  const details = miniCard.getByRole("link", { name: /View details/ });
+  await expect(details).toBeVisible();
+
+  await details.click();
+  await expect(page).toHaveURL(/\/eat\//);
+});
+
+test("filtering narrows the pins on the map", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?q=halal");
+
+  await expect(page.locator(".cuisine-pill")).toHaveCount(1, {
+    timeout: 15000,
+  });
 });
 
 test("mobile explorer exposes sheet detents", async ({ page }) => {

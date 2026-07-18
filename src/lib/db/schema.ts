@@ -75,6 +75,7 @@ export const venues = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // Mirrors CAMPUS_COORDINATE_BOUNDS in src/config/site.ts — change together.
     check(
       "venues_lat_lng_campus_ish",
       sql`${table.lat} BETWEEN 39.96 AND 40.02 AND ${table.lng} BETWEEN -75.18 AND -75.13`,

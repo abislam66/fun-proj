@@ -32,6 +32,8 @@ export default async function VenueDetailPage({
     name: row!.name,
     description: row!.description,
     status: row!.status === "retired" ? "retired" : "published",
+    lat: row!.lat,
+    lng: row!.lng,
     zoneKey:
       row!.zoneKey === "norris" ||
       row!.zoneKey === "montgomery" ||
@@ -44,8 +46,6 @@ export default async function VenueDetailPage({
       "Near Temple Main Campus",
     building: row!.building,
     floor: row!.floor,
-    lat: row!.lat,
-    lng: row!.lng,
     acceptsCash: row!.acceptsCash,
     acceptsCard: row!.acceptsCard,
     cuisines: row!.cuisines.filter(

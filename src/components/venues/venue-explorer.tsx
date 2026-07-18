@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { VenueMapLoader } from "@/components/map/venue-map-loader";
+import { MapPlaceholder } from "@/components/layout/map-placeholder";
 import { SiteHeader } from "@/components/layout/site-header";
 import { MobileSheet } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/primitives";
 import { FilterBar } from "@/components/venues/filter-bar";
-import { VenueList } from "@/components/venues/venue-list";
+import { VenueList, VenueMiniCard } from "@/components/venues/venue-list";
 import type { Venue, VenueFilters } from "@/lib/venues";
 import {
   countUnknownHours,
@@ -16,6 +18,13 @@ import {
   parseVenueFilters,
   serializeVenueFilters,
 } from "@/lib/venues";
+
+// MapLibre is the heaviest dependency — lazy-load it so the list is interactive
+// well under the 2s budget and renders even if the map chunk/tiles fail.
+const VenueMap = dynamic(
+  () => import("@/components/map/venue-map").then((mod) => mod.VenueMap),
+  { ssr: false, loading: () => <MapPlaceholder /> },
+);
 
 function ResultsPanel({
   venues,
@@ -26,7 +35,6 @@ function ResultsPanel({
   selectedId,
   hoveredId,
   onHover,
-  onSelect,
 }: {
   venues: Venue[];
   filters: VenueFilters;
@@ -35,8 +43,7 @@ function ResultsPanel({
   unknownHours: number;
   selectedId: string | null;
   hoveredId: string | null;
-  onHover: (venueId: string | null) => void;
-  onSelect: (venueId: string | null) => void;
+  onHover: (id: string | null) => void;
 }) {
   return (
     <div className="results-panel">
@@ -69,7 +76,6 @@ function ResultsPanel({
         hoveredId={hoveredId}
         onClear={() => setFilters(EMPTY_VENUE_FILTERS)}
         onHover={onHover}
-        onSelect={onSelect}
         selectedId={selectedId}
         venues={venues}
       />
@@ -84,6 +90,7 @@ export function VenueExplorer({
   venues: Venue[];
   initialQuery: string;
 }) {
+  const router = useRouter();
   const [filters, setFilters] = useState(() =>
     parseVenueFilters(new URLSearchParams(initialQuery)),
   );
@@ -100,24 +107,53 @@ export function VenueExplorer({
     [venues, filters],
   );
 
+  const selectedVenue = useMemo(
+    () => visibleVenues.find((venue) => venue.id === selectedId) ?? null,
+    [visibleVenues, selectedId],
+  );
+  const detailHref = selectedVenue
+    ? `/eat/${selectedVenue.slug}?from=${encodeURIComponent(backPath)}`
+    : "/";
+
+  // Drop a selection that a filter change just hid.
+  useEffect(() => {
+    if (selectedId && !visibleVenues.some((venue) => venue.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [visibleVenues, selectedId]);
+
   useEffect(() => {
     const next = query ? `/?${query}` : "/";
     window.history.replaceState(window.history.state, "", next);
   }, [query]);
 
-  useEffect(() => {
-    if (selectedId && !visibleVenues.some((venue) => venue.id === selectedId)) {
-      setSelectedId(null);
-    }
-  }, [selectedId, visibleVenues]);
+  // First tap selects (mini-card); second tap on the same pin opens detail.
+  const onSelect = useCallback(
+    (id: string) => {
+      setSelectedId((current) => {
+        if (current === id) {
+          const venue = visibleVenues.find((item) => item.id === id);
+          if (venue) {
+            router.push(
+              `/eat/${venue.slug}?from=${encodeURIComponent(backPath)}`,
+            );
+          }
+          return current;
+        }
+        return id;
+      });
+    },
+    [visibleVenues, backPath, router],
+  );
+
+  const onHover = useCallback((id: string | null) => setHoveredId(id), []);
 
   const panel = (
     <ResultsPanel
       backPath={backPath}
       filters={filters}
       hoveredId={hoveredId}
-      onHover={setHoveredId}
-      onSelect={setSelectedId}
+      onHover={onHover}
       selectedId={selectedId}
       setFilters={setFilters}
       unknownHours={unknownHours}
@@ -130,15 +166,22 @@ export function VenueExplorer({
       <SiteHeader />
       <div className="desktop-results">{panel}</div>
       <div className="explorer-map">
-        <VenueMapLoader
-          backPath={backPath}
+        <VenueMap
           hoveredId={hoveredId}
-          onClearSelection={() => setSelectedId(null)}
-          onHover={setHoveredId}
-          onSelect={setSelectedId}
+          onHover={onHover}
+          onSelect={onSelect}
           selectedId={selectedId}
           venues={visibleVenues}
         />
+        {selectedVenue ? (
+          <div className="map-mini-card">
+            <VenueMiniCard
+              href={detailHref}
+              onClose={() => setSelectedId(null)}
+              venue={selectedVenue}
+            />
+          </div>
+        ) : null}
       </div>
       <div className="mobile-results">
         <MobileSheet>{panel}</MobileSheet>

@@ -3,78 +3,25 @@
  * Run locally: `pnpm seed:kml`
  *
  * Sources Temple's public My Map KML (names + coordinates).
- * Never publishes — drafts only. Near-duplicate names stay distinct venues.
- * Matching is by exact name (case-insensitive) OR near-identical coordinates,
- * never by fuzzy name similarity (see domain-knowledge.md gyro pitfall).
+ * Never publishes — drafts only. Parsing, the campus-bounds guard, and dedup
+ * live in `src/lib/seed/kml.ts` (pure + unit-tested). Near-duplicate names stay
+ * distinct venues (see domain-knowledge.md gyro pitfall).
  */
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { uniqueSlug } from "../src/lib/slug";
 import { venues } from "../src/lib/db/schema";
+import {
+  findExistingMatch,
+  findNearbyDistinct,
+  parsePlacemarks,
+  type ExistingVenue,
+} from "../src/lib/seed/kml";
+import { uniqueSlug } from "../src/lib/slug";
 
 const KML_URL =
   "https://www.google.com/maps/d/kml?mid=1kFf5IaeeXiFpn_UHIyd4UqwHj90&forcekml=1";
-
-const COORD_EPSILON = 0.00015; // ~15m
-
-type Placemark = {
-  name: string;
-  description: string | null;
-  lat: number;
-  lng: number;
-};
-
-function decodeXml(text: string): string {
-  return text
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function stripHtml(html: string): string {
-  return decodeXml(html)
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function parsePlacemarks(kml: string): Placemark[] {
-  const results: Placemark[] = [];
-  const placemarkRe = /<Placemark>([\s\S]*?)<\/Placemark>/gi;
-  let match: RegExpExecArray | null;
-
-  while ((match = placemarkRe.exec(kml)) !== null) {
-    const block = match[1] ?? "";
-    const nameMatch = /<name>([\s\S]*?)<\/name>/i.exec(block);
-    const descMatch = /<description>([\s\S]*?)<\/description>/i.exec(block);
-    const coordMatch = /<coordinates>\s*([-\d.]+)\s*,\s*([-\d.]+)/i.exec(block);
-
-    if (!nameMatch || !coordMatch) {
-      continue;
-    }
-
-    const name = stripHtml(nameMatch[1] ?? "").trim();
-    const lng = Number(coordMatch[1]);
-    const lat = Number(coordMatch[2]);
-    if (!name || Number.isNaN(lat) || Number.isNaN(lng)) {
-      continue;
-    }
-
-    results.push({
-      name,
-      description: descMatch ? stripHtml(descMatch[1] ?? "") || null : null,
-      lat,
-      lng,
-    });
-  }
-
-  return results;
-}
 
 async function main() {
   const connectionString = process.env.DATABASE_URL;
@@ -91,30 +38,32 @@ async function main() {
   }
   const kml = await response.text();
   const placemarks = parsePlacemarks(kml);
-  console.log(`Parsed ${placemarks.length} placemarks`);
+  console.log(`Parsed ${placemarks.length} in-bounds placemarks`);
 
   const client = postgres(connectionString, { prepare: false, max: 1 });
   const db = drizzle(client);
 
-  const existing = await db.select().from(venues);
-  const slugSet = new Set(existing.map((v) => v.slug));
+  const existing: ExistingVenue[] = (await db.select().from(venues)).map(
+    (row) => ({ name: row.name, lat: row.lat, lng: row.lng }),
+  );
+  const slugSet = new Set(
+    (await db.select({ slug: venues.slug }).from(venues)).map((r) => r.slug),
+  );
 
   let inserted = 0;
   let skipped = 0;
 
   for (const place of placemarks) {
-    const byName = existing.find(
-      (v) => v.name.toLowerCase() === place.name.toLowerCase(),
-    );
-    const byCoords = existing.find(
-      (v) =>
-        Math.abs(v.lat - place.lat) < COORD_EPSILON &&
-        Math.abs(v.lng - place.lng) < COORD_EPSILON,
-    );
-
-    if (byName || byCoords) {
+    if (findExistingMatch(place, existing)) {
       skipped += 1;
       continue;
+    }
+
+    const nearby = findNearbyDistinct(place, existing);
+    if (nearby) {
+      console.warn(
+        `  review: "${place.name}" is ~near "${nearby.name}" — kept distinct`,
+      );
     }
 
     const slug = uniqueSlug(place.name, slugSet);
@@ -131,14 +80,7 @@ async function main() {
       cuisines: [],
       hours: null,
     });
-
-    existing.push({
-      id: "pending",
-      slug,
-      name: place.name,
-      lat: place.lat,
-      lng: place.lng,
-    } as (typeof existing)[number]);
+    existing.push({ name: place.name, lat: place.lat, lng: place.lng });
 
     inserted += 1;
     console.log(`  draft: ${place.name} → ${slug}`);

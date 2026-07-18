@@ -2,12 +2,28 @@
 
 export const CAMPUS_TIMEZONE = "America/New_York" as const;
 
-/** Observed venue spread around Temple main campus (approx). */
+/**
+ * Tight viewport box — the corridor where trucks actually cluster. Used only to
+ * frame the map / default viewport, NOT to validate coordinates (real venues
+ * near Broad St or Cecil B. Moore fall just outside it).
+ */
 export const CAMPUS_BOUNDS = {
   west: -75.157,
   south: 39.979,
   east: -75.15,
   north: 39.984,
+} as const;
+
+/**
+ * Acceptable coordinate envelope for a campus-area venue — the source of truth
+ * for validation and the KML seed guard. Kept in sync with the `venues`
+ * lat/lng CHECK constraint in `src/lib/db/schema.ts` (change both together).
+ */
+export const CAMPUS_COORDINATE_BOUNDS = {
+  west: -75.18,
+  south: 39.96,
+  east: -75.13,
+  north: 40.02,
 } as const;
 
 /** Default MapLibre viewport — campus, not Philadelphia. */

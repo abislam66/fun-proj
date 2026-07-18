@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CAMPUS_BOUNDS } from "@/config/site";
+import { CAMPUS_COORDINATE_BOUNDS } from "@/config/site";
 import { reportProblemSchema, venueInputSchema } from "@/lib/validation";
 
 describe("venueInputSchema", () => {
@@ -23,15 +23,25 @@ describe("venueInputSchema", () => {
     expect(() =>
       venueInputSchema.parse({
         ...valid,
-        lat: CAMPUS_BOUNDS.north + 0.1,
+        lat: CAMPUS_COORDINATE_BOUNDS.north + 0.1,
       }),
     ).toThrow();
     expect(() =>
       venueInputSchema.parse({
         ...valid,
-        lng: CAMPUS_BOUNDS.west - 0.1,
+        lng: CAMPUS_COORDINATE_BOUNDS.west - 0.1,
       }),
     ).toThrow();
+  });
+
+  it("accepts campus-edge coordinates the tight viewport box would reject", () => {
+    // A truck near Broad St sits outside CAMPUS_BOUNDS but inside the envelope.
+    const parsed = venueInputSchema.parse({
+      ...valid,
+      lat: 39.9775,
+      lng: -75.16,
+    });
+    expect(parsed.lat).toBe(39.9775);
   });
 
   it("rejects unknown keys (strict)", () => {

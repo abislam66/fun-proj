@@ -7,17 +7,30 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Mock-functional public + admin UI and the campus MapLibre map (cuisine pins, locate, attribution) are in place. Production data/auth wiring and KML seed remain.
+- **Phase:** Phase 1 implementation. The mock-functional public/admin UI **and the interactive MapLibre campus map** are complete and verified; production data/auth wiring remains.
 - **Next up:**
-  1. Continue frontend polish against `DESIGN.md` where needed.
-  2. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to Drizzle/Supabase when credentials are available.
-  3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+  1. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to the existing Drizzle/Supabase server boundary (needs live Supabase credentials).
+  2. Run the KML seed workflow against dev and replace mock fixtures with reviewed development data (needs a live DB).
 
 ---
 
-## 2026-07-18 — Campus MapLibre map + cuisine pins
+## 2026-07-18 — Coordinate-bounds reconciliation + seed hardening
 
-Replaced the explorer map placeholder with a client-only MapLibre map locked to Temple campus bounds (OpenFreeMap Positron). Cuisine-pill HTML markers, list↔pin hover/selection sync, pin mini-card → detail, custom zoom + locate (browser-only blue dot), and quiet OSM/OpenFreeMap attribution. Public `Venue` fixtures now carry `lat`/`lng`.
+Closed the two mapping-correctness follow-ups surfaced by the audit. Split the campus geometry into two config values: `CAMPUS_BOUNDS` stays the tight map viewport box, and a new `CAMPUS_COORDINATE_BOUNDS` (mirrors the `venues` lat/lng DB CHECK: lat 39.96–40.02, lng −75.18–−75.13) is now the single source of truth for coordinate validation. Zod `venueInputSchema` and the mock-admin validator point at it, so a legit truck near Broad St / Cecil B. Moore no longer passes the seed yet fails an admin edit.
+
+Extracted the KML parse/dedup/bounds logic into pure `src/lib/seed/kml.ts` (unit-tested): parsing now skips off-campus and malformed points instead of inserting garbage drafts, and dedup tightened its coordinate epsilon to ~5m so distinct-but-close trucks (the five gyro carts) stay separate while re-run idempotency holds via exact-name match; a ~25m review radius logs distinct neighbours for a manual glance. `scripts/seed-kml.ts` is now a thin wrapper over the tested module.
+
+Verification: TypeScript, ESLint, Prettier, 41 Vitest tests (+9), production build.
+
+---
+
+## 2026-07-18 — MapLibre campus map + cuisine pins
+
+Implemented the deferred explorer map slot per `DESIGN.md` / `docs/design/map-and-pins.md`. Added `src/components/map/` (`VenueMap`, `VenuePinLayer`, `CuisinePill`, `LocateControl`, `MapAttribution`); MapLibre GL 5 is dynamically imported (`ssr:false`) so it stays out of the initial bundle and the list works if tiles fail. Cuisine-pill pins carry the primary cuisine label only (open status stays off the pin), Framer Motion springs the selected pill, and a deferred one-shot GSAP stagger runs after load (skipped under `prefers-reduced-motion`). List↔pin hover sync, pin→mini-card→detail (second tap opens), custom zoom + client-only locate (blue dot never leaves the browser), quiet OSM/OpenFreeMap attribution, and campus-locked `maxBounds`.
+
+Also fixed two audit defects this unblocked: the basemap style URL was `liberty` in `site.ts` / `.env.example` / CI — corrected to **Positron** (the mandated muted basemap); and `lat`/`lng` were missing from the client `Venue` payload — added to the type, all fixtures, and the detail-page row mapper so map and list share one payload.
+
+Verification: TypeScript, ESLint, Prettier, 32 Vitest tests, production build (map code-split out of first load), and 4 Chromium Playwright flows (now asserting the live map renders). Deps added: `maplibre-gl@^5`, `framer-motion`, `gsap`.
 
 ---
 

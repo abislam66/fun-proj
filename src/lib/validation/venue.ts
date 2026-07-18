@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { CUISINE_KEYS } from "@/config/cuisines";
 import {
-  CAMPUS_BOUNDS,
+  CAMPUS_COORDINATE_BOUNDS,
   MAX_PROBLEM_NOTE_LENGTH,
   MAX_VENUE_DESCRIPTION_LENGTH,
   MAX_VENUE_NAME_LENGTH,
@@ -45,8 +45,14 @@ export const venueInputSchema = z
       .max(MAX_VENUE_DESCRIPTION_LENGTH)
       .nullable()
       .optional(),
-    lat: z.number().min(CAMPUS_BOUNDS.south).max(CAMPUS_BOUNDS.north),
-    lng: z.number().min(CAMPUS_BOUNDS.west).max(CAMPUS_BOUNDS.east),
+    lat: z
+      .number()
+      .min(CAMPUS_COORDINATE_BOUNDS.south)
+      .max(CAMPUS_COORDINATE_BOUNDS.north),
+    lng: z
+      .number()
+      .min(CAMPUS_COORDINATE_BOUNDS.west)
+      .max(CAMPUS_COORDINATE_BOUNDS.east),
     zoneKey: z.enum(ZONE_KEYS).nullable().optional(),
     building: z.string().trim().max(120).nullable().optional(),
     floor: z.string().trim().max(40).nullable().optional(),

@@ -12,14 +12,13 @@ export interface Venue {
   name: string;
   description: string | null;
   status: "published" | "retired";
+  /** Map pin coordinates — map and list consume this same payload. */
+  lat: number;
+  lng: number;
   zoneKey: ZoneKey | null;
   location: string;
   building?: string | null;
   floor?: string | null;
-  /** WGS84 latitude — required for map pins. */
-  lat: number;
-  /** WGS84 longitude — required for map pins. */
-  lng: number;
   acceptsCash: boolean | null;
   acceptsCard: boolean | null;
   cuisines: CuisineKey[];

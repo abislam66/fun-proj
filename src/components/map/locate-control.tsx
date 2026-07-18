@@ -1,94 +1,73 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker } from "maplibre-gl";
+import maplibregl from "maplibre-gl";
+import { useEffect, useRef, useState } from "react";
 
-type LocateState = "idle" | "pending" | "active" | "denied" | "unavailable";
+type LocateState = "idle" | "locating" | "denied";
 
-export function LocateControl({ map }: { map: MapLibreMap | null }) {
-  const [state, setState] = useState<LocateState>("idle");
+/**
+ * Browser geolocation → MapLibre blue dot only. The coordinate NEVER leaves the
+ * browser (auth-security.md: user geolocation is sensitive, no endpoint sees it).
+ */
+export function LocateControl({ map }: { map: MapLibreMap }) {
   const markerRef = useRef<Marker | null>(null);
+  const [state, setState] = useState<LocateState>("idle");
 
   useEffect(() => {
+    const marker = markerRef;
     return () => {
-      markerRef.current?.remove();
-      markerRef.current = null;
+      marker.current?.remove();
+      marker.current = null;
     };
   }, []);
 
-  async function locate() {
-    if (!map || typeof navigator === "undefined" || !navigator.geolocation) {
-      setState("unavailable");
+  function locate() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setState("denied");
       return;
     }
-
-    setState("pending");
-
+    setState("locating");
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { longitude, latitude } = position.coords;
-        const maplibre = await import("maplibre-gl");
-
-        markerRef.current?.remove();
-        const el = document.createElement("div");
-        el.className = "locate-dot";
-        el.setAttribute("aria-hidden", "true");
-
-        markerRef.current = new maplibre.Marker({
-          element: el,
-          anchor: "center",
-        })
-          .setLngLat([longitude, latitude])
-          .addTo(map);
-
-        map.easeTo({
-          center: [longitude, latitude],
-          zoom: Math.max(map.getZoom(), 16),
-          duration: 650,
-        });
-        setState("active");
+      (position) => {
+        const point: [number, number] = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+        if (markerRef.current) {
+          markerRef.current.setLngLat(point);
+        } else {
+          const el = document.createElement("div");
+          el.className = "map-user-dot";
+          markerRef.current = new maplibregl.Marker({ element: el })
+            .setLngLat(point)
+            .addTo(map);
+        }
+        map.easeTo({ center: point, zoom: Math.max(map.getZoom(), 16) });
+        setState("idle");
       },
-      (error) => {
-        setState(
-          error.code === error.PERMISSION_DENIED ? "denied" : "unavailable",
-        );
-      },
-      {
-        enableHighAccuracy: false,
-        maximumAge: 60_000,
-        timeout: 8_000,
-      },
+      () => setState("denied"),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
     );
   }
 
-  const label =
-    state === "pending"
-      ? "Finding your location"
-      : state === "denied"
-        ? "Location permission denied — map still works"
-        : state === "unavailable"
-          ? "Location unavailable — map still works"
-          : "Show my location";
-
   return (
     <button
-      aria-label={label}
-      className={[
-        "map-control-button",
-        "locate-control",
-        state === "active" && "map-control-button-active",
-        (state === "denied" || state === "unavailable") &&
-          "map-control-button-muted",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      disabled={state === "pending"}
-      onClick={() => void locate()}
-      title={label}
+      aria-label={
+        state === "denied"
+          ? "Location unavailable"
+          : "Show my location on the map"
+      }
+      className="map-control-button"
+      data-state={state}
+      onClick={locate}
+      title="My location"
       type="button"
     >
-      <span aria-hidden="true" className="locate-control-icon" />
-      <span className="sr-only">{label}</span>
+      <span
+        aria-hidden="true"
+        className="map-control-icon map-control-locate"
+      />
     </button>
   );
 }

@@ -1,18 +1,22 @@
 "use client";
 
-import { createRoot, type Root } from "react-dom/client";
-import { useEffect, useRef } from "react";
 import type { Map as MapLibreMap, Marker } from "maplibre-gl";
+import maplibregl from "maplibre-gl";
+import { useEffect, useRef } from "react";
+import { createRoot, type Root } from "react-dom/client";
 
 import { CuisinePill } from "@/components/map/cuisine-pill";
-import { getPinLabel } from "@/lib/pin-label";
+import { cuisinePinLabel } from "@/config/cuisines";
 import type { Venue } from "@/lib/venues";
 
-type PinHandle = {
-  marker: Marker;
-  root: Root;
-  button: HTMLButtonElement;
-};
+type PinEntry = { marker: Marker; root: Root; el: HTMLElement };
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
 
 export function VenuePinLayer({
   map,
@@ -22,119 +26,91 @@ export function VenuePinLayer({
   onSelect,
   onHover,
 }: {
-  map: MapLibreMap | null;
+  map: MapLibreMap;
   venues: Venue[];
   selectedId: string | null;
   hoveredId: string | null;
-  onSelect: (venueId: string) => void;
-  onHover: (venueId: string | null) => void;
+  onSelect: (id: string) => void;
+  onHover: (id: string | null) => void;
 }) {
-  const pinsRef = useRef<Map<string, PinHandle>>(new Map());
-  const onSelectRef = useRef(onSelect);
-  const onHoverRef = useRef(onHover);
+  const pins = useRef<Map<string, PinEntry>>(new Map());
+  const staggered = useRef(false);
 
+  // Reconcile the marker set with the current (already filtered) venues.
   useEffect(() => {
-    onSelectRef.current = onSelect;
-  }, [onSelect]);
+    const current = pins.current;
+    const nextIds = new Set(venues.map((venue) => venue.id));
 
-  useEffect(() => {
-    onHoverRef.current = onHover;
-  }, [onHover]);
-
-  useEffect(() => {
-    if (!map) return;
-
-    let cancelled = false;
-    const pins = pinsRef.current;
-
-    async function syncPins() {
-      const maplibre = await import("maplibre-gl");
-      if (cancelled || !map) return;
-
-      const visibleIds = new Set(venues.map((venue) => venue.id));
-
-      for (const [id, pin] of pins) {
-        if (!visibleIds.has(id)) {
-          pin.marker.remove();
-          pin.root.unmount();
-          pins.delete(id);
-        }
+    for (const [id, entry] of current) {
+      if (!nextIds.has(id)) {
+        entry.root.unmount();
+        entry.marker.remove();
+        current.delete(id);
       }
-
-      venues.forEach((venue, index) => {
-        const selected = venue.id === selectedId;
-        const highlighted = venue.id === hoveredId;
-        const label = getPinLabel(venue.cuisines);
-        const existing = pins.get(venue.id);
-
-        if (existing) {
-          existing.marker.setLngLat([venue.lng, venue.lat]);
-          existing.button.setAttribute("aria-label", `${venue.name}, ${label}`);
-          existing.root.render(
-            <CuisinePill
-              highlighted={highlighted}
-              index={index}
-              label={label}
-              selected={selected}
-            />,
-          );
-          return;
-        }
-
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "venue-pin";
-        button.setAttribute("aria-label", `${venue.name}, ${label}`);
-
-        button.addEventListener("click", (event) => {
-          event.stopPropagation();
-          onSelectRef.current(venue.id);
-        });
-        button.addEventListener("mouseenter", () =>
-          onHoverRef.current(venue.id),
-        );
-        button.addEventListener("mouseleave", () => onHoverRef.current(null));
-        button.addEventListener("focus", () => onHoverRef.current(venue.id));
-        button.addEventListener("blur", () => onHoverRef.current(null));
-
-        const root = createRoot(button);
-        root.render(
-          <CuisinePill
-            highlighted={highlighted}
-            index={index}
-            label={label}
-            selected={selected}
-          />,
-        );
-
-        const marker = new maplibre.Marker({
-          element: button,
-          anchor: "bottom",
-        })
-          .setLngLat([venue.lng, venue.lat])
-          .addTo(map);
-
-        pins.set(venue.id, { marker, root, button });
-      });
     }
 
-    void syncPins();
+    const fresh: HTMLElement[] = [];
+    for (const venue of venues) {
+      const existing = current.get(venue.id);
+      if (existing) {
+        existing.marker.setLngLat([venue.lng, venue.lat]);
+        continue;
+      }
+      const el = document.createElement("div");
+      el.className = "cuisine-pin";
+      el.addEventListener("mouseenter", () => onHover(venue.id));
+      el.addEventListener("mouseleave", () => onHover(null));
+      const marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([venue.lng, venue.lat])
+        .addTo(map);
+      current.set(venue.id, { marker, root: createRoot(el), el });
+      fresh.push(el);
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [map, venues, selectedId, hoveredId]);
+    // GSAP: one-shot stagger after first paint only (DESIGN.md → Motion).
+    if (!staggered.current && fresh.length > 0 && !prefersReducedMotion()) {
+      staggered.current = true;
+      void import("gsap").then(({ gsap }) => {
+        gsap.from(fresh, {
+          autoAlpha: 0,
+          y: -8,
+          scale: 0.8,
+          transformOrigin: "50% 100%",
+          duration: 0.4,
+          ease: "power2.out",
+          stagger: 0.025,
+        });
+      });
+    }
+  }, [map, venues, onHover]);
+
+  // Re-render pill state (selection / hover) without recreating markers.
+  useEffect(() => {
+    for (const venue of venues) {
+      const entry = pins.current.get(venue.id);
+      if (!entry) continue;
+      entry.el.classList.toggle("is-active", venue.id === selectedId);
+      entry.root.render(
+        <CuisinePill
+          hovered={venue.id === hoveredId}
+          label={cuisinePinLabel(venue.cuisines)}
+          onSelect={() => onSelect(venue.id)}
+          selected={venue.id === selectedId}
+        />,
+      );
+    }
+  }, [venues, selectedId, hoveredId, onSelect]);
 
   useEffect(() => {
-    const pins = pinsRef.current;
+    const current = pins.current;
     return () => {
-      for (const pin of pins.values()) {
-        pin.marker.remove();
-        pin.root.unmount();
+      for (const [, entry] of current) {
+        entry.root.unmount();
+        entry.marker.remove();
       }
-      pins.clear();
+      current.clear();
     };
-  }, [map]);
+  }, []);
 
   return null;
 }
