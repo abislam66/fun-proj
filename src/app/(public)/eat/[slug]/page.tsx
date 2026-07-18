@@ -44,6 +44,8 @@ export default async function VenueDetailPage({
       "Near Temple Main Campus",
     building: row!.building,
     floor: row!.floor,
+    lat: row!.lat,
+    lng: row!.lng,
     acceptsCash: row!.acceptsCash,
     acceptsCard: row!.acceptsCard,
     cuisines: row!.cuisines.filter(

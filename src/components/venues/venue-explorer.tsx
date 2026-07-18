@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { MapPlaceholder } from "@/components/layout/map-placeholder";
+import { VenueMapLoader } from "@/components/map/venue-map-loader";
 import { SiteHeader } from "@/components/layout/site-header";
 import { MobileSheet } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/primitives";
@@ -23,12 +23,20 @@ function ResultsPanel({
   setFilters,
   backPath,
   unknownHours,
+  selectedId,
+  hoveredId,
+  onHover,
+  onSelect,
 }: {
   venues: Venue[];
   filters: VenueFilters;
   setFilters: (filters: VenueFilters) => void;
   backPath: string;
   unknownHours: number;
+  selectedId: string | null;
+  hoveredId: string | null;
+  onHover: (venueId: string | null) => void;
+  onSelect: (venueId: string | null) => void;
 }) {
   return (
     <div className="results-panel">
@@ -58,7 +66,11 @@ function ResultsPanel({
       </div>
       <VenueList
         backPath={backPath}
+        hoveredId={hoveredId}
         onClear={() => setFilters(EMPTY_VENUE_FILTERS)}
+        onHover={onHover}
+        onSelect={onSelect}
+        selectedId={selectedId}
         venues={venues}
       />
     </div>
@@ -75,6 +87,8 @@ export function VenueExplorer({
   const [filters, setFilters] = useState(() =>
     parseVenueFilters(new URLSearchParams(initialQuery)),
   );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const query = serializeVenueFilters(filters);
   const backPath = query ? `/?${query}` : "/";
   const visibleVenues = useMemo(
@@ -91,10 +105,20 @@ export function VenueExplorer({
     window.history.replaceState(window.history.state, "", next);
   }, [query]);
 
+  useEffect(() => {
+    if (selectedId && !visibleVenues.some((venue) => venue.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [selectedId, visibleVenues]);
+
   const panel = (
     <ResultsPanel
       backPath={backPath}
       filters={filters}
+      hoveredId={hoveredId}
+      onHover={setHoveredId}
+      onSelect={setSelectedId}
+      selectedId={selectedId}
       setFilters={setFilters}
       unknownHours={unknownHours}
       venues={visibleVenues}
@@ -106,7 +130,15 @@ export function VenueExplorer({
       <SiteHeader />
       <div className="desktop-results">{panel}</div>
       <div className="explorer-map">
-        <MapPlaceholder />
+        <VenueMapLoader
+          backPath={backPath}
+          hoveredId={hoveredId}
+          onClearSelection={() => setSelectedId(null)}
+          onHover={setHoveredId}
+          onSelect={setSelectedId}
+          selectedId={selectedId}
+          venues={visibleVenues}
+        />
       </div>
       <div className="mobile-results">
         <MobileSheet>{panel}</MobileSheet>
