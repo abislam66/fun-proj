@@ -62,7 +62,7 @@ export function VenueMap({
       setMap(ready);
     }
 
-    function useFallbackBasemap(reason: string) {
+    function applyFallbackBasemap(reason: string) {
       if (usedFallback || cancelled || !mapRef.current) return;
       usedFallback = true;
       setBasemapFailed(true);
@@ -83,7 +83,7 @@ export function VenueMap({
         dragRotate: false,
         pitchWithRotate: false,
       });
-    } catch (error) {
+    } catch {
       // e.g. WebGL unavailable — try a second time with the solid style.
       try {
         instance = new maplibregl.Map({
@@ -114,7 +114,7 @@ export function VenueMap({
       const message = event.error?.message ?? "unknown map error";
       // Style/tile fetch failures shouldn't blank the whole map — keep pins.
       if (!instance.isStyleLoaded()) {
-        useFallbackBasemap(message);
+        applyFallbackBasemap(message);
       }
     });
 
@@ -127,7 +127,7 @@ export function VenueMap({
     // If the remote style never arrives, fall back so pins still show.
     const watchdog = window.setTimeout(() => {
       if (!cancelled && mapRef.current && !mapRef.current.isStyleLoaded()) {
-        useFallbackBasemap("style load timed out");
+        applyFallbackBasemap("style load timed out");
       }
     }, 8000);
 
