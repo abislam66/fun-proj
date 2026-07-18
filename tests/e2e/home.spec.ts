@@ -7,7 +7,13 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Find your next campus bite." }),
   ).toBeVisible();
-  await expect(page.getByText("Interactive map coming later")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Temple campus food map" })
+      .or(page.getByLabel("Temple campus food map")),
+  ).toBeVisible();
+  await expect(page.getByText("OpenStreetMap")).toBeVisible();
+  await expect(page.getByText("Temple Main Campus")).toBeVisible();
 
   const results = page.locator(".desktop-results");
   const cuisine = results.getByRole("button", { name: "Cuisine", exact: true });
@@ -26,6 +32,21 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
   await search.fill("halal");
   await expect(page).toHaveURL(/q=halal/);
   await expect(results.getByText("Compass Kitchen")).toBeVisible();
+});
+
+test("desktop map pin opens mini-card", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const pin = page.getByRole("button", { name: /Compass Kitchen, Halal/ });
+  await expect(pin).toBeVisible({ timeout: 15_000 });
+  await pin.click();
+
+  const miniCard = page.locator("a.map-mini-card");
+  await expect(miniCard).toBeVisible();
+  await expect(miniCard).toContainText("Compass Kitchen");
+  await miniCard.click();
+  await expect(page).toHaveURL(/eat\/compass-kitchen/);
 });
 
 test("mobile explorer exposes sheet detents", async ({ page }) => {

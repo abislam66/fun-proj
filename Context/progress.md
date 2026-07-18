@@ -7,18 +7,13 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Mock-functional public + admin UI is complete; frontend polish continues while Supabase/data wiring waits. Map/pins and production data/auth wiring remain.
-- **Next up:**
-  1. Continue frontend polish against `DESIGN.md` (explorer UX, detail, admin density).
-  2. Implement the MapLibre campus map and cuisine pins against the explorer's isolated map slot.
-  3. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to Drizzle/Supabase when credentials are available.
-  4. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+
 
 ---
 
-## 2026-07-18 — In-page filter expand panel
+## 2026-07-18 — Campus MapLibre map + cuisine pins
 
-Replaced the Cuisine/Area overlay popovers (`position: fixed` / `absolute`) with an in-flow expand panel under the filter chip row. Opening a filter pushes the results list down instead of covering it; only one panel is open at a time; options use the same chip language as the strip.
+Replaced the explorer map placeholder with a client-only MapLibre map locked to Temple campus bounds (OpenFreeMap Positron). Cuisine-pill HTML markers, list↔pin hover/selection sync, pin mini-card → detail, custom zoom + locate (browser-only blue dot), and quiet OSM/OpenFreeMap attribution. Public `Venue` fixtures now carry `lat`/`lng`.
 
 ---
 

@@ -18,7 +18,13 @@ export const DEFAULT_VIEWPORT = {
 
 export const MAP_STYLE_URL =
   process.env.NEXT_PUBLIC_MAP_STYLE_URL ??
-  "https://tiles.openfreemap.org/styles/liberty";
+  "https://tiles.openfreemap.org/styles/positron";
+
+/** Soft clamp so pan/zoom stays campus-local, never Philly-wide. */
+export const CAMPUS_MAX_BOUNDS = [
+  [CAMPUS_BOUNDS.west - 0.004, CAMPUS_BOUNDS.south - 0.003],
+  [CAMPUS_BOUNDS.east + 0.004, CAMPUS_BOUNDS.north + 0.003],
+] as [[number, number], [number, number]];
 
 /** Anonymous problem reports per salted IP hash per rolling window. */
 export const PROBLEM_REPORT_RATE_LIMIT = {

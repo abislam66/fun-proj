@@ -16,6 +16,10 @@ export interface Venue {
   location: string;
   building?: string | null;
   floor?: string | null;
+  /** WGS84 latitude — required for map pins. */
+  lat: number;
+  /** WGS84 longitude — required for map pins. */
+  lng: number;
   acceptsCash: boolean | null;
   acceptsCard: boolean | null;
   cuisines: CuisineKey[];
