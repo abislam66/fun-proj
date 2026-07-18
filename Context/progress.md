@@ -7,11 +7,21 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. The full mock-functional public and admin UI is complete and verified; map/pins and production data/auth wiring remain.
+- **Phase:** Phase 1 implementation. The mock-functional public/admin UI **and the interactive MapLibre campus map** are complete and verified; production data/auth wiring remains.
 - **Next up:**
   1. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to the existing Drizzle/Supabase server boundary.
-  2. Implement the MapLibre campus map and cuisine pins against the explorer's isolated map slot.
-  3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+  2. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+  3. Reconcile the campus coordinate envelope: `CAMPUS_BOUNDS` (Zod) is far tighter than the `venues` DB CHECK box, and the KML seed bypasses Zod entirely — verify against real placemarks before publishing.
+
+---
+
+## 2026-07-18 — MapLibre campus map + cuisine pins
+
+Implemented the deferred explorer map slot per `DESIGN.md` / `docs/design/map-and-pins.md`. Added `src/components/map/` (`VenueMap`, `VenuePinLayer`, `CuisinePill`, `LocateControl`, `MapAttribution`); MapLibre GL 5 is dynamically imported (`ssr:false`) so it stays out of the initial bundle and the list works if tiles fail. Cuisine-pill pins carry the primary cuisine label only (open status stays off the pin), Framer Motion springs the selected pill, and a deferred one-shot GSAP stagger runs after load (skipped under `prefers-reduced-motion`). List↔pin hover sync, pin→mini-card→detail (second tap opens), custom zoom + client-only locate (blue dot never leaves the browser), quiet OSM/OpenFreeMap attribution, and campus-locked `maxBounds`.
+
+Also fixed two audit defects this unblocked: the basemap style URL was `liberty` in `site.ts` / `.env.example` / CI — corrected to **Positron** (the mandated muted basemap); and `lat`/`lng` were missing from the client `Venue` payload — added to the type, all fixtures, and the detail-page row mapper so map and list share one payload.
+
+Verification: TypeScript, ESLint, Prettier, 32 Vitest tests, production build (map code-split out of first load), and 4 Chromium Playwright flows (now asserting the live map renders). Deps added: `maplibre-gl@^5`, `framer-motion`, `gsap`.
 
 ---
 
