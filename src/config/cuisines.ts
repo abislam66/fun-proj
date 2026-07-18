@@ -12,3 +12,12 @@ export const CUISINES = {
 export type CuisineKey = keyof typeof CUISINES;
 
 export const CUISINE_KEYS = Object.keys(CUISINES) as CuisineKey[];
+
+/**
+ * The map pin's short label: primary (first) cuisine wins; an untagged venue
+ * still reads as food ("Food"). See DESIGN.md → Pins and public/pins/README.md.
+ */
+export function cuisinePinLabel(cuisines: readonly CuisineKey[]): string {
+  const primary = cuisines[0];
+  return primary ? CUISINES[primary].pinLabel : CUISINES.other.pinLabel;
+}

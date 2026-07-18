@@ -24,6 +24,32 @@ test("desktop explorer filters and preserves URL state", async ({ page }) => {
   ).toBeHidden();
 });
 
+test("map pin opens a mini-card and navigates to detail", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const pill = page.locator(".cuisine-pill").first();
+  await expect(pill).toBeVisible({ timeout: 15000 });
+  await pill.click();
+
+  const miniCard = page.locator(".map-mini-card");
+  await expect(miniCard).toBeVisible();
+  const details = miniCard.getByRole("link", { name: /View details/ });
+  await expect(details).toBeVisible();
+
+  await details.click();
+  await expect(page).toHaveURL(/\/eat\//);
+});
+
+test("filtering narrows the pins on the map", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/?q=halal");
+
+  await expect(page.locator(".cuisine-pill")).toHaveCount(1, {
+    timeout: 15000,
+  });
+});
+
 test("mobile explorer exposes sheet detents", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

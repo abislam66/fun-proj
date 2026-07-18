@@ -6,16 +6,10 @@ import { useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { CuisinePill } from "@/components/map/cuisine-pill";
-import { CUISINES } from "@/config/cuisines";
+import { cuisinePinLabel } from "@/config/cuisines";
 import type { Venue } from "@/lib/venues";
 
 type PinEntry = { marker: Marker; root: Root; el: HTMLElement };
-
-/** Primary cuisine wins; unset venues still read as food ("Food"). */
-function pinLabel(venue: Venue): string {
-  const key = venue.cuisines[0];
-  return key ? CUISINES[key].pinLabel : CUISINES.other.pinLabel;
-}
 
 function prefersReducedMotion(): boolean {
   return (
@@ -99,7 +93,7 @@ export function VenuePinLayer({
       entry.root.render(
         <CuisinePill
           hovered={venue.id === hoveredId}
-          label={pinLabel(venue)}
+          label={cuisinePinLabel(venue.cuisines)}
           onSelect={() => onSelect(venue.id)}
           selected={venue.id === selectedId}
         />,
