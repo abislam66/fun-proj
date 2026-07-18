@@ -12,6 +12,9 @@ export interface Venue {
   name: string;
   description: string | null;
   status: "published" | "retired";
+  /** Map pin coordinates — map and list consume this same payload. */
+  lat: number;
+  lng: number;
   zoneKey: ZoneKey | null;
   location: string;
   building?: string | null;

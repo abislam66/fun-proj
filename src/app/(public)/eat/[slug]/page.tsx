@@ -32,6 +32,8 @@ export default async function VenueDetailPage({
     name: row!.name,
     description: row!.description,
     status: row!.status === "retired" ? "retired" : "published",
+    lat: row!.lat,
+    lng: row!.lng,
     zoneKey:
       row!.zoneKey === "norris" ||
       row!.zoneKey === "montgomery" ||
