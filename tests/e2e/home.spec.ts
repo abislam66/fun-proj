@@ -36,11 +36,9 @@ test("desktop map pin opens mini-card", async ({ page }) => {
   await expect(pin).toBeVisible({ timeout: 15_000 });
   await pin.click();
 
-  const miniCard = page.getByRole("link", { name: /Compass Kitchen/ }).filter({
-    has: page.locator(".map-mini-card"),
-  });
-  await expect(page.locator(".map-mini-card")).toBeVisible();
-  await expect(page.locator(".map-mini-card")).toContainText("Compass Kitchen");
+  const miniCard = page.locator("a.map-mini-card");
+  await expect(miniCard).toBeVisible();
+  await expect(miniCard).toContainText("Compass Kitchen");
   await miniCard.click();
   await expect(page).toHaveURL(/eat\/compass-kitchen/);
 });
