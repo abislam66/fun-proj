@@ -21,7 +21,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      NEXT_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
+      NEXT_PUBLIC_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/positron
       IP_HASH_SALT: ci-test-salt-not-for-production
 
     steps:
