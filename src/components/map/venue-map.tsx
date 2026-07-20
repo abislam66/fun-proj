@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
+import { CampusBuildingLayer } from "@/components/map/campus-building-layer";
 import { LocateControl } from "@/components/map/locate-control";
 import { MapAttribution } from "@/components/map/map-attribution";
 import { VenuePinLayer } from "@/components/map/venue-pin-layer";
@@ -176,6 +177,8 @@ export function VenueMap({
       </div>
 
       <MapAttribution />
+
+      <CampusBuildingLayer map={map} />
 
       <VenuePinLayer
         hoveredId={hoveredId}

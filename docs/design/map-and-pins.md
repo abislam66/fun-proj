@@ -29,6 +29,10 @@ Center and fit the **campus bounding box** only (never Philly-wide):
 
 Phase 1 ships stock Positron. If base POI icons compete with our pills, fork the style in Maputnik later.
 
+### Campus buildings (2D custom)
+
+Named Temple footprints are a curated GeoJSON overlay (`public/maps/campus-buildings.geojson`) with per-feature fill/stroke/label tokens — not the anonymous OpenMapTiles `building` layer (which has no names). Stock Positron buildings are muted underneath. Full research + tweak options: [`campus-buildings.md`](./campus-buildings.md). Stay 2D (no `fill-extrusion`).
+
 ### Zones
 
 Campus zones are **list/filter language** in v1. No zone polygon fills on the map.
@@ -88,6 +92,7 @@ Keep cuisine pills. Don’t invent truck-only pin components.
 | Component | Responsibility |
 |-----------|----------------|
 | `VenueMap` | MapLibre init, style URL, bounds, controls shell |
+| `CampusBuildingLayer` | Curated campus footprints + labels (GeoJSON, 2D) |
 | `VenuePinLayer` | Markers / symbols; maps primary cuisine → pill label |
 | `CuisinePill` | Shared pin chrome + label text |
 | `LocateControl` | Client geolocation + blue-dot marker |

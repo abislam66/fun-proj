@@ -7,11 +7,17 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Mock-functional public + admin UI and the campus MapLibre map (cuisine pins, locate, attribution) are in place. Production data/auth wiring and KML seed remain.
+- **Phase:** Phase 1 implementation. Mock-functional public + admin UI and the campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) are in place. Production data/auth wiring and KML seed remain.
 - **Next up:**
-  1. Continue frontend polish against `DESIGN.md` where needed.
+  1. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
   2. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to Drizzle/Supabase when credentials are available.
   3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+
+---
+
+## 2026-07-20 — Custom campus buildings (2D MapLibre overlay)
+
+Explored how to tweak the map stack for per-building design. OpenFreeMap Positron / OpenMapTiles `building` tiles are anonymous (no names), so Maputnik forks alone cannot style “Charles Library” vs “Engineering.” Recommended approach: mute stock footprints and overlay curated GeoJSON with per-feature paint tokens. Seeded 52 named Temple buildings from OSM, added `CampusBuildingLayer`, and documented options in `docs/design/campus-buildings.md`.
 
 ---
 
