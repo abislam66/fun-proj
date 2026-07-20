@@ -137,7 +137,8 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 | Desktop map pane | Fills the right split full height; controls inset in the map pane; list hover ↔ pin highlight |
 | Locate me | Client-only blue-dot; never sent to server |
 | Zones | List-filter language only in v1 — no zone polygon fills |
-| Optional later | Faint dashed campus outline; Maputnik fork to strip base POI clutter |
+| Campus buildings | Curated GeoJSON overlay — per-building 2D fill/stroke/label; mute stock Positron footprints ([docs/design/campus-buildings.md](docs/design/campus-buildings.md)) |
+| Optional later | Faint dashed campus outline; Maputnik fork to strip base POI clutter / align land+water to tokens |
 
 See [docs/design/map-and-pins.md](docs/design/map-and-pins.md) and [public/pins/](public/pins/).
 
@@ -156,7 +157,7 @@ See [docs/design/map-and-pins.md](docs/design/map-and-pins.md) and [public/pins/
 
 Maps to `Specs/architecture-planning.md`:
 
-- `components/map/` — `VenueMap`, `VenuePinLayer`, `LocateControl`, `MapAttribution`
+- `components/map/` — `VenueMap`, `CampusBuildingLayer`, `VenuePinLayer`, `LocateControl`, `MapAttribution`
 - `components/venues/` — `VenueExplorer`, `VenueList`, `VenueListRow`, `VenueMiniCard`, `FilterBar`, `OpenStatusBadge`, `PaymentIcons`, `CuisineTags`
 - `components/ui/` — Button, Chip, Sheet, Input, EmptyState, Wordmark
 - Tokens in `globals.css` + Tailwind 4 `@theme`
@@ -186,5 +187,6 @@ Maps to `Specs/architecture-planning.md`:
 | 2026-07-17 | OpenFreeMap Positron basemap | Muted land so cherry pins dominate; $0, keyless, swappable |
 | 2026-07-17 | Cuisine-label pill pins (not status beacons) | Pin must help decide what to eat; open status lives on list/mini-card |
 | 2026-07-17 | Framer Motion + deferred GSAP pin stagger | Motion personality without wrecking Lighthouse ≥90 |
+| 2026-07-20 | Curated GeoJSON campus buildings (2D), not basemap fork alone | OpenMapTiles buildings have no names; per-building design needs our footprints + paint tokens |
 | 2026-07-17 | Cabinet Grotesk + Satoshi + JetBrains Mono | Modern athletic utility; blacklist of overused UI fonts honored |
 | 2026-07-17 | Desktop is first-class (split explorer), not stretched mobile | Portfolio / hiring-manager viewport; mobile-first priority unchanged |
