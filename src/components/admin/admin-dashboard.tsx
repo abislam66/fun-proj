@@ -28,10 +28,12 @@ export function AdminDashboard({
   const [reports, setReports] = useState(initialReports);
   const [pendingReportId, setPendingReportId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [venueFilter, setVenueFilter] = useState<"all" | VenueRow["status"]>("all");
-  const [reportFilter, setReportFilter] = useState<"all" | ProblemReportRow["status"]>(
-    "open",
+  const [venueFilter, setVenueFilter] = useState<"all" | VenueRow["status"]>(
+    "all",
   );
+  const [reportFilter, setReportFilter] = useState<
+    "all" | ProblemReportRow["status"]
+  >("open");
 
   const venueNameById = useMemo(
     () => new Map(venues.map((venue) => [venue.id, venue.name])),
@@ -52,9 +54,13 @@ export function AdminDashboard({
   const visibleReports = reports.filter(
     (report) => reportFilter === "all" || report.status === reportFilter,
   );
-  const published = venues.filter((venue) => venue.status === "published").length;
+  const published = venues.filter(
+    (venue) => venue.status === "published",
+  ).length;
   const drafts = venues.filter((venue) => venue.status === "draft").length;
-  const openReports = reports.filter((report) => report.status === "open").length;
+  const openReports = reports.filter(
+    (report) => report.status === "open",
+  ).length;
   const stale = venues.filter(
     (venue) => !venue.lastVerifiedAt && venue.status !== "retired",
   ).length;
@@ -66,7 +72,9 @@ export function AdminDashboard({
     if (!result.ok) return;
     setReports((current) =>
       current.map((report) =>
-        report.id === id ? { ...report, status, resolvedAt: new Date() } : report,
+        report.id === id
+          ? { ...report, status, resolvedAt: new Date() }
+          : report,
       ),
     );
   }
@@ -158,7 +166,10 @@ export function AdminDashboard({
               {visibleVenues.map((venue) => (
                 <tr key={venue.id}>
                   <td>
-                    <Link className="admin-record-link" href={`/admin/venues/${venue.id}`}>
+                    <Link
+                      className="admin-record-link"
+                      href={`/admin/venues/${venue.id}`}
+                    >
                       <strong>{venue.name}</strong>
                       <span>{venue.slug}</span>
                     </Link>
@@ -176,7 +187,10 @@ export function AdminDashboard({
                   </td>
                   <td>{venue.updatedAt.toLocaleDateString()}</td>
                   <td>
-                    <Link className="admin-row-action" href={`/admin/venues/${venue.id}`}>
+                    <Link
+                      className="admin-row-action"
+                      href={`/admin/venues/${venue.id}`}
+                    >
                       Edit
                     </Link>
                   </td>
@@ -231,14 +245,20 @@ export function AdminDashboard({
               </span>
               <div className="report-row-actions">
                 <Button
-                  disabled={pendingReportId === report.id || report.status === "actioned"}
+                  disabled={
+                    pendingReportId === report.id ||
+                    report.status === "actioned"
+                  }
                   onClick={() => updateReport(report.id, "actioned")}
                   variant="secondary"
                 >
                   Mark actioned
                 </Button>
                 <Button
-                  disabled={pendingReportId === report.id || report.status === "dismissed"}
+                  disabled={
+                    pendingReportId === report.id ||
+                    report.status === "dismissed"
+                  }
                   onClick={() => updateReport(report.id, "dismissed")}
                   variant="ghost"
                 >

@@ -89,12 +89,7 @@ function drawPill(borderWidth: number): PillIconAsset {
   ctx.fillStyle = FILL;
   ctx.fill();
 
-  const imageData = ctx.getImageData(
-    0,
-    0,
-    WIDTH * SCALE,
-    HEIGHT * SCALE,
-  );
+  const imageData = ctx.getImageData(0, 0, WIDTH * SCALE, HEIGHT * SCALE);
 
   return {
     width: WIDTH * SCALE,

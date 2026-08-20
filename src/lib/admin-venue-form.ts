@@ -128,10 +128,18 @@ export function validateVenueDraft(
   const lng = Number(draft.lng);
 
   if (!draft.name.trim()) errors.name = "Enter a venue name.";
-  if (!Number.isFinite(lat) || lat < CAMPUS_BOUNDS.south || lat > CAMPUS_BOUNDS.north) {
+  if (
+    !Number.isFinite(lat) ||
+    lat < CAMPUS_BOUNDS.south ||
+    lat > CAMPUS_BOUNDS.north
+  ) {
     errors.lat = `Use a latitude from ${CAMPUS_BOUNDS.south} to ${CAMPUS_BOUNDS.north}.`;
   }
-  if (!Number.isFinite(lng) || lng < CAMPUS_BOUNDS.west || lng > CAMPUS_BOUNDS.east) {
+  if (
+    !Number.isFinite(lng) ||
+    lng < CAMPUS_BOUNDS.west ||
+    lng > CAMPUS_BOUNDS.east
+  ) {
     errors.lng = `Use a longitude from ${CAMPUS_BOUNDS.west} to ${CAMPUS_BOUNDS.east}.`;
   }
   if (forPublish && !draft.zoneKey) {

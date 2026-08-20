@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { publishVenue, retireVenue, upsertVenue, verifyVenue } from "@/actions/admin";
+import {
+  publishVenue,
+  retireVenue,
+  upsertVenue,
+  verifyVenue,
+} from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Input } from "@/components/ui/primitives";
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
@@ -50,7 +55,10 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
   const [noticeIsError, setNoticeIsError] = useState(false);
   const [pending, setPending] = useState(false);
 
-  function setField<K extends keyof VenueDraft>(field: K, value: VenueDraft[K]) {
+  function setField<K extends keyof VenueDraft>(
+    field: K,
+    value: VenueDraft[K],
+  ) {
     setDraft((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setNotice("");
@@ -75,7 +83,11 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
       return null;
     }
 
-    const saved: VenueDraft = { ...draft, id: result.data.id, slug: result.data.slug };
+    const saved: VenueDraft = {
+      ...draft,
+      id: result.data.id,
+      slug: result.data.slug,
+    };
     setDraft(saved);
     return saved;
   }
@@ -159,9 +171,16 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
     );
   }
 
-  function updateHours(day: WeekdayKey, field: "open" | "close", value: string) {
+  function updateHours(
+    day: WeekdayKey,
+    field: "open" | "close",
+    value: string,
+  ) {
     const current = draft.hours[day]?.[0] ?? { open: "10:30", close: "18:00" };
-    setField("hours", { ...draft.hours, [day]: [{ ...current, [field]: value }] });
+    setField("hours", {
+      ...draft.hours,
+      [day]: [{ ...current, [field]: value }],
+    });
   }
 
   function toggleDay(day: WeekdayKey, open: boolean) {
@@ -218,7 +237,9 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
 
       {notice ? (
         <div
-          className={noticeIsError ? "admin-notice admin-notice-error" : "admin-notice"}
+          className={
+            noticeIsError ? "admin-notice admin-notice-error" : "admin-notice"
+          }
           role="status"
         >
           {notice}
@@ -234,7 +255,10 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
         }}
       >
         <div className="editor-column">
-          <EditorSection description="Core public-facing details." title="Venue details">
+          <EditorSection
+            description="Core public-facing details."
+            title="Venue details"
+          >
             <div className="admin-field-grid">
               <Field error={errors.name} label="Venue name" required>
                 <Input
@@ -263,7 +287,9 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
               <textarea
                 className="admin-textarea"
                 maxLength={500}
-                onChange={(event) => setField("description", event.target.value)}
+                onChange={(event) =>
+                  setField("description", event.target.value)
+                }
                 rows={4}
                 value={draft.description}
               />
@@ -381,7 +407,9 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
             <label className="hours-known-toggle">
               <input
                 checked={draft.hoursKnown}
-                onChange={(event) => setField("hoursKnown", event.target.checked)}
+                onChange={(event) =>
+                  setField("hoursKnown", event.target.checked)
+                }
                 type="checkbox"
               />
               Posted hours are known
@@ -395,7 +423,9 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
                       <label className="day-toggle">
                         <input
                           checked={Boolean(range)}
-                          onChange={(event) => toggleDay(day, event.target.checked)}
+                          onChange={(event) =>
+                            toggleDay(day, event.target.checked)
+                          }
                           type="checkbox"
                         />
                         {dayLabels[day]}

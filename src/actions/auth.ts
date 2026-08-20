@@ -63,7 +63,9 @@ export async function signOutAdmin(): Promise<ActionResult> {
  * at /admin/reset-password. Supabase itself never reveals whether the
  * address exists, so this always returns ok on a well-formed email.
  */
-export async function requestPasswordReset(raw: unknown): Promise<ActionResult> {
+export async function requestPasswordReset(
+  raw: unknown,
+): Promise<ActionResult> {
   try {
     const { email } = requestPasswordResetSchema.parse(raw);
 

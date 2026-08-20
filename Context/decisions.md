@@ -17,7 +17,7 @@ never fully root-caused (the SMTP username field kept reverting or
 mismatching between saves; possibly compounded by a browser extension
 already known to interfere with form fields on this machine, per the
 `fdprocessedid` hydration issue fixed earlier). Rather than keep debugging a
-flaky third-party mail pipeline just to get a *first* admin password set,
+flaky third-party mail pipeline just to get a _first_ admin password set,
 switched to a strictly simpler bootstrap: Supabase Dashboard → Authentication
 → Users → **Add User** exposes a direct password field + "Auto Confirm User"
 checkbox on user creation — no email involved at all.
@@ -72,7 +72,7 @@ Also added: a "Forgot password?" self-service trigger on `/admin/sign-in`
 (`requestPasswordReset` → `resetPasswordForEmail`, redirect target
 `/admin/reset-password`), and `src/components/auth/recovery-redirect.tsx` — a
 tiny client component mounted in the root layout that forwards stray recovery
-tokens found on *any* page to `/admin/reset-password`. This exists because
+tokens found on _any_ page to `/admin/reset-password`. This exists because
 Supabase's dashboard-triggered reset has no field to specify a redirect
 target — it always uses the project's Site URL (this app's homepage) — so
 without this safety net, a maintainer using the dashboard's own "Reset
@@ -103,8 +103,8 @@ past migrations.
 
 **Why:** the OTP flow never worked end-to-end this session — `auth.users.last_sign_in_at`
 stayed `null` across every real attempt. Root cause: Supabase's default PKCE
-flow requires the `code_verifier` cookie set when the link is *requested* to
-still be present when it's *clicked* — which fails if the email is opened on a
+flow requires the `code_verifier` cookie set when the link is _requested_ to
+still be present when it's _clicked_ — which fails if the email is opened on a
 different device/browser than the one used to sign in (common — people check
 email on their phone), and separately is vulnerable to corporate link-scanners
 (Office 365 Safe Links, common on `.edu` tenants) pre-fetching and consuming
@@ -160,7 +160,7 @@ crashing.
 Direct SQL writes to `venues` (bypassing `src/actions/admin.ts`) don't trigger
 `revalidateTag("venues")`. Next's on-disk incremental cache (`.next/cache`) then
 keeps serving whatever `getPublishedVenues()`/`getVenueBySlug()` returned on the
-*first* call after the dev server started — even across dev-server restarts, since
+_first_ call after the dev server started — even across dev-server restarts, since
 the cache persists to disk, not just memory. Hit this directly this session: an
 out-of-band `UPDATE venues SET status='published'` left the public homepage
 showing stale (in one case, empty) results until `.next/cache` was deleted by hand.

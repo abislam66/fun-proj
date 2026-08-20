@@ -14,7 +14,7 @@ The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD a
 
 - `Context/progress.md` — running log, newest entries first. Add a dated entry after any meaningful unit of work (this satisfies the progress rule in `Specs/conventions.md`), and keep the "Current status / Next up" block at the top accurate — it is the fastest way for a fresh session to orient.
 - `Context/backlog.md` — deliberately deferred items, each with a revisit trigger. Add a row whenever something is skipped "for later"; scan the triggers when planning new work. It is not a roadmap — planned work lives in `Specs/features.md`.
-- `Context/decisions.md` — append-only log of decisions too small for a `Specs/` change but important enough that silently reversing them would cause confusion (the *why*, not the *what* or *when*). Add an entry whenever you make a call like this; check it before "fixing" something that looks broken but might be intentional.
+- `Context/decisions.md` — append-only log of decisions too small for a `Specs/` change but important enough that silently reversing them would cause confusion (the _why_, not the _what_ or _when_). Add an entry whenever you make a call like this; check it before "fixing" something that looks broken but might be intentional.
 
 ## Which spec answers what
 

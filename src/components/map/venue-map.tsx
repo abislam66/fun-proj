@@ -8,7 +8,10 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import { CampusBuildingLayer } from "@/components/map/campus-building-layer";
 import { LocateControl } from "@/components/map/locate-control";
 import { MapAttribution } from "@/components/map/map-attribution";
-import { VenuePillLayer, VENUE_PILL_LAYER_ID } from "@/components/map/venue-pill-layer";
+import {
+  VenuePillLayer,
+  VENUE_PILL_LAYER_ID,
+} from "@/components/map/venue-pill-layer";
 import { CuisineTags, OpenStatus } from "@/components/venues/venue-bits";
 import {
   CAMPUS_BOUNDS,

@@ -182,7 +182,8 @@ export function VenuePillLayer({
 
     return () => {
       if (!map.getStyle()) return;
-      if (map.getLayer(VENUE_PILL_LAYER_ID)) map.removeLayer(VENUE_PILL_LAYER_ID);
+      if (map.getLayer(VENUE_PILL_LAYER_ID))
+        map.removeLayer(VENUE_PILL_LAYER_ID);
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
     };
   }, [map]);

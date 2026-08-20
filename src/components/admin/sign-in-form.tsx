@@ -74,8 +74,8 @@ export function SignInForm() {
           <>
             <h1>Check your email</h1>
             <p>
-              If {email} has an admin account, a password reset link is on
-              its way.
+              If {email} has an admin account, a password reset link is on its
+              way.
             </p>
             <Button onClick={backToSignIn} variant="ghost">
               Back to sign in
@@ -86,7 +86,11 @@ export function SignInForm() {
             <h1>Reset your password</h1>
             <p>Enter your admin email and we&rsquo;ll send a reset link.</p>
 
-            <form className="signin-form" noValidate onSubmit={submitForgotPassword}>
+            <form
+              className="signin-form"
+              noValidate
+              onSubmit={submitForgotPassword}
+            >
               <label className="admin-field">
                 <span>Email address</span>
                 <Input
