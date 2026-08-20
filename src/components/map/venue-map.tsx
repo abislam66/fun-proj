@@ -8,7 +8,7 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import { CampusBuildingLayer } from "@/components/map/campus-building-layer";
 import { LocateControl } from "@/components/map/locate-control";
 import { MapAttribution } from "@/components/map/map-attribution";
-import { VenuePinLayer } from "@/components/map/venue-pin-layer";
+import { VenuePillLayer, VENUE_PILL_LAYER_ID } from "@/components/map/venue-pill-layer";
 import { CuisineTags, OpenStatus } from "@/components/venues/venue-bits";
 import {
   CAMPUS_BOUNDS,
@@ -98,7 +98,13 @@ export function VenueMap({
         if (!disposed) setFailed(true);
       });
 
-      instance.on("click", () => {
+      instance.on("click", (e) => {
+        if (instance.getLayer(VENUE_PILL_LAYER_ID)) {
+          const hits = instance.queryRenderedFeatures(e.point, {
+            layers: [VENUE_PILL_LAYER_ID],
+          });
+          if (hits.length > 0) return;
+        }
         onClearSelectionRef.current();
       });
     }
@@ -180,7 +186,7 @@ export function VenueMap({
 
       <CampusBuildingLayer map={map} />
 
-      <VenuePinLayer
+      <VenuePillLayer
         hoveredId={hoveredId}
         map={map}
         onHover={onHover}

@@ -7,6 +7,7 @@ import {
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
+import { ZONES } from "@/config/zones";
 import { WEEKDAY_KEYS, type VenueHours } from "@/lib/hours";
 import type { Venue } from "@/lib/venues";
 
@@ -109,7 +110,7 @@ export function VenueDetail({
 
         <section className="detail-section">
           <h2>Location</h2>
-          <p>{venue.location}</p>
+          <p>{venue.zoneKey ? ZONES[venue.zoneKey].label : venue.location}</p>
           {venue.building ? (
             <p className="location-landmark">Near {venue.building}</p>
           ) : null}

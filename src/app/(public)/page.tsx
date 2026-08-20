@@ -1,5 +1,5 @@
 import { VenueExplorer } from "@/components/venues/venue-explorer";
-import { MOCK_VENUES } from "@/lib/venue-fixtures";
+import { getPublishedVenues, toVenue } from "@/lib/db/queries";
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -13,7 +13,8 @@ export default async function HomePage({ searchParams }: PageProps) {
     else if (value !== undefined) params.set(key, value);
   });
 
-  return (
-    <VenueExplorer initialQuery={params.toString()} venues={MOCK_VENUES} />
-  );
+  const publishedRows = await getPublishedVenues();
+  const venues = publishedRows.map(toVenue);
+
+  return <VenueExplorer initialQuery={params.toString()} venues={venues} />;
 }

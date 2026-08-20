@@ -1,0 +1,1 @@
+ALTER TYPE "public"."venue_type" ADD VALUE 'convenience';

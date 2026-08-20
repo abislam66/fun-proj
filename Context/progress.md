@@ -7,11 +7,104 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Mock-functional public + admin UI and the campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) are in place. Production data/auth wiring and KML seed remain.
+- **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. 69 real venues (from the curated `TuEats.kml` export) are seeded and published. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place.
+- **Admin auth is email/password**, not OTP/magic-link — the OTP flow never completed a real session end-to-end (see `Context/decisions.md`'s 2026-08-18 entries) and was replaced outright. Authorization is unchanged: `requireAdmin()` still requires a `profiles` row with `role: "admin"`, granted only via direct DB access. `Specs/auth-security.md` now documents this V1 model (anonymous public / password admin(s) / future OTP student accounts) and explicitly allows for more than one admin account — no more spec/implementation mismatch.
+- **Live admin login:** `abislam64@gmail.com` (not `@temple.edu` — admin isn't domain-restricted, see spec). Password was set directly via Supabase Dashboard → Authentication → Users → Add User (password field right in that dialog, "Auto Confirm User" checked) — deliberately bypassing email/SMTP entirely after the custom-SMTP password-recovery path proved unreliable (intermittent `535 "Invalid username"` SMTP auth failures against Resend, one confirmed success sandwiched between many failures — never fully root-caused, see `Context/decisions.md`). The original `tur67594@temple.edu` account was deleted; its orphaned `profiles` row was deleted and replaced with one for the new account's `auth.users.id`.
+- **Pending:** a second admin account for a friend — email not yet provided by the user ("will look later"). Same no-email bootstrap process once it's available: Supabase Dashboard → Add User (with password) → tell me the email + desired display name → I grant `role: "admin"` via direct DB insert. No code changes needed for any number of admins — `profiles.role` is a per-row flag, not a singleton.
+- **Password recovery** (`/admin/reset-password`, "Forgot password?" on the sign-in page) is fully implemented and spec-documented, but **not confirmed working end-to-end** — the custom SMTP (Resend) setup behind it is still flaky. Not currently blocking anything since admin bootstrap no longer depends on it; worth finishing later if self-service reset is wanted.
+- **Known gaps:** every seeded venue is missing `hours`/`cuisines`/`zoneKey` (the KML source only carries name + coordinates) — pins show the "Food" fallback and the UI shows "Hours unknown" until an admin enriches each one via `/admin`. ~12-15 seeded entries are national chains (Chick-fil-A, 7-Eleven, etc.) stored with `type: "truck"` since the seed script hardcodes it — needs a reclassification pass. See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed this session, and `Context/backlog.md` for deferred items.
 - **Next up:**
-  1. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
-  2. Connect public venue reads, anonymous reports, admin authentication, and admin mutations to Drizzle/Supabase when credentials are available.
-  3. Run the KML seed workflow and replace mock fixtures with reviewed development data.
+  1. Confirm `abislam64@gmail.com` can sign in at `/admin/sign-in` and reach the real dashboard.
+  2. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for their account.
+  3. Use the real `/admin` to enrich hours/cuisine/zone for the 69 seeded venues and reclassify mis-typed chain entries.
+  4. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
+  5. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
+
+---
+
+## 2026-08-18 — Password recovery flow (Supabase token delivery fixed)
+
+The first real password-reset attempt (dashboard-triggered) landed on the
+homepage with no way to set a new password — Supabase delivers recovery
+tokens in the URL **fragment**, which the app had no code to read anywhere.
+Full root cause and fix in `Context/decisions.md`. Summary: added
+`/admin/reset-password` (client-side token exchange via `setSession`/
+`verifyOtp`, then a server-action password update via `updateAdminPassword`),
+a "Forgot password?" self-service trigger on `/admin/sign-in`
+(`requestPasswordReset`), and a small safety-net redirect
+(`recovery-redirect.tsx`) that forwards stray recovery tokens landing on any
+other page to the reset screen — needed because Supabase's dashboard-triggered
+reset always uses the project's Site URL (this app's homepage) with no way to
+override it. No callback route was restored; both token formats Supabase can
+send are handled entirely client-side plus one server action for the actual
+write. `requireAdmin()`/`profiles.role` authorization is untouched — a
+recovery session can only ever change that one account's password.
+
+`Specs/auth-security.md` also got an explicit rewrite (permission granted)
+to describe the actual V1 model instead of the stale OTP-for-everyone text:
+anonymous public browsing, password-only admin auth with authentication/
+authorization kept separate, and a clearly-marked **not-implemented** future
+phase for verified-student OTP accounts.
+
+Verified without real admin credentials (Playwright + `pnpm` checks):
+public site loads with no auth, `/admin` redirects unauthenticated visitors,
+`/admin/reset-password` shows a graceful "link expired" state with no
+session/tokens present (doesn't crash, doesn't get bounced by middleware),
+wrong password still rejected on sign-in, zero console errors. `typecheck` /
+`lint` / `test` (34 tests) / `build` all pass.
+
+**Not verified** (needs the account owner): a real recovery email actually
+landing on `/admin/reset-password` and successfully setting a password, then
+signing in with it. The stale email already received won't work even now —
+it points at the homepage with no handler for a same-page reset; a fresh one
+via the in-app "Forgot password?" link is needed after the redirect URL is
+allow-listed (see `ACTION REQUIRED` in the current status block above).
+
+---
+
+## 2026-08-18 — Admin auth: OTP/magic-link → email + password
+
+The OTP admin sign-in built earlier this session never actually completed a
+session (`auth.users.last_sign_in_at` stayed `null` across every real attempt,
+confirmed by direct query) — root cause traced to Supabase's PKCE flow
+requiring the same browser/device for request and click, which real-world
+email checking (often on a different device) and corporate link-scanners
+(Office 365 Safe Links) both break. Replaced outright per explicit product
+decision: `signInAdmin(email, password)` via `supabase.auth.signInWithPassword()`,
+`signOutAdmin()`, a "Sign out" control added to the admin header (didn't
+exist before). Deleted the OTP-only `/auth/callback` route handler,
+`requestSignup` action, `assertSignupAllowed` rate limiter, and
+`SIGNUP_RATE_LIMIT` config. Dropped `otp_requests` via a proper migration
+(`drizzle/0002_drop_otp_requests.sql`).
+
+Verified without needing real admin credentials: public homepage loads with
+no auth, `/admin` redirects unauthenticated visitors, the sign-in form is
+email+password only (no OTP UI left), a wrong password is rejected with a
+generic "Invalid login credentials" message (no user enumeration), zero
+console errors — all via a live Playwright run against the dev server.
+`pnpm typecheck` / `lint` / `test` (34 tests) / `build` all pass in a clean,
+isolated run (dev server stopped, `.next` cleared first — running `next dev`
+and `next build` concurrently against the same `.next` directory produces
+spurious webpack module-resolution errors; not a real bug, just don't do
+both at once).
+
+Not yet verified (needs the account owner, who alone knows/sets the real
+password): correct-password sign-in, sign-out invalidating a real session,
+session persistence across a refresh. See `Context/decisions.md` for the full
+rationale and the `Specs/auth-security.md` conflict this creates.
+
+---
+
+## 2026-08-18 — Real DB wiring, KML seed, and admin cutover
+
+Ran a full engineering audit (kept out of this log — see conversation/plan history) that found the app split between a fully-built server side (schema, Drizzle queries, server actions, real Supabase auth plumbing) and a public/admin UI still running entirely on mock data. Closed that gap:
+
+- Migrated `tueats-dev`, wired the public homepage and venue detail page to real `getPublishedVenues`/`getVenueBySlug` queries, removed `MOCK_VENUES` from both.
+- Ran `seed:kml` against the curated local `TuEats.kml` export (75 placemarks, 69 unique after dedup) — see `Context/decisions.md` for why the seed source changed from a live Google My Maps URL to this local file.
+- Built the real admin sign-in flow (`requestSignup` server action, `@temple.edu`-gated, Postgres-backed rate limit via a new `otp_requests` table) and cut the admin dashboard/venue editor over from the `localStorage` mock store to the real `src/actions/admin.ts` write path. Deleted `admin-mock.ts`, `admin-mock-store.ts`, `admin-mock.test.ts`, `mock-sign-in.tsx`.
+- Hit and fixed two real bugs: a `DIRECT_DATABASE_URL` pointed at Supabase's IPv6-only direct host (fails on networks without IPv6 — repointed at the pooler's session-mode port), and a `.next/cache` staleness issue where a direct-SQL write bypassed `revalidateTag` and kept serving stale data across dev-server restarts. Both documented in `Context/decisions.md`.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (35 tests), `pnpm build` all pass. `pnpm format:check` fails across ~75 files (including untouched ones) due to a pre-existing `core.autocrlf`/Prettier LF mismatch on this Windows checkout — not a regression from this session.
+- Explicitly deferred: `tests/e2e/home.spec.ts` (still asserts mock venue names), hours/cuisine enrichment content work, chain-restaurant type reclassification.
 
 ---
 

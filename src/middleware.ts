@@ -10,10 +10,10 @@ export async function middleware(request: NextRequest) {
     request: { headers: request.headers },
   });
 
-  const isMockSignIn = request.nextUrl.pathname === "/admin/sign-in";
-  const hasMockSession =
-    request.cookies.get("tueats_phase1_admin_mock")?.value === "1";
-  if (isMockSignIn || hasMockSession) {
+  if (
+    request.nextUrl.pathname === "/admin/sign-in" ||
+    request.nextUrl.pathname === "/admin/reset-password"
+  ) {
     return response;
   }
 

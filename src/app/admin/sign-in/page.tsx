@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { MockSignIn } from "@/components/admin/mock-sign-in";
+import { SignInForm } from "@/components/admin/sign-in-form";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
 };
 
 export default function AdminSignInPage() {
-  return <MockSignIn />;
+  return <SignInForm />;
 }

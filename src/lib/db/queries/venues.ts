@@ -1,6 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 
+import { CUISINE_KEYS } from "@/config/cuisines";
+import { ZONE_KEYS } from "@/config/zones";
 import { db } from "@/lib/db";
 import {
   problemReports,
@@ -10,10 +12,40 @@ import {
   type VenueRow,
 } from "@/lib/db/schema";
 import type { VenueHours } from "@/lib/hours";
+import type { Venue } from "@/lib/venues";
 
 export type PublicVenue = Omit<VenueRow, "hours"> & {
   hours: VenueHours | null;
 };
+
+/** Maps a DB row to the frontend `Venue` shape used by mock fixtures. */
+export function toVenue(row: PublicVenue): Venue {
+  return {
+    id: row.id,
+    slug: row.slug,
+    type: row.type,
+    name: row.name,
+    description: row.description,
+    status: row.status === "retired" ? "retired" : "published",
+    zoneKey: ZONE_KEYS.includes(row.zoneKey as (typeof ZONE_KEYS)[number])
+      ? (row.zoneKey as Venue["zoneKey"])
+      : null,
+    location:
+      [row.building, row.floor].filter(Boolean).join(" · ") ||
+      "Near Temple Main Campus",
+    building: row.building,
+    floor: row.floor,
+    lat: row.lat,
+    lng: row.lng,
+    acceptsCash: row.acceptsCash,
+    acceptsCard: row.acceptsCard,
+    cuisines: row.cuisines.filter((value): value is Venue["cuisines"][number] =>
+      CUISINE_KEYS.includes(value as (typeof CUISINE_KEYS)[number]),
+    ),
+    hours: row.hours,
+    lastVerifiedAt: row.lastVerifiedAt?.toISOString().slice(0, 10) ?? null,
+  };
+}
 
 const PUBLIC_STATUSES = ["published", "retired"] as const;
 

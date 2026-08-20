@@ -2,7 +2,12 @@ import type { CuisineKey } from "@/config/cuisines";
 import type { ZoneKey } from "@/config/zones";
 import { isHoursUnknown, isOpenNow, type VenueHours } from "@/lib/hours";
 
-export type VenueType = "truck" | "restaurant" | "cafe" | "vending";
+export type VenueType =
+  | "truck"
+  | "restaurant"
+  | "cafe"
+  | "vending"
+  | "convenience";
 export type PaymentFilter = "cash" | "card";
 
 export interface Venue {

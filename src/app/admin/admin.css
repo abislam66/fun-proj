@@ -60,6 +60,14 @@
   font-weight: 700;
 }
 
+button.admin-public-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .admin-public-link:hover,
 .admin-record-link:hover,
 .admin-row-action:hover,

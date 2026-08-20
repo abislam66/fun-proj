@@ -30,6 +30,7 @@ export const venueTypeSchema = z.enum([
   "restaurant",
   "cafe",
   "vending",
+  "convenience",
 ]);
 
 export const venueStatusSchema = z.enum(["draft", "published", "retired"]);

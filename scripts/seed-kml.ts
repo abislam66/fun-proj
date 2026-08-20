@@ -2,11 +2,16 @@
  * Idempotent KML → draft venues importer.
  * Run locally: `pnpm seed:kml`
  *
- * Sources Temple's public My Map KML (names + coordinates).
+ * Sources the curated `TuEats.kml` export (My Maps → File → Download KML)
+ * at the repo root — names + coordinates. Re-export and overwrite that file
+ * whenever the map changes, then re-run.
  * Never publishes — drafts only. Near-duplicate names stay distinct venues.
  * Matching is by exact name (case-insensitive) OR near-identical coordinates,
  * never by fuzzy name similarity (see domain-knowledge.md gyro pitfall).
  */
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -14,8 +19,7 @@ import postgres from "postgres";
 import { uniqueSlug } from "../src/lib/slug";
 import { venues } from "../src/lib/db/schema";
 
-const KML_URL =
-  "https://www.google.com/maps/d/kml?mid=1kFf5IaeeXiFpn_UHIyd4UqwHj90&forcekml=1";
+const KML_PATH = path.resolve(__dirname, "../TuEats.kml");
 
 const COORD_EPSILON = 0.00015; // ~15m
 
@@ -82,14 +86,8 @@ async function main() {
     throw new Error("DATABASE_URL is required (load via .env.local)");
   }
 
-  console.log("Fetching KML…");
-  const response = await fetch(KML_URL);
-  if (!response.ok) {
-    throw new Error(
-      `KML fetch failed: ${response.status} ${response.statusText}`,
-    );
-  }
-  const kml = await response.text();
+  console.log(`Reading ${KML_PATH}…`);
+  const kml = await readFile(KML_PATH, "utf-8");
   const placemarks = parsePlacemarks(kml);
   console.log(`Parsed ${placemarks.length} placemarks`);
 

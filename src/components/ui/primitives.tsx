@@ -41,7 +41,18 @@ export function Input({
   className,
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={join("input", className)} {...props} />;
+  // Password-manager / form-autofill browser extensions inject attributes
+  // like `fdprocessedid` onto inputs before React hydrates, which React
+  // then reports as a hydration mismatch. It's a real mismatch (the
+  // extension really did mutate the DOM), but not a bug in this app —
+  // suppress just this node's own-attribute warnings, not its subtree.
+  return (
+    <input
+      className={join("input", className)}
+      suppressHydrationWarning
+      {...props}
+    />
+  );
 }
 
 export function Chip({

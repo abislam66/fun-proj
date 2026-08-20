@@ -3,65 +3,72 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { resolveProblemReport } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Input } from "@/components/ui/primitives";
-import {
-  resetMockAdminState,
-  updateMockAdminState,
-  useMockAdminState,
-} from "@/lib/admin-mock-store";
-import {
-  setMockReportStatus,
-  type MockReportStatus,
-  type MockVenueStatus,
-} from "@/lib/admin-mock";
+import type { ProblemReportRow, VenueRow } from "@/lib/db/schema";
 
-const reportLabels = {
+const reportLabels: Record<ProblemReportRow["kind"], string> = {
   closed: "Reported closed",
   moved: "Reported moved",
   wrong_hours: "Wrong hours",
   other: "Other",
-} as const;
+};
 
-export function AdminDashboard() {
-  const state = useMockAdminState();
+type ResolvableStatus = Exclude<ProblemReportRow["status"], "open">;
+
+export function AdminDashboard({
+  initialReports,
+  initialVenues,
+}: {
+  initialReports: ProblemReportRow[];
+  initialVenues: VenueRow[];
+}) {
+  const [venues] = useState(initialVenues);
+  const [reports, setReports] = useState(initialReports);
+  const [pendingReportId, setPendingReportId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [venueFilter, setVenueFilter] = useState<"all" | MockVenueStatus>(
-    "all",
-  );
-  const [reportFilter, setReportFilter] = useState<"all" | MockReportStatus>(
+  const [venueFilter, setVenueFilter] = useState<"all" | VenueRow["status"]>("all");
+  const [reportFilter, setReportFilter] = useState<"all" | ProblemReportRow["status"]>(
     "open",
   );
 
-  const venues = useMemo(
+  const venueNameById = useMemo(
+    () => new Map(venues.map((venue) => [venue.id, venue.name])),
+    [venues],
+  );
+
+  const visibleVenues = useMemo(
     () =>
-      state.venues.filter(
+      venues.filter(
         (venue) =>
           (venueFilter === "all" || venue.status === venueFilter) &&
           `${venue.name} ${venue.slug}`
             .toLowerCase()
             .includes(search.trim().toLowerCase()),
       ),
-    [search, state.venues, venueFilter],
+    [search, venues, venueFilter],
   );
-  const reports = state.reports.filter(
+  const visibleReports = reports.filter(
     (report) => reportFilter === "all" || report.status === reportFilter,
   );
-  const published = state.venues.filter(
-    (venue) => venue.status === "published",
-  ).length;
-  const drafts = state.venues.filter(
-    (venue) => venue.status === "draft",
-  ).length;
-  const openReports = state.reports.filter(
-    (report) => report.status === "open",
-  ).length;
-  const stale = state.venues.filter(
+  const published = venues.filter((venue) => venue.status === "published").length;
+  const drafts = venues.filter((venue) => venue.status === "draft").length;
+  const openReports = reports.filter((report) => report.status === "open").length;
+  const stale = venues.filter(
     (venue) => !venue.lastVerifiedAt && venue.status !== "retired",
   ).length;
 
-  function updateReport(id: string, status: MockReportStatus) {
-    updateMockAdminState((current) => setMockReportStatus(current, id, status));
+  async function updateReport(id: string, status: ResolvableStatus) {
+    setPendingReportId(id);
+    const result = await resolveProblemReport({ id, status });
+    setPendingReportId(null);
+    if (!result.ok) return;
+    setReports((current) =>
+      current.map((report) =>
+        report.id === id ? { ...report, status, resolvedAt: new Date() } : report,
+      ),
+    );
   }
 
   return (
@@ -70,15 +77,8 @@ export function AdminDashboard() {
         <div>
           <p className="eyebrow">Operations snapshot</p>
           <h1>Venue management</h1>
-          <p>
-            Local mock data only. Changes persist in this browser and do not
-            call production actions.
-          </p>
         </div>
         <div className="admin-heading-actions">
-          <Button variant="ghost" onClick={resetMockAdminState}>
-            Reset mock data
-          </Button>
           <Link className="button button-primary" href="/admin/venues/new">
             Add venue
           </Link>
@@ -110,7 +110,7 @@ export function AdminDashboard() {
         <div className="admin-panel-header">
           <div>
             <h2>Venues</h2>
-            <p>{venues.length} records shown</p>
+            <p>{visibleVenues.length} records shown</p>
           </div>
           <div className="admin-table-tools">
             <label className="admin-search">
@@ -155,13 +155,10 @@ export function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {venues.map((venue) => (
+              {visibleVenues.map((venue) => (
                 <tr key={venue.id}>
                   <td>
-                    <Link
-                      className="admin-record-link"
-                      href={`/admin/venues/${venue.id}`}
-                    >
+                    <Link className="admin-record-link" href={`/admin/venues/${venue.id}`}>
                       <strong>{venue.name}</strong>
                       <span>{venue.slug}</span>
                     </Link>
@@ -174,15 +171,12 @@ export function AdminDashboard() {
                   <td>{venue.zoneKey || "Not set"}</td>
                   <td>
                     {venue.lastVerifiedAt
-                      ? new Date(venue.lastVerifiedAt).toLocaleDateString()
+                      ? venue.lastVerifiedAt.toLocaleDateString()
                       : "Never"}
                   </td>
-                  <td>{venue.updatedAt}</td>
+                  <td>{venue.updatedAt.toLocaleDateString()}</td>
                   <td>
-                    <Link
-                      className="admin-row-action"
-                      href={`/admin/venues/${venue.id}`}
-                    >
+                    <Link className="admin-row-action" href={`/admin/venues/${venue.id}`}>
                       Edit
                     </Link>
                   </td>
@@ -190,7 +184,7 @@ export function AdminDashboard() {
               ))}
             </tbody>
           </table>
-          {venues.length === 0 ? (
+          {visibleVenues.length === 0 ? (
             <p className="admin-empty">No venues match these filters.</p>
           ) : null}
         </div>
@@ -200,7 +194,7 @@ export function AdminDashboard() {
         <div className="admin-panel-header">
           <div>
             <h2>Problem-report queue</h2>
-            <p>Review public corrections and record a mock outcome.</p>
+            <p>Review public corrections and record an outcome.</p>
           </div>
           <label>
             <span className="sr-only">Filter reports by status</span>
@@ -220,15 +214,15 @@ export function AdminDashboard() {
         </div>
 
         <div className="report-queue">
-          {reports.map((report) => (
+          {visibleReports.map((report) => (
             <article className="report-row" key={report.id}>
               <div className="report-kind">
                 <span>{reportLabels[report.kind]}</span>
-                <small>{report.createdAt}</small>
+                <small>{report.createdAt.toLocaleString()}</small>
               </div>
               <div className="report-copy">
                 <Link href={`/admin/venues/${report.venueId}`}>
-                  {report.venueName}
+                  {venueNameById.get(report.venueId) ?? "Unknown venue"}
                 </Link>
                 <p>{report.note || "No note provided."}</p>
               </div>
@@ -237,31 +231,23 @@ export function AdminDashboard() {
               </span>
               <div className="report-row-actions">
                 <Button
-                  disabled={report.status === "actioned"}
+                  disabled={pendingReportId === report.id || report.status === "actioned"}
                   onClick={() => updateReport(report.id, "actioned")}
                   variant="secondary"
                 >
                   Mark actioned
                 </Button>
                 <Button
-                  disabled={report.status === "dismissed"}
+                  disabled={pendingReportId === report.id || report.status === "dismissed"}
                   onClick={() => updateReport(report.id, "dismissed")}
                   variant="ghost"
                 >
                   Dismiss
                 </Button>
-                {report.status !== "open" ? (
-                  <Button
-                    onClick={() => updateReport(report.id, "open")}
-                    variant="ghost"
-                  >
-                    Reopen
-                  </Button>
-                ) : null}
               </div>
             </article>
           ))}
-          {reports.length === 0 ? (
+          {visibleReports.length === 0 ? (
             <p className="admin-empty">No reports in this queue.</p>
           ) : null}
         </div>

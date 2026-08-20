@@ -19,6 +19,7 @@ export const venueTypeEnum = pgEnum("venue_type", [
   "restaurant",
   "cafe",
   "vending",
+  "convenience",
 ]);
 
 export const venueStatusEnum = pgEnum("venue_status", [

@@ -1,13 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { signOutAdmin } from "@/actions/auth";
 import { Wordmark } from "@/components/ui/primitives";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function signOut() {
+    await signOutAdmin();
+    router.push("/admin/sign-in");
+    router.refresh();
+  }
 
   return (
     <div className="admin-shell">
@@ -18,10 +26,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <span>Admin</span>
         </div>
         <div className="admin-header-actions">
-          <span className="mock-badge">Mock workspace</span>
           <Link className="admin-public-link" href="/">
             View public site
           </Link>
+          <button className="admin-public-link" onClick={signOut} type="button">
+            Sign out
+          </button>
         </div>
       </header>
 

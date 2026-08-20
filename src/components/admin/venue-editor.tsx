@@ -4,26 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { publishVenue, retireVenue, upsertVenue, verifyVenue } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Input } from "@/components/ui/primitives";
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
 import { ZONES, type ZoneKey } from "@/config/zones";
-import {
-  EMPTY_MOCK_VENUE,
-  hasValidationErrors,
-  saveMockVenue,
-  setMockVenueStatus,
-  validateMockVenue,
-  verifyMockVenue,
-  type MockAdminVenue,
-  type MockPaymentValue,
-  type VenueValidationErrors,
-} from "@/lib/admin-mock";
-import {
-  updateMockAdminState,
-  useMockAdminState,
-} from "@/lib/admin-mock-store";
+import type { VenueRow } from "@/lib/db/schema";
 import { WEEKDAY_KEYS, type WeekdayKey } from "@/lib/hours";
+import {
+  EMPTY_VENUE_DRAFT,
+  fromDraft,
+  hasValidationErrors,
+  toDraft,
+  validateVenueDraft,
+  type PaymentTriState,
+  type VenueDraft,
+  type VenueDraftErrors,
+} from "@/lib/admin-venue-form";
 
 const dayLabels: Record<WeekdayKey, string> = {
   mon: "Mon",
@@ -35,111 +32,121 @@ const dayLabels: Record<WeekdayKey, string> = {
   sun: "Sun",
 };
 
-export function VenueEditor({ venueId }: { venueId?: string }) {
-  const state = useMockAdminState();
-  const source = venueId
-    ? state.venues.find((venue) => venue.id === venueId)
-    : undefined;
-
-  if (venueId && !source) {
-    return (
-      <AdminShell>
-        <div className="admin-not-found">
-          <p className="eyebrow">Mock record unavailable</p>
-          <h1>Venue not found</h1>
-          <p>This record may have been removed when mock data was reset.</p>
-          <Link className="button button-primary" href="/admin">
-            Return to dashboard
-          </Link>
-        </div>
-      </AdminShell>
-    );
-  }
-
+export function VenueEditor({ source }: { source?: VenueRow }) {
   return (
     <VenueEditorForm
-      key={
-        source
-          ? `${source.id}:${source.updatedAt}:${source.status}:${source.lastVerifiedAt}`
-          : "new"
-      }
-      source={source ?? EMPTY_MOCK_VENUE}
+      key={source ? `${source.id}:${source.updatedAt.toISOString()}` : "new"}
+      source={source ? toDraft(source) : EMPTY_VENUE_DRAFT}
     />
   );
 }
 
-function VenueEditorForm({ source }: { source: MockAdminVenue }) {
+function VenueEditorForm({ source }: { source: VenueDraft }) {
   const router = useRouter();
   const isNew = !source.id;
   const [draft, setDraft] = useState(source);
-  const [errors, setErrors] = useState<VenueValidationErrors>({});
+  const [errors, setErrors] = useState<VenueDraftErrors>({});
   const [notice, setNotice] = useState("");
+  const [noticeIsError, setNoticeIsError] = useState(false);
+  const [pending, setPending] = useState(false);
 
-  function setField<K extends keyof MockAdminVenue>(
-    field: K,
-    value: MockAdminVenue[K],
-  ) {
+  function setField<K extends keyof VenueDraft>(field: K, value: VenueDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setNotice("");
   }
 
-  function persist(forPublish = false): MockAdminVenue | null {
-    const nextErrors = validateMockVenue(draft, forPublish);
+  async function persist(forPublish = false): Promise<VenueDraft | null> {
+    const nextErrors = validateVenueDraft(draft, forPublish);
     setErrors(nextErrors);
     if (hasValidationErrors(nextErrors)) {
       setNotice("Fix the highlighted fields before continuing.");
+      setNoticeIsError(true);
       return null;
     }
 
-    let saved = draft;
-    updateMockAdminState((current) => {
-      const result = saveMockVenue(current, draft);
-      saved = result.venue;
-      return result.state;
-    });
+    setPending(true);
+    const result = await upsertVenue(fromDraft(draft));
+    setPending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return null;
+    }
+
+    const saved: VenueDraft = { ...draft, id: result.data.id, slug: result.data.slug };
     setDraft(saved);
     return saved;
   }
 
-  function save() {
-    const saved = persist();
+  async function save() {
+    const saved = await persist();
     if (!saved) return;
-    setNotice("Mock changes saved in this browser.");
+    setNotice("Saved.");
+    setNoticeIsError(false);
     if (isNew) router.replace(`/admin/venues/${saved.id}`);
   }
 
-  function publish() {
-    const saved = persist(true);
+  async function publish() {
+    const saved = await persist(true);
     if (!saved) return;
-    updateMockAdminState((current) =>
-      setMockVenueStatus(current, saved.id, "published"),
-    );
+
+    setPending(true);
+    const result = await publishVenue({ id: saved.id });
+    setPending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return;
+    }
+
     setDraft((current) => ({ ...current, status: "published" }));
-    setNotice("Venue published in the mock workspace.");
+    setNotice("Venue published.");
+    setNoticeIsError(false);
     if (isNew) router.replace(`/admin/venues/${saved.id}`);
   }
 
-  function retire() {
-    const saved = persist();
+  async function retire() {
+    const saved = await persist();
     if (!saved) return;
-    updateMockAdminState((current) =>
-      setMockVenueStatus(current, saved.id, "retired"),
-    );
+
+    setPending(true);
+    const result = await retireVenue({ id: saved.id });
+    setPending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return;
+    }
+
     setDraft((current) => ({ ...current, status: "retired" }));
-    setNotice("Venue retired in the mock workspace.");
+    setNotice("Venue retired.");
+    setNoticeIsError(false);
   }
 
-  function verify() {
-    const saved = persist();
+  async function verify() {
+    const saved = await persist();
     if (!saved) return;
-    const now = new Date();
-    updateMockAdminState((current) => verifyMockVenue(current, saved.id, now));
+
+    setPending(true);
+    const result = await verifyVenue({ id: saved.id });
+    setPending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return;
+    }
+
     setDraft((current) => ({
       ...current,
-      lastVerifiedAt: now.toISOString(),
+      lastVerifiedAt: result.data.lastVerifiedAt,
     }));
     setNotice("Venue marked verified just now.");
+    setNoticeIsError(false);
   }
 
   function toggleCuisine(cuisine: CuisineKey) {
@@ -152,19 +159,9 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
     );
   }
 
-  function updateHours(
-    day: WeekdayKey,
-    field: "open" | "close",
-    value: string,
-  ) {
-    const current = draft.hours[day]?.[0] ?? {
-      open: "10:30",
-      close: "18:00",
-    };
-    setField("hours", {
-      ...draft.hours,
-      [day]: [{ ...current, [field]: value }],
-    });
+  function updateHours(day: WeekdayKey, field: "open" | "close", value: string) {
+    const current = draft.hours[day]?.[0] ?? { open: "10:30", close: "18:00" };
+    setField("hours", { ...draft.hours, [day]: [{ ...current, [field]: value }] });
   }
 
   function toggleDay(day: WeekdayKey, open: boolean) {
@@ -184,7 +181,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
           <Link className="back-link" href="/admin">
             ← Back to venues
           </Link>
-          <p className="eyebrow">{isNew ? "New mock record" : draft.slug}</p>
+          <p className="eyebrow">{isNew ? "New venue" : draft.slug}</p>
           <h1>{isNew ? "Add venue" : draft.name}</h1>
           <div className="editor-meta">
             <span className={`admin-status status-${draft.status}`}>
@@ -199,18 +196,20 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
         </div>
         <div className="editor-actions">
           {!isNew ? (
-            <Button onClick={verify} variant="secondary">
+            <Button disabled={pending} onClick={verify} variant="secondary">
               Mark verified
             </Button>
           ) : null}
-          <Button onClick={save} variant="secondary">
-            Save draft
+          <Button disabled={pending} onClick={save} variant="secondary">
+            {pending ? "Saving…" : "Save draft"}
           </Button>
           {draft.status !== "published" ? (
-            <Button onClick={publish}>Publish</Button>
+            <Button disabled={pending} onClick={publish}>
+              {pending ? "Saving…" : "Publish"}
+            </Button>
           ) : null}
           {draft.status === "published" ? (
-            <Button onClick={retire} variant="ghost">
+            <Button disabled={pending} onClick={retire} variant="ghost">
               Retire venue
             </Button>
           ) : null}
@@ -219,11 +218,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
 
       {notice ? (
         <div
-          className={
-            hasValidationErrors(errors)
-              ? "admin-notice admin-notice-error"
-              : "admin-notice"
-          }
+          className={noticeIsError ? "admin-notice admin-notice-error" : "admin-notice"}
           role="status"
         >
           {notice}
@@ -235,14 +230,11 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          save();
+          void save();
         }}
       >
         <div className="editor-column">
-          <EditorSection
-            description="Core public-facing details."
-            title="Venue details"
-          >
+          <EditorSection description="Core public-facing details." title="Venue details">
             <div className="admin-field-grid">
               <Field error={errors.name} label="Venue name" required>
                 <Input
@@ -255,10 +247,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
                 <select
                   className="admin-select"
                   onChange={(event) =>
-                    setField(
-                      "type",
-                      event.target.value as MockAdminVenue["type"],
-                    )
+                    setField("type", event.target.value as VenueDraft["type"])
                   }
                   value={draft.type}
                 >
@@ -266,6 +255,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
                   <option value="restaurant">Restaurant</option>
                   <option value="cafe">Cafe</option>
                   <option value="vending">Vending</option>
+                  <option value="convenience">Convenience store</option>
                 </select>
               </Field>
             </div>
@@ -273,9 +263,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
               <textarea
                 className="admin-textarea"
                 maxLength={500}
-                onChange={(event) =>
-                  setField("description", event.target.value)
-                }
+                onChange={(event) => setField("description", event.target.value)}
                 rows={4}
                 value={draft.description}
               />
@@ -348,7 +336,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
             title="Location — deferred map field"
           >
             <div className="deferred-map-summary">
-              <strong>No map controls in this mock</strong>
+              <strong>No map controls yet</strong>
               <span>
                 Coordinate summary: {draft.lat || "—"}, {draft.lng || "—"}
               </span>
@@ -387,15 +375,13 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
           </EditorSection>
 
           <EditorSection
-            description="Hours are local campus wall-clock times. One range per day in this mock."
+            description="Hours are local campus wall-clock times. One range per day here."
             title="Hours"
           >
             <label className="hours-known-toggle">
               <input
                 checked={draft.hoursKnown}
-                onChange={(event) =>
-                  setField("hoursKnown", event.target.checked)
-                }
+                onChange={(event) => setField("hoursKnown", event.target.checked)}
                 type="checkbox"
               />
               Posted hours are known
@@ -409,9 +395,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
                       <label className="day-toggle">
                         <input
                           checked={Boolean(range)}
-                          onChange={(event) =>
-                            toggleDay(day, event.target.checked)
-                          }
+                          onChange={(event) => toggleDay(day, event.target.checked)}
                           type="checkbox"
                         />
                         {dayLabels[day]}
@@ -448,7 +432,7 @@ function VenueEditorForm({ source }: { source: MockAdminVenue }) {
               </div>
             ) : (
               <p className="admin-inline-note">
-                Public UI will display “Hours unknown.”
+                Public UI will display &ldquo;Hours unknown.&rdquo;
               </p>
             )}
           </EditorSection>
@@ -507,15 +491,15 @@ function PaymentField({
   value,
 }: {
   label: string;
-  onChange: (value: MockPaymentValue) => void;
-  value: MockPaymentValue;
+  onChange: (value: PaymentTriState) => void;
+  value: PaymentTriState;
 }) {
   return (
     <label className="admin-field">
       <span>{label}</span>
       <select
         className="admin-select"
-        onChange={(event) => onChange(event.target.value as MockPaymentValue)}
+        onChange={(event) => onChange(event.target.value as PaymentTriState)}
         value={value}
       >
         <option value="unknown">Unknown</option>

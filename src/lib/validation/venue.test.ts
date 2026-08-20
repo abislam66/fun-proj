@@ -42,7 +42,7 @@ describe("venueInputSchema", () => {
 
   it("rejects invalid cuisine tags", () => {
     expect(() =>
-      venueInputSchema.parse({ ...valid, cuisines: ["pizza"] }),
+      venueInputSchema.parse({ ...valid, cuisines: ["barbecue"] }),
     ).toThrow();
   });
 });

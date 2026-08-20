@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
+import { AdminAccessDenied } from "@/components/admin/access-denied";
 import { VenueEditor } from "@/components/admin/venue-editor";
+import { AuthError, requireAdmin } from "@/lib/auth";
+import { getVenueById } from "@/lib/db/queries";
 
 export const metadata: Metadata = {
   title: "Edit venue",
@@ -11,6 +15,20 @@ export default async function EditVenuePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  try {
+    await requireAdmin();
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return <AdminAccessDenied />;
+    }
+    throw error;
+  }
+
   const { id } = await params;
-  return <VenueEditor venueId={id} />;
+  const venue = await getVenueById(id);
+  if (!venue) {
+    notFound();
+  }
+
+  return <VenueEditor source={venue} />;
 }

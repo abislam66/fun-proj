@@ -9,5 +9,6 @@ export {
   insertProblemReport,
   listProblemReports,
   updateProblemReportStatus,
+  toVenue,
   type PublicVenue,
 } from "./venues";

@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 
+import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
+
 const cabinetGrotesk = localFont({
   src: [
     {
@@ -59,6 +61,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${cabinetGrotesk.variable} ${satoshi.variable}`}>
+        <RecoveryRedirect />
         {children}
       </body>
     </html>

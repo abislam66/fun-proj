@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **TuEats** — an unofficial, mobile-first web app for finding every non-meal-plan food option around Temple University's main campus (food trucks first, later restaurants/cafes/vending machines), with verified-student ratings and reviews.
 
-The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD and is the source of truth for every decision. **No application code exists yet** — implementation starts at milestone ① (truck directory). When code and specs appear to disagree, the specs win; flag the conflict rather than improvising.
+The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD and is the source of truth for every decision. **Implementation is underway at milestone ① (truck directory)**: schema, Drizzle queries, admin server actions, real Supabase auth, and the public map/list UI are built and wired to a real database; milestone ① is not yet complete (venue hours/cuisine enrichment and content curation are ongoing — see `Context/progress.md`). When code and specs appear to disagree, the specs win; flag the conflict rather than improvising.
 
 **Never modify files in `Specs/` without explicit instruction** (this rule is itself in `Specs/conventions.md`).
 
@@ -14,6 +14,7 @@ The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD a
 
 - `Context/progress.md` — running log, newest entries first. Add a dated entry after any meaningful unit of work (this satisfies the progress rule in `Specs/conventions.md`), and keep the "Current status / Next up" block at the top accurate — it is the fastest way for a fresh session to orient.
 - `Context/backlog.md` — deliberately deferred items, each with a revisit trigger. Add a row whenever something is skipped "for later"; scan the triggers when planning new work. It is not a roadmap — planned work lives in `Specs/features.md`.
+- `Context/decisions.md` — append-only log of decisions too small for a `Specs/` change but important enough that silently reversing them would cause confusion (the *why*, not the *what* or *when*). Add an entry whenever you make a call like this; check it before "fixing" something that looks broken but might be intentional.
 
 ## Which spec answers what
 
@@ -39,7 +40,7 @@ Pin assets and MapLibre notes live in `public/pins/` and `docs/design/map-and-pi
 
 ## Commands
 
-No build exists yet. The spec'd script conventions (`Specs/deployment.md`) to implement at scaffolding, pnpm-based: `dev`, `db:generate`, `db:migrate` (never auto-run in builds), `seed:kml`, `test` (Vitest), `test:e2e` (Playwright).
+pnpm-based, per `Specs/deployment.md`: `dev`, `build`, `lint`, `typecheck`, `format:check`, `db:generate`, `db:migrate` (never auto-run in builds), `seed:kml`, `test` (Vitest), `test:e2e` (Playwright).
 
 ## Architecture (the shape everything must fit)
 
@@ -47,13 +48,13 @@ Single Next.js App Router app on Vercel + Supabase (Postgres + Auth). No separat
 
 Load-bearing rules that span files:
 
-- **Single write path**: every mutation is a server action running validate (Zod, strict) → authorize (`requireUser`/`requireAdmin`) → rate-limit (Postgres-backed) → write (Drizzle) → `revalidateTag`. The browser never touches the DB. The only route handler is `/auth/callback`.
+- **Single write path**: every mutation is a server action running validate (Zod, strict) → authorize (`requireUser`/`requireAdmin`) → rate-limit (Postgres-backed) → write (Drizzle) → `revalidateTag`. The browser never touches the DB. There are no custom route handlers — admin auth is email/password via server actions (`signInAdmin`/`signOutAdmin`), no OTP code-exchange callback needed.
 - **Data access is server-only Drizzle**, and only `src/lib/db/queries/` imports the Drizzle client. `supabase-js` is for auth flows exclusively — never data. Supabase's PostgREST surface is neutralized with deny-all RLS. The service-role key is used nowhere.
 - **Everything is venue-generic**: "truck" (or any venue type) appears only as a `venue.type` value — never in table, route, or component names (`/eat/[slug]`, `VenueCard`). This is the "platform-ready" goal; violating it recreates a future migration.
 - **"Open now" is computed client-side** from shipped hours so public pages stay static/ISR. Hours are local wall-clock (`America/New_York`) via `lib/hours.ts` — never UTC instants.
 - **Caching is event-driven**: tags `venues` and `venue:{slug}`, invalidated by the writes that change them. No TTLs, no cron.
 - **Venues are retired, never deleted** (`status: draft → published → retired`); slugs are immutable after publish and collision-suffixed.
-- **Auth**: passwordless email OTP to `@temple.edu` only (enforced in our `requestSignup` action, not a dashboard setting); no social logins ever — they'd bypass the campus-mailbox trust model. Browsing never requires login; auth gates writes only.
+- **Auth (V1)**: no student/member accounts exist yet. The only auth surface is admin sign-in — email/password via Supabase Auth (`signInAdmin`), never OTP/magic-link. Authentication and authorization are separate: a successful sign-in only proves identity, never grants admin access — `requireAdmin()` separately requires a `profiles` row with `role: "admin"`, set only via direct DB access (`Specs/auth-security.md:57`). Browsing never requires login. Verified `@temple.edu` student accounts (email OTP, ratings/reviews) are planned for a later phase, not V1 — see `Context/decisions.md`.
 - **PII**: email lives only in Supabase `auth.users`; display name is the only user field in any payload; raw IPs never stored (salted hash); user geolocation never leaves the browser; user content rendered as plain text only (`dangerouslySetInnerHTML` banned).
 - **No LLM anything** (deps, keys, `src/lib/ai/`, UI hooks) until the four-condition gate in `Specs/llm-integration.md` is passed.
 - **Phase discipline**: don't implement later-phase features while the current milestone is incomplete. Build order: ① truck directory → ② accounts + ratings/reviews/proposals → ③ new venue types.
