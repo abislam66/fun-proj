@@ -33,7 +33,6 @@ type VenuePillProps = {
   name: string;
   priority: number;
   iconId: string;
-  textSize: number;
 };
 
 function toFeatureCollection(
@@ -52,7 +51,6 @@ function toFeatureCollection(
         name: venue.name,
         priority,
         iconId: emphasized ? PILL_ICON_SELECTED : PILL_ICON_NORMAL,
-        textSize: emphasized ? 12.5 : 11,
       };
       return {
         type: "Feature" as const,
@@ -141,15 +139,39 @@ export function VenuePillLayer({
         layout: {
           "icon-image": ["get", "iconId"],
           "icon-text-fit": "both",
-          "icon-text-fit-padding": [2, 6, 2, 6],
+          // Tightened from [2,6,2,6] — less dead space around the text
+          // inside the pill means a smaller collision footprint per venue,
+          // so more pills fit before anything has to hide.
+          "icon-text-fit-padding": [1, 3, 1, 3],
+          "icon-padding": 0,
           "icon-anchor": "bottom",
           "icon-allow-overlap": false,
           "icon-optional": false,
           "text-field": ["get", "name"],
           "text-font": ["Noto Sans Bold"],
-          "text-size": ["get", "textSize"],
+          // Smaller at campus-wide zoom (smaller pill footprint → far more
+          // fit without colliding), growing toward the previous fixed size
+          // as you zoom in — native GL interpolation, not custom logic.
+          // Selected/hovered emphasis comes from the thicker-border icon
+          // variant (iconId) rather than a bigger text-size here — nesting
+          // per-feature branching around a zoom expression like this one
+          // hit a MapLibre GL validation edge case (see commit history).
+          "text-size": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            14,
+            6,
+            15.5,
+            7,
+            17,
+            10,
+            18.5,
+            13,
+          ],
           "text-max-width": 7,
           "text-line-height": 1.1,
+          "text-padding": 1,
           "text-anchor": "bottom",
           "text-allow-overlap": false,
           "text-optional": true,
