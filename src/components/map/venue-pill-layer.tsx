@@ -28,6 +28,24 @@ function firstSymbolLayerId(map: MapLibreMap): string | undefined {
   return layers.find((layer) => layer.type === "symbol")?.id;
 }
 
+/**
+ * With overlap allowed, several pills can share a pixel. MapLibre's own
+ * ordering of `queryRenderedFeatures` results isn't a documented contract,
+ * so pick the visually topmost hit ourselves using the same `priority`
+ * field the layer is sorted by, rather than trusting `features[0]`.
+ */
+function topFeature(
+  features: MapGeoJSONFeature[] | undefined,
+): MapGeoJSONFeature | undefined {
+  if (!features || features.length === 0) return undefined;
+  return features.reduce((top, feature) => {
+    const topPriority = (top.properties?.priority as number | undefined) ?? 0;
+    const featurePriority =
+      (feature.properties?.priority as number | undefined) ?? 0;
+    return featurePriority > topPriority ? feature : top;
+  });
+}
+
 type VenuePillProps = {
   id: string;
   name: string;
@@ -40,12 +58,23 @@ function toFeatureCollection(
   selectedId: string | null,
   hoveredId: string | null,
 ) {
+  // With icon/text-allow-overlap true, symbol-sort-key controls visual
+  // stacking directly: a *higher* sort key wins the overlap (opposite of
+  // the placement-priority meaning it has when overlap is disallowed).
+  // Base order is stable per-render (index); hover bumps a pill above the
+  // rest, selection bumps it above hover, and selection wins ties with
+  // hover so a stronger signal never gets buried by a weaker one.
+  const base = venues.length;
   return {
     type: "FeatureCollection" as const,
     features: venues.map((venue, index) => {
       const emphasized = venue.id === selectedId || venue.id === hoveredId;
       const priority =
-        venue.id === selectedId ? -2 : venue.id === hoveredId ? -1 : index;
+        venue.id === selectedId
+          ? base * 2 + index
+          : venue.id === hoveredId
+            ? base + index
+            : index;
       const properties: VenuePillProps = {
         id: venue.id,
         name: venue.name,
@@ -67,11 +96,12 @@ function toFeatureCollection(
 /**
  * Venue markers as a single native MapLibre symbol layer: a 9-slice pill+
  * stem icon (venue-pill-icon.ts) with the venue name fit inside it via
- * icon-text-fit. Collision detection, priority ordering, and zoom-based
- * reveal all come from the GL engine, not custom logic. `icon-optional:
- * false` + `text-optional: true` means a crowded pill falls back to its
- * bare (nameless) form rather than disappearing — the marker stays
- * discoverable even when its name can't fit.
+ * icon-text-fit. Both icon and text allow overlap, so every venue renders
+ * every pill on every frame — no GL collision detection deciding which
+ * pills survive as you pan/zoom, which previously made pills appear and
+ * disappear unpredictably in dense clusters. `symbol-sort-key` (see
+ * `toFeatureCollection`) controls which pill draws on top when several
+ * overlap: selected beats hovered beats default insertion order.
  */
 export function VenuePillLayer({
   map,
@@ -140,22 +170,25 @@ export function VenuePillLayer({
           "icon-image": ["get", "iconId"],
           "icon-text-fit": "both",
           // Tightened from [2,6,2,6] — less dead space around the text
-          // inside the pill means a smaller collision footprint per venue,
-          // so more pills fit before anything has to hide.
+          // keeps each pill visually compact now that pills can overlap
+          // freely (no collision system to shrink the footprint for).
           "icon-text-fit-padding": [1, 3, 1, 3],
           "icon-padding": 0,
           "icon-anchor": "bottom",
-          "icon-allow-overlap": false,
+          // Overlap is allowed rather than left to GL collision detection:
+          // dense clusters render every pill every time instead of some
+          // winning the collision test and others vanishing as you pan/zoom.
+          "icon-allow-overlap": true,
           "icon-optional": false,
           "text-field": ["get", "name"],
           "text-font": ["Noto Sans Bold"],
-          // Smaller at campus-wide zoom (smaller pill footprint → far more
-          // fit without colliding), growing toward the previous fixed size
-          // as you zoom in — native GL interpolation, not custom logic.
-          // Selected/hovered emphasis comes from the thicker-border icon
-          // variant (iconId) rather than a bigger text-size here — nesting
-          // per-feature branching around a zoom expression like this one
-          // hit a MapLibre GL validation edge case (see commit history).
+          // Smaller at campus-wide zoom, growing toward the previous fixed
+          // size as you zoom in — native GL interpolation, not custom
+          // logic. Selected/hovered emphasis comes from the thicker-border
+          // icon variant (iconId) rather than a bigger text-size here —
+          // nesting per-feature branching around a zoom expression like
+          // this one hit a MapLibre GL validation edge case (see commit
+          // history).
           "text-size": [
             "interpolate",
             ["linear"],
@@ -173,8 +206,8 @@ export function VenuePillLayer({
           "text-line-height": 1.1,
           "text-padding": 1,
           "text-anchor": "bottom",
-          "text-allow-overlap": false,
-          "text-optional": true,
+          "text-allow-overlap": true,
+          "text-optional": false,
           "symbol-sort-key": ["get", "priority"],
         },
         paint: {
@@ -192,12 +225,12 @@ export function VenuePillLayer({
       onHoverRef.current(null);
     });
     map.on("mousemove", VENUE_PILL_LAYER_ID, (e) => {
-      const feature = e.features?.[0] as MapGeoJSONFeature | undefined;
+      const feature = topFeature(e.features as MapGeoJSONFeature[] | undefined);
       const id = feature?.properties?.id as string | undefined;
       if (id) onHoverRef.current(id);
     });
     map.on("click", VENUE_PILL_LAYER_ID, (e) => {
-      const feature = e.features?.[0] as MapGeoJSONFeature | undefined;
+      const feature = topFeature(e.features as MapGeoJSONFeature[] | undefined);
       const id = feature?.properties?.id as string | undefined;
       if (id) onSelectRef.current(id);
     });
