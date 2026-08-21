@@ -7,6 +7,29 @@
 
 ---
 
+## 2026-08-21 — `zoneKey` will not be auto-computed from coordinates
+
+During the venue enrichment pass, a lat/lng bounding-box + latitude-band
+rule was written to backfill `zoneKey` for the 26 venues missing it,
+mirroring the corridor description in `domain-knowledge.md`. Before
+applying it, it was backtested against all 35 venues that already had a
+human-assigned `zoneKey` in the live DB: **8/35 (23%) disagreed** with the
+already-curated value (e.g. Hank's Cafe is `twelfth`, the rule said
+`montgomery`; Samosa Deb is `montgomery`, the rule said `norris`). A
+nearest-neighbor variant did worse (31% mismatch).
+
+This confirms `domain-knowledge.md`'s "zones are curated data, not
+computed clusters" line is a real, load-bearing constraint, not boilerplate
+caution — geography alone doesn't predict which side of an informal truck
+corridor a venue counts as. The rule was discarded rather than applied;
+`zoneKey` backfill for the remaining 26 venues stays a manual `/admin` task
+for someone with local knowledge of where the corridor boundaries actually
+fall. Don't resurrect an automated version without new signal beyond
+coordinates (e.g. street-address parsing, or an admin walking the
+corridor).
+
+---
+
 ## 2026-08-18 — Admin accounts bootstrapped via Supabase dashboard "Add User", not email
 
 The custom-SMTP (Resend) password-recovery path built earlier the same day

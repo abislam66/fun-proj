@@ -2,12 +2,18 @@
 
 export const CAMPUS_TIMEZONE = "America/New_York" as const;
 
-/** Observed venue spread around Temple main campus (approx). */
+/**
+ * Observed venue spread around Temple main campus (approx). Widened from
+ * the original truck-corridor-only box (west -75.157/south 39.979/east
+ * -75.15/north 39.984) once the KML source grew to include the Liacouras
+ * Walk chain cluster and north/south outliers — still comfortably inside
+ * the DB's own check constraint (lat 39.96-40.02, lng -75.18--75.13).
+ */
 export const CAMPUS_BOUNDS = {
-  west: -75.157,
-  south: 39.979,
-  east: -75.15,
-  north: 39.984,
+  west: -75.165,
+  south: 39.973,
+  east: -75.146,
+  north: 39.989,
 } as const;
 
 /** Default MapLibre viewport — campus, not Philadelphia. */
