@@ -111,6 +111,19 @@ export function VenueExplorer({
     }
   }, [selectedId, visibleVenues]);
 
+  // Keyboard escape hatch: pin selection is otherwise dismissed only by
+  // clicking empty map space or the mini-card's close button.
+  useEffect(() => {
+    if (!selectedId) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        setSelectedId(null);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedId]);
+
   const panel = (
     <ResultsPanel
       backPath={backPath}

@@ -132,11 +132,11 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 |----------|--------|
 | Basemap | OpenFreeMap **Positron** — `https://tiles.openfreemap.org/styles/positron` |
 | Config | `NEXT_PUBLIC_MAP_STYLE_URL` (swappable) |
-| Viewport | Campus bbox only (~lat 39.979–39.984, lng −75.157–−75.150) — never Philly-wide |
+| Viewport | Campus bbox only (~lat 39.971–39.984, lng −75.161–−75.150) — includes west-of-Broad athletics and the Girard sports complex; never Philly-wide |
 | Chrome | Custom zoom + locate; Satoshi labels; cherry focus ring; quiet OSM/OpenFreeMap attribution |
 | Desktop map pane | Fills the right split full height; controls inset in the map pane; list hover ↔ pin highlight |
 | Locate me | Client-only blue-dot; never sent to server |
-| Zones | List-filter language only in v1 — no zone polygon fills |
+| Zones | Campus overview uses two marks together: `streetLine` corridors (Student Center, W Montgomery, SERC trucks, Tyler trucks) and `buildingFill` washes (Vantage & The View buildings; The Wall plaza immediately west of Anderson Hall, not Anderson itself; Richie's Cafe footprint only, not Facilities; Liacouras Walk 1926–1938 building only, not 1940 Residence Hall). Zone names sit on a light cherry plate (`#E8D4D8`) with a thin cherry outline. Click a zone to zoom in and show pins. List-filter `zone_key` is a separate model. |
 | Campus buildings | Curated GeoJSON overlay — per-building 2D fill/stroke/label; mute stock Positron footprints ([docs/design/campus-buildings.md](docs/design/campus-buildings.md)) |
 | Optional later | Faint dashed campus outline; Maputnik fork to strip base POI clutter / align land+water to tokens |
 
@@ -152,6 +152,7 @@ See [docs/design/map-and-pins.md](docs/design/map-and-pins.md) and [public/pins/
 - **Rendering:** Prefer one shared Marker/component that injects the label (don’t explode asset count). Reference SVGs in `public/pins/`. Symbol layer or HTML markers OK at ~40 venues; HTML Marker for selected.
 - **Density:** Collision fade / light cluster at overview; every pill tappable at street zoom (~16+).
 - **Phase 3 types:** Same pill; cuisine still primary. Optional tiny type mark later — not required for trucks.
+- **Meal-plan dining info pins:** The Student Center food court, J&H dining hall, and Morgan Hall food court are meal-plan dining — out of product scope, never venues, never in the DB. Each building gets **one** neutral info pin that just names what's there (`src/config/campus-dining.ts`). Treatment: same pill+stem silhouette, but **white surface fill, stone `#B8B4AA` border, ink-secondary regular-weight text** — deliberately not cherry, so it can't be mistaken for a tappable venue. Non-interactive (no hover, no click, no mini-card) and always loses label collisions to venue pills. Don't add more of these casually — cherry venue pills stay the dominant map layer.
 
 ## Component inventory
 
@@ -190,3 +191,4 @@ Maps to `Specs/architecture-planning.md`:
 | 2026-07-20 | Curated GeoJSON campus buildings (2D), not basemap fork alone | OpenMapTiles buildings have no names; per-building design needs our footprints + paint tokens |
 | 2026-07-17 | Cabinet Grotesk + Satoshi + JetBrains Mono | Modern athletic utility; blacklist of overused UI fonts honored |
 | 2026-07-17 | Desktop is first-class (split explorer), not stretched mobile | Portfolio / hiring-manager viewport; mobile-first priority unchanged |
+| 2026-08-25 | Neutral info pins for meal-plan dining halls (SC food court, J&H, Morgan) | Meal-plan places are out of scope, not venues; one white/stone non-interactive pill per building names what's there without competing with cherry venue pills |

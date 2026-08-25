@@ -1,24 +1,42 @@
 "use client";
 
+import { useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap, Marker } from "maplibre-gl";
 
 type LocateState = "idle" | "pending" | "active" | "denied" | "unavailable";
 
+const NOTICE_MS = 6_000;
+
 export function LocateControl({ map }: { map: MapLibreMap | null }) {
   const [state, setState] = useState<LocateState>("idle");
   const markerRef = useRef<Marker | null>(null);
+  const noticeTimer = useRef<number | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     return () => {
       markerRef.current?.remove();
       markerRef.current = null;
+      if (noticeTimer.current !== null) {
+        window.clearTimeout(noticeTimer.current);
+      }
     };
   }, []);
 
+  // Failure states show a visible notice, then settle back to idle so the
+  // button is obviously retryable (e.g. after the user re-grants permission).
+  function fail(next: "denied" | "unavailable") {
+    setState(next);
+    if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => {
+      setState((current) => (current === next ? "idle" : current));
+    }, NOTICE_MS);
+  }
+
   async function locate() {
     if (!map || typeof navigator === "undefined" || !navigator.geolocation) {
-      setState("unavailable");
+      fail("unavailable");
       return;
     }
 
@@ -44,14 +62,12 @@ export function LocateControl({ map }: { map: MapLibreMap | null }) {
         map.easeTo({
           center: [longitude, latitude],
           zoom: Math.max(map.getZoom(), 16),
-          duration: 650,
+          duration: reduceMotion ? 0 : 650,
         });
         setState("active");
       },
       (error) => {
-        setState(
-          error.code === error.PERMISSION_DENIED ? "denied" : "unavailable",
-        );
+        fail(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable");
       },
       {
         enableHighAccuracy: false,
@@ -71,24 +87,31 @@ export function LocateControl({ map }: { map: MapLibreMap | null }) {
           : "Show my location";
 
   return (
-    <button
-      aria-label={label}
-      className={[
-        "map-control-button",
-        "locate-control",
-        state === "active" && "map-control-button-active",
-        (state === "denied" || state === "unavailable") &&
-          "map-control-button-muted",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      disabled={state === "pending"}
-      onClick={() => void locate()}
-      title={label}
-      type="button"
-    >
-      <span aria-hidden="true" className="locate-control-icon" />
-      <span className="sr-only">{label}</span>
-    </button>
+    <div className="locate-wrap">
+      <button
+        aria-label={label}
+        className={[
+          "map-control-button",
+          "locate-control",
+          state === "active" && "map-control-button-active",
+          (state === "denied" || state === "unavailable") &&
+            "map-control-button-muted",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        disabled={state === "pending"}
+        onClick={() => void locate()}
+        title={label}
+        type="button"
+      >
+        <span aria-hidden="true" className="locate-control-icon" />
+        <span className="sr-only">{label}</span>
+      </button>
+      {state === "denied" || state === "unavailable" ? (
+        <p className="locate-notice" role="status">
+          {label}
+        </p>
+      ) : null}
+    </div>
   );
 }

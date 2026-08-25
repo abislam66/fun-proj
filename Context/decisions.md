@@ -7,6 +7,135 @@
 
 ---
 
+## 2026-08-25 — Liacouras Walk is buildingFill, not 1940 Residence Hall
+
+`liacouras-walk` uses `MAP_ZONE_MARK.buildingFill` on OSM 1926–1938 N. Liacouras Walk — the building labeled “Liacouras Walk” south of 1940 Residence Hall. The path, 1940, and 1810 Liacouras stay unfilled.
+
+---
+
+## 2026-08-25 — Richie's Cafe is buildingFill, not the Facilities block
+
+`richies-cafe` uses `MAP_ZONE_MARK.buildingFill` on the OSM Richie's Cafe footprint on W Berks. Facilities and the rest of that block stay unfilled — same “paint the named place, not the neighbor” rule as The Wall vs Anderson.
+
+---
+
+## 2026-08-25 — Tyler trucks runs Tomlinson to short of Tyler’s east edge
+
+`tyler-trucks` follows W Norris from Tomlinson’s west edge, through 13th and Presser, and stops a bit before Tyler’s east edge — not at 13th and not out to 12th/SERC. Still not list-filter `norris`.
+
+---
+
+## 2026-08-25 — Tyler trucks is a map zone, not list-filter `norris`
+
+`tyler-trucks` is a campus-overview street-line on W Norris. It is not `config/zones.ts` `norris` (list/admin filter). Same split as `w-montgomery` vs `montgomery`.
+
+---
+
+## 2026-08-25 — W Montgomery is a map zone, not list-filter `montgomery`
+
+`w-montgomery` is a campus-overview street-line along Klein Law on Montgomery, stopping short of 13th so a visible gap sits before the Student Center L. It is not `config/zones.ts` `montgomery` (list/admin filter). Same split as the other map clusters.
+
+---
+
+## 2026-08-25 — The Wall paints the plaza, not Anderson Hall
+
+`the-wall` is `MAP_ZONE_MARK.buildingFill` because students mean the 12th Street vendor-pad plaza (OSM outdoor seating / food-pad west of Anderson), not a street centerline and not Anderson Hall itself. The cherry wash sits immediately left of Anderson's west facade. Paley and Anderson stay unfilled.
+
+---
+
+## 2026-08-25 — Map marks: `streetLine` vs `buildingFill`
+
+The winning overview is both marks at once, not a hull overlay. Named so we can talk about them without saying "the red line" vs "the building outline":
+
+- `MAP_ZONE_MARK.streetLine` — cherry corridor. Student Center, W Montgomery, SERC trucks, Tyler trucks.
+- `MAP_ZONE_MARK.buildingFill` — cherry wash. Vantage & The View buildings; The Wall plaza west of Anderson (not Anderson); Richie's Cafe (cafe only, not Facilities); Liacouras Walk (1926–1938 building only, not 1940).
+
+Rounded hulls were the rejected A/B. Do not reintroduce a public toggle unless we are comparing again.
+
+---
+
+## 2026-08-25 — Map zones are a new overlay, not list-filter `zone_key`
+
+The home map A/B (Student Center / Vantage & The View / The Wall / SERC trucks)
+is **not** the existing `config/zones.ts` keys (`norris`, `montgomery`,
+`twelfth`, `other`). Those remain list/admin filter language. Map clusters are
+`src/config/map-zones.ts` plus `public/maps/map-zones.geojson`. Venue membership
+for the prototype is spatial (point-in-polygon), not `venues.zone_key`, because
+most seeded rows have no zone and the user will upload corridor data later.
+
+**Why two treatments:** the user asked to compare street/corridor highlights vs
+rounded hulls on the live map before locking DESIGN.md. Cherry stays rare
+(line casement + soft fill, not a solid flood). Vantage & The View is buildings,
+not a street, even in the Streets treatment.
+
+**Why this contradicts DESIGN.md on purpose:** DESIGN.md currently says zones
+are list-filter language only with no polygon fills. Specs Feature 1 still says
+every truck appears as a pin. Neither file was edited. After a winner is picked,
+update DESIGN.md / `docs/design/map-and-pins.md` and drop the Streets/Shapes
+toggle. Do not reuse map-zone keys as list `zone_key` values without an explicit
+decision.
+
+---
+
+## 2026-08-25 — Student Center food-court chains are retired, not mapped as venues
+
+Saladworks, Zen Japanese Food Fast, Chick-fil-A (Student Center), and BurgerFi
+were seeded as published venues because the KML dump treated every pin as
+off-meal-plan food. They're meal-plan food-court tenants inside Howard Gittis
+Student Center — out of scope (`Specs/overview.md`). The user asked to drop
+those cherry pills and keep only the white "Student Center Food Court" info
+pin.
+
+**Why retire, not delete:** venues are retired never deleted. Public
+`getPublishedVenues()` already hides `status: retired`. Detail URLs can stay
+as Closed. The Morgan Hall Chick-fil-A draft was left alone (not in the
+screenshot, not published).
+
+**How to apply:** don't republish these four without an explicit scope change.
+Other meal-plan tenants that show up the same way should be retired the same
+way, not filtered in the map layer.
+
+---
+
+## 2026-08-25 — Meal-plan dining halls get one static info pin each, not venue rows
+
+The product explicitly does not cover meal-plan dining, but the Student Center
+food court, J&H dining hall, and Morgan Hall food court are the most food-dense
+buildings on campus — leaving them blank makes the map look wrong. Per the
+user's ask, each building now carries exactly one pin that just says what it is.
+
+**Why:** these are map annotations, not venues. Modeling them as venues (even
+retired/unpublished ones) would pull out-of-scope places into the DB, the admin
+UI, and the single write path for no benefit. They live in static config
+(`src/config/campus-dining.ts`) rendered by `CampusDiningLayer` — neutral
+white/stone pill, non-interactive, always losing label collisions to venue
+pills. Coordinates are the curated building-footprint centroids (Morgan's pin
+sits between the two towers, where the dining floor is).
+
+**How to apply:** don't "promote" these to venues later without an explicit
+scope change, and don't reuse the cherry venue pill for anything
+non-tappable — the neutral treatment is what signals "information, not a
+choice". If more out-of-scope-but-visible places show up, add them to the same
+config, sparingly.
+
+---
+
+## 2026-08-23 — Map viewport includes west-of-Broad athletics and Girard sports complex
+
+User asked to add STAR, IBC, Pearson Hall, Liacouras Center, Geasey Field, the Girard sports complex, and the new Klein/Kimmel construction — and said extending the map view is critical. `CAMPUS_BOUNDS` is now west `-75.161` / south `39.971` (was `-75.157` / `39.979`). That also widens venue lat/lng validation. Conflicts with `Specs/domain-knowledge.md`'s tighter observed-spread numbers; code follows the explicit product ask, spec not edited.
+
+Kimmel Pavilion is not in OSM yet. The overlay uses the 15th Street Lot footprint (west of Broad at Polett Walk), labeled "New Klein".
+
+---
+
+## 2026-08-23 — Campus building fills are one stone, not category tints
+
+`docs/design/campus-buildings.md` ships category palettes (library water-tint, student-life / landmark cherry wash, housing/parking/retail variants). On the live map those extras read as random pink/blue buildings. The user asked to neutralize TECH / Tomlinson / TPAC, then **every** building including Charles Library and Student Center.
+
+Paint tokens on all 52 curated footprints are now the academic stone (`#E4E2DC` / `#B8B4AA` / `#3D3A35`). `category` is still on the features (label collision priority only). Don't reintroduce per-category fills without an explicit visual go-ahead; the design doc is the leftover, not the map.
+
+---
+
 ## 2026-08-18 — Admin accounts bootstrapped via Supabase dashboard "Add User", not email
 
 The custom-SMTP (Resend) password-recovery path built earlier the same day

@@ -9,8 +9,10 @@ import type {
 
 import {
   buildPillIcons,
+  PILL_ICON_HOVER,
   PILL_ICON_NORMAL,
   PILL_ICON_SELECTED,
+  type PillIconAsset,
 } from "@/lib/map/venue-pill-icon";
 import type { Venue } from "@/lib/venues";
 
@@ -20,8 +22,9 @@ export const VENUE_PILL_LAYER_ID = "venue-pills-symbol";
 /**
  * MapLibre resolves label collisions in layer order — earlier layers win
  * ties. Venue pins are the primary decision info, so this layer must be
- * inserted ahead of the base style's own labels and the campus building
- * labels (campus-building-layer.tsx), not appended after them.
+ * inserted ahead of the base style's own labels, the campus building
+ * labels (campus-building-layer.tsx), and the meal-plan dining info pins
+ * (campus-dining-layer.tsx), not appended after them.
  */
 function firstSymbolLayerId(map: MapLibreMap): string | undefined {
   const layers = map.getStyle().layers ?? [];
@@ -68,7 +71,6 @@ function toFeatureCollection(
   return {
     type: "FeatureCollection" as const,
     features: venues.map((venue, index) => {
-      const emphasized = venue.id === selectedId || venue.id === hoveredId;
       const priority =
         venue.id === selectedId
           ? base * 2 + index
@@ -79,7 +81,12 @@ function toFeatureCollection(
         id: venue.id,
         name: venue.name,
         priority,
-        iconId: emphasized ? PILL_ICON_SELECTED : PILL_ICON_NORMAL,
+        iconId:
+          venue.id === selectedId
+            ? PILL_ICON_SELECTED
+            : venue.id === hoveredId
+              ? PILL_ICON_HOVER
+              : PILL_ICON_NORMAL,
       };
       return {
         type: "Feature" as const,
@@ -136,22 +143,21 @@ export function VenuePillLayer({
     // event already fired (see VenueMap), so the style is guaranteed ready
     // here — no gating on isStyleLoaded()/"load" needed (see venue-map.tsx
     // history: that gate silently dead-ends for late-mounted layers).
-    if (!map.hasImage(PILL_ICON_NORMAL) || !map.hasImage(PILL_ICON_SELECTED)) {
+    const iconIds = [PILL_ICON_NORMAL, PILL_ICON_HOVER, PILL_ICON_SELECTED];
+    if (iconIds.some((id) => !map.hasImage(id))) {
       const icons = buildPillIcons();
-      if (!map.hasImage(PILL_ICON_NORMAL)) {
-        map.addImage(PILL_ICON_NORMAL, icons.normal, {
-          pixelRatio: icons.normal.pixelRatio,
-          content: icons.normal.content,
-          stretchX: icons.normal.stretchX,
-          stretchY: icons.normal.stretchY,
-        });
-      }
-      if (!map.hasImage(PILL_ICON_SELECTED)) {
-        map.addImage(PILL_ICON_SELECTED, icons.selected, {
-          pixelRatio: icons.selected.pixelRatio,
-          content: icons.selected.content,
-          stretchX: icons.selected.stretchX,
-          stretchY: icons.selected.stretchY,
+      const assets: [string, PillIconAsset][] = [
+        [PILL_ICON_NORMAL, icons.normal],
+        [PILL_ICON_HOVER, icons.hover],
+        [PILL_ICON_SELECTED, icons.selected],
+      ];
+      for (const [id, asset] of assets) {
+        if (map.hasImage(id)) continue;
+        map.addImage(id, asset, {
+          pixelRatio: asset.pixelRatio,
+          content: asset.content,
+          stretchX: asset.stretchX,
+          stretchY: asset.stretchY,
         });
       }
     }
@@ -188,17 +194,18 @@ export function VenuePillLayer({
           // icon variant (iconId) rather than a bigger text-size here —
           // nesting per-feature branching around a zoom expression like
           // this one hit a MapLibre GL validation edge case (see commit
-          // history).
+          // history). Floor kept at a legibility minimum: below ~7px the
+          // labels are unreadable for everyone and hostile to low vision.
           "text-size": [
             "interpolate",
             ["linear"],
             ["zoom"],
             14,
-            6,
-            15.5,
             7,
+            15.5,
+            8.5,
             17,
-            10,
+            10.5,
             18.5,
             13,
           ],

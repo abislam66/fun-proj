@@ -9,3 +9,5 @@ test-results/
 *.tsbuildinfo
 .vercel
 .env*
+.gstack/
+.pnpm-store/

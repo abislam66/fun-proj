@@ -418,6 +418,13 @@ button {
   outline: none;
 }
 
+/* The canvas is keyboard-operable (arrows pan, +/- zoom) — keep a visible
+   focus ring for keyboard users while suppressing the mouse-click outline. */
+.venue-map .maplibregl-canvas:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: -3px;
+}
+
 .venue-map-loading,
 .venue-map-fallback {
   position: absolute;
@@ -456,8 +463,8 @@ button {
 
 .map-control-button {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem; /* 44px minimum touch target */
+  height: 2.75rem;
   place-items: center;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -503,6 +510,28 @@ button {
   border: 2px solid currentColor;
   border-radius: 9999px;
   box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.locate-wrap {
+  position: relative;
+}
+
+.locate-notice {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.5rem);
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: 13rem;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 4px 14px rgba(28, 25, 23, 0.12);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-small);
+  line-height: 1.35;
 }
 
 .locate-dot {
@@ -554,82 +583,20 @@ button {
   text-underline-offset: 2px;
 }
 
-.venue-pin {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  filter: drop-shadow(0 1.5px 2px rgba(28, 25, 23, 0.28));
-}
-
-.venue-pin:focus-visible {
-  outline: none;
-}
-
-.venue-pin:focus-visible .cuisine-pill {
-  box-shadow: 0 0 0 3px rgba(157, 34, 53, 0.35);
-}
-
-.cuisine-pill {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform-origin: bottom center;
-  will-change: transform;
-}
-
-.cuisine-pill-label {
-  display: inline-flex;
-  min-width: 2.75rem;
-  min-height: 1.75rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.65rem;
-  border: 2px solid #fff;
-  border-radius: 9999px;
-  background: var(--color-cherry);
-  color: #fff;
-  font-family: var(--font-body), sans-serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.cuisine-pill-stem {
-  width: 0;
-  height: 0;
-  margin-top: -1px;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 10px solid var(--color-cherry);
-}
-
-.cuisine-pill-highlighted .cuisine-pill-label {
-  border-width: 2.5px;
-}
-
-.cuisine-pill-selected .cuisine-pill-label {
-  border-width: 3px;
-  box-shadow: 0 0 0 2px rgba(157, 34, 53, 0.2);
-}
-
 .map-mini-card-wrap {
   position: absolute;
   top: 4.5rem;
   left: var(--spacing-md);
-  right: var(--spacing-md);
+  /* Clear the map-controls column (2.75rem wide at 1rem inset) so the
+     card never covers the zoom/locate buttons on small screens. */
+  right: 4.25rem;
   z-index: 5;
   max-width: 22rem;
   margin-inline: auto;
 }
 
 .map-mini-card {
-  display: grid;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+  position: relative;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.96);
@@ -642,11 +609,27 @@ button {
   transform: translateY(-1px);
 }
 
-.map-mini-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.map-mini-card:focus-within {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.map-mini-card-link {
+  display: grid;
   gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The card shows a :focus-within ring instead. */
+.map-mini-card-link:focus-visible {
+  outline: none;
+}
+
+.map-mini-card-top {
+  padding-right: 2.25rem; /* clear the absolute close button */
 }
 
 .map-mini-card-top h3 {
@@ -657,9 +640,56 @@ button {
   letter-spacing: -0.02em;
 }
 
-.map-mini-card-top span {
+.map-mini-card .venue-location {
+  color: var(--color-ink-secondary);
+  font-size: var(--text-small);
+}
+
+.map-mini-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.map-mini-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  color: var(--color-cherry);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+.map-mini-card-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 1;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
   color: var(--color-ink-muted);
-  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    color var(--duration-micro) var(--ease-move);
+}
+
+.map-mini-card-close:hover {
+  background: var(--color-cherry-soft);
+  color: var(--color-ink);
+}
+
+.map-mini-card-close:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
 }
 
 .desktop-results {
@@ -686,7 +716,7 @@ button {
 }
 
 .mobile-sheet-peek {
-  height: 9.5rem;
+  height: 10.25rem;
 }
 
 .mobile-sheet-mid {
@@ -700,7 +730,7 @@ button {
 .sheet-handle {
   display: grid;
   width: 100%;
-  min-height: 2rem;
+  min-height: 2.75rem; /* 44px touch target for the drag handle */
   place-items: center;
   border: 0;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
@@ -717,7 +747,7 @@ button {
 }
 
 .sheet-content {
-  height: calc(100% - 2rem);
+  height: calc(100% - 2.75rem);
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -1266,7 +1296,9 @@ button {
   .map-mini-card-wrap {
     top: auto;
     right: var(--spacing-xl);
-    bottom: var(--spacing-xl);
+    /* Sit above the attribution line — it must stay readable while a
+       venue is selected. */
+    bottom: calc(var(--spacing-xl) + 2.25rem);
     left: auto;
     width: min(22rem, calc(100% - 5rem));
     margin-inline: 0;

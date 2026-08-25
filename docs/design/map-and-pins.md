@@ -16,7 +16,7 @@ Source of truth for visual decisions: root [`DESIGN.md`](../../DESIGN.md). Asset
 
 Center and fit the **campus bounding box** only (never Philly-wide):
 
-- Approx: lat `39.979`–`39.984`, lng `-75.157`–`-75.150`
+- Approx: lat `39.971`–`39.984`, lng `-75.161`–`-75.150` (west-of-Broad athletics + Girard sports complex)
 - Canonical values live in `src/config/site.ts` when scaffolded (`CAMPUS_BOUNDS`, default zoom ~15–16)
 
 ### Chrome
@@ -35,7 +35,14 @@ Named Temple footprints are a curated GeoJSON overlay (`public/maps/campus-build
 
 ### Zones
 
-Campus zones are **list/filter language** in v1. No zone polygon fills on the map.
+Campus overview draws **map zones**, not every venue pin. Two marks, named in `src/config/map-zones.ts`:
+
+| Variable | What it draws | Zones |
+|----------|---------------|-------|
+| `MAP_ZONE_MARK.streetLine` | Cherry corridor (casement + core line) | Student Center, W Montgomery, SERC trucks, Tyler trucks |
+| `MAP_ZONE_MARK.buildingFill` | Cherry wash + outline | Vantage & The View (buildings); The Wall (plaza west of Anderson, not Anderson); Richie's Cafe (cafe footprint only, not Facilities); Liacouras Walk (1926–1938 building only, not 1940 Residence Hall) |
+
+Click a zone → fly in → venue pills whose coordinates fall inside that zone. List-filter `zone_key` (`norris` / `montgomery` / `twelfth`) is unrelated. Zone names use a light cherry plate (`#E8D4D8`) with a thin cherry outline — the same family as `buildingFill`, not a white text halo.
 
 ## Pins — cuisine only
 
@@ -87,12 +94,27 @@ Pin tap → sheet peeks: **name, cuisine tags, open-status badge**. Second tap �
 
 Keep cuisine pills. Don’t invent truck-only pin components.
 
+## Meal-plan dining info pins
+
+Meal-plan dining (Student Center food court, J&H dining hall, Morgan Hall food court) is out of scope — those places are **not venues** and never enter the DB. So the big food buildings don’t read as mysteriously empty, each gets exactly **one** info pin naming what’s there.
+
+| Aspect | Value |
+|--------|-------|
+| Data | `src/config/campus-dining.ts` — static markers on footprint centroids (Morgan pin sits between the North/South towers where the dining floor is) |
+| Look | Same pill+stem silhouette; white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text |
+| Behavior | Non-interactive: no hover, no click, no mini-card. Map-background clicks through them clear selection like any other map click |
+| Collision | `icon/text-allow-overlap: false`, layer inserted **after** venue pills in collision order — a truck pill covering a dining pin always wins |
+| Rendering | `CampusDiningLayer` symbol layer; icon from `buildDiningPillIcon()` in `venue-pill-icon.ts` (shared 9-slice drawing routine) |
+
+Mount order in `VenueMap` is load-bearing: each layer self-inserts ahead of the style’s first symbol layer, so later mounts land earlier and win collisions. `CampusDiningLayer` mounts between `CampusBuildingLayer` and `VenuePillLayer`, giving: venue pills → dining pins → base labels → building labels.
+
 ## Component mapping
 
 | Component | Responsibility |
 |-----------|----------------|
 | `VenueMap` | MapLibre init, style URL, bounds, controls shell |
 | `CampusBuildingLayer` | Curated campus footprints + labels (GeoJSON, 2D) |
+| `CampusDiningLayer` | Neutral one-per-building info pins for meal-plan dining halls |
 | `VenuePinLayer` | Markers / symbols; maps primary cuisine → pill label |
 | `CuisinePill` | Shared pin chrome + label text |
 | `LocateControl` | Client geolocation + blue-dot marker |

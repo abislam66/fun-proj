@@ -7,7 +7,7 @@ const SOURCE_ID = "campus-buildings";
 const FILL_LAYER_ID = "campus-buildings-fill";
 const LINE_LAYER_ID = "campus-buildings-outline";
 const LABEL_LAYER_ID = "campus-buildings-label";
-const GEOJSON_URL = "/maps/campus-buildings.geojson";
+const GEOJSON_URL = "/maps/campus-buildings.geojson?v=athletics-1";
 
 /** First symbol layer in the active style — insert fills beneath labels/pins. */
 function firstSymbolLayerId(map: MapLibreMap): string | undefined {
@@ -49,7 +49,7 @@ export function CampusBuildingLayer({ map }: { map: MapLibreMap | null }) {
           source: SOURCE_ID,
           paint: {
             "fill-color": ["coalesce", ["get", "fill"], "#EAE9E4"],
-            "fill-opacity": 0.92,
+            "fill-opacity": ["coalesce", ["get", "fillOpacity"], 0.92],
           },
         },
         beforeId,
@@ -83,7 +83,7 @@ export function CampusBuildingLayer({ map }: { map: MapLibreMap | null }) {
         id: LABEL_LAYER_ID,
         type: "symbol",
         source: SOURCE_ID,
-        minzoom: 15.2,
+        minzoom: 14.4,
         layout: {
           "text-field": ["coalesce", ["get", "label"], ["get", "name"]],
           "text-font": ["Noto Sans Regular"],
