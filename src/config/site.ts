@@ -8,10 +8,12 @@ export const CAMPUS_TIMEZONE = "America/New_York" as const;
  * -75.15/north 39.984) once the KML source grew to include the Liacouras
  * Walk chain cluster and north/south outliers — still comfortably inside
  * the DB's own check constraint (lat 39.96-40.02, lng -75.18--75.13).
+ * South edge is the map-zones branch's 39.971 (DESIGN.md viewport spec:
+ * include the Girard sports complex) — the union of both widenings.
  */
 export const CAMPUS_BOUNDS = {
   west: -75.165,
-  south: 39.973,
+  south: 39.971,
   east: -75.146,
   north: 39.989,
 } as const;
