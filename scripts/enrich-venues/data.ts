@@ -1,10 +1,13 @@
 /**
- * Hand-merged research output for the venue enrichment backfill.
- * Keyed by slug (stable). Only fields present here get touched by
- * apply.ts — cuisines fully replace the venue's current set, hours
+ * Hand-merged venue data for the enrichment backfill (from web research,
+ * or pasted in directly by the site owner). Keyed by slug (stable). Only
+ * fields present here get touched by apply.ts — omit a field entirely to
+ * leave it alone. cuisines fully replace the venue's current set, hours
  * fully replace (null = "Posted hours are known" left unchecked, i.e.
  * "Hours unknown" — never a guess), type only reclassifies away from
- * the seed script's hardcoded "truck" default when explicitly set.
+ * the seed script's hardcoded "truck" default when explicitly set,
+ * description overwrites the venue's "Good to know" text (500-char cap,
+ * enforced in apply.ts).
  *
  * hours are local Philadelphia wall-clock, one range/day (the admin
  * form's own constraint), only for days the source confirms as open.
@@ -16,8 +19,9 @@ import type { VenueType } from "../../src/lib/admin-venue-form";
 export type VenueEnrichment = {
   slug: string;
   type?: VenueType;
-  cuisines: CuisineKey[];
-  hours: VenueHours | null;
+  cuisines?: CuisineKey[];
+  hours?: VenueHours | null;
+  description?: string;
   note?: string;
 };
 

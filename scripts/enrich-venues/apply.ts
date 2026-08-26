@@ -104,13 +104,28 @@ async function main() {
       // curation task, not something this pass fills in (see progress.md).
 
       // Cuisines: converge current checked set onto the desired array.
-      for (const cuisine of Object.values(CUISINES)) {
-        const checkbox = page.getByRole("checkbox", { name: cuisine.label });
-        const shouldBeChecked = entry.cuisines.includes(
-          cuisine.key as CuisineKey,
-        );
-        const isChecked = await checkbox.isChecked();
-        if (shouldBeChecked !== isChecked) await checkbox.click();
+      // Omitted entirely (undefined) means "don't touch cuisines".
+      if (entry.cuisines) {
+        for (const cuisine of Object.values(CUISINES)) {
+          const checkbox = page.getByRole("checkbox", { name: cuisine.label });
+          const shouldBeChecked = entry.cuisines.includes(
+            cuisine.key as CuisineKey,
+          );
+          const isChecked = await checkbox.isChecked();
+          if (shouldBeChecked !== isChecked) await checkbox.click();
+        }
+      }
+
+      // Description: the admin textarea caps input at 500 chars
+      // client-side (venue-editor.tsx) — fail loudly rather than risk a
+      // silent truncation via a programmatic .fill().
+      if (entry.description) {
+        if (entry.description.length > 500) {
+          throw new Error(
+            `description is ${entry.description.length} chars, over the 500-char admin form limit`,
+          );
+        }
+        await page.getByLabel("Description").fill(entry.description);
       }
 
       // Hours: leave "Posted hours are known" untouched if entry.hours is
@@ -145,9 +160,17 @@ async function main() {
       await page
         .getByText("Saved.", { exact: true })
         .waitFor({ timeout: 5000 });
-      console.log(
-        `  saved (cuisines=${entry.cuisines.join("+")}, hours=${entry.hours ? "set" : "unknown"}${entry.type ? `, type=${entry.type}` : ""})`,
-      );
+      const parts = [
+        entry.cuisines
+          ? `cuisines=${entry.cuisines.join("+") || "(none)"}`
+          : null,
+        entry.hours !== undefined
+          ? `hours=${entry.hours ? "set" : "unknown"}`
+          : null,
+        entry.type ? `type=${entry.type}` : null,
+        entry.description ? "description=set" : null,
+      ].filter(Boolean);
+      console.log(`  saved (${parts.join(", ")})`);
       ok += 1;
     } catch (error) {
       failed += 1;
