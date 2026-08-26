@@ -4,6 +4,7 @@ import {
   check,
   doublePrecision,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -43,6 +44,17 @@ export const problemKindEnum = pgEnum("problem_kind", [
   "other",
 ]);
 
+/**
+ * "legacy" = migrated from the pre-backend static registry
+ * (src/config/venue-photos.ts + public/photos/<slug>/), never touched by
+ * admin upload/remove. "admin" = the one slot uploadVenueImage/
+ * removeVenueImage manage per venue, backed by Vercel Blob.
+ */
+export const venuePhotoSourceEnum = pgEnum("venue_photo_source", [
+  "legacy",
+  "admin",
+]);
+
 export const venues = pgTable(
   "venues",
   {
@@ -51,7 +63,6 @@ export const venues = pgTable(
     type: venueTypeEnum("type").notNull().default("truck"),
     name: text("name").notNull(),
     description: text("description"),
-    imageUrl: text("image_url"),
     status: venueStatusEnum("status").notNull().default("draft"),
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),
@@ -86,6 +97,24 @@ export const venues = pgTable(
   ],
 );
 
+export const venuePhotos = pgTable(
+  "venue_photos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    venueId: uuid("venue_id")
+      .notNull()
+      .references(() => venues.id),
+    url: text("url").notNull(),
+    alt: text("alt").notNull(),
+    source: venuePhotoSourceEnum("source").notNull().default("admin"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("venue_photos_venue_id_idx").on(table.venueId)],
+);
+
 /** 1:1 with Supabase auth.users — email lives only in Auth, never here. */
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
@@ -117,3 +146,5 @@ export type VenueRow = typeof venues.$inferSelect;
 export type VenueInsert = typeof venues.$inferInsert;
 export type ProfileRow = typeof profiles.$inferSelect;
 export type ProblemReportRow = typeof problemReports.$inferSelect;
+export type VenuePhotoRow = typeof venuePhotos.$inferSelect;
+export type VenuePhotoInsert = typeof venuePhotos.$inferInsert;

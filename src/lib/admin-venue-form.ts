@@ -75,7 +75,10 @@ function triStateToPayment(value: PaymentTriState): boolean | null {
   return null;
 }
 
-export function toDraft(row: VenueRow): VenueDraft {
+export function toDraft(
+  row: VenueRow,
+  adminPhotoUrl: string | null = null,
+): VenueDraft {
   const hours = (row.hours as VenueHours | null) ?? {};
   return {
     id: row.id,
@@ -83,7 +86,7 @@ export function toDraft(row: VenueRow): VenueDraft {
     name: row.name,
     type: row.type,
     description: row.description ?? "",
-    imageUrl: row.imageUrl,
+    imageUrl: adminPhotoUrl,
     status: row.status,
     lat: String(row.lat),
     lng: String(row.lng),

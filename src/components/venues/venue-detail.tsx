@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
@@ -91,17 +90,6 @@ export function VenueDetail({
               We keep this page available so old links still make sense.
             </span>
           </div>
-        ) : null}
-
-        {venue.imageUrl ? (
-          <Image
-            alt={venue.name}
-            className="detail-hero-image"
-            height={720}
-            priority
-            src={venue.imageUrl}
-            width={1280}
-          />
         ) : null}
 
         <header className="detail-hero">

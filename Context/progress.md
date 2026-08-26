@@ -8,21 +8,74 @@
 ## Current status
 
 - **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place. The live venue table has grown past the original 69-row KML seed (74 rows now — 61 published/draft, 13 retired) via ordinary admin edits made outside this progress log between sessions; this doc previously understated that and has been corrected as of 2026-08-21 (see that date's entry).
-- **Map/UX overhaul (map-zones branch, 2026-08-25):** campus-overview zones (street-line + building-fill marks), baked venue-name pills that occlude instead of bleeding, pin-anchored popup mini-card with staged camera arrival (arrow disc, `$12` price placeholder), list rows select-on-map (detail pages only via the popup), inline filter drawer with cherry toggle pills, multi-zone map support, mobile sheet/controls fixes, frontend-only venue photos, dimmed zoom-gated dining pins. See the 2026-08-25 entries below and `DESIGN.md`'s changelog.
+- **Map/UX overhaul (map-zones branch, 2026-08-25):** campus-overview zones (street-line + building-fill marks), baked venue-name pills that occlude instead of bleeding, pin-anchored popup mini-card with staged camera arrival (arrow disc, `$12` price placeholder), list rows select-on-map (detail pages only via the popup), inline filter drawer with cherry toggle pills, multi-zone map support, mobile sheet/controls fixes, dimmed zoom-gated dining pins. See the 2026-08-25 entries below and `DESIGN.md`'s changelog. (The co-founder's venue-photo gallery from this branch was later consolidated onto a DB backend the same day — see below.)
 - **Admin auth is email/password**, not OTP/magic-link — the OTP flow never completed a real session end-to-end (see `Context/decisions.md`'s 2026-08-18 entries) and was replaced outright. Authorization is unchanged: `requireAdmin()` still requires a `profiles` row with `role: "admin"`, granted only via direct DB access. `Specs/auth-security.md` now documents this V1 model (anonymous public / password admin(s) / future OTP student accounts) and explicitly allows for more than one admin account — no more spec/implementation mismatch.
 - **Live admin login:** `abislam64@gmail.com` (not `@temple.edu` — admin isn't domain-restricted, see spec). Password was set directly via Supabase Dashboard → Authentication → Users → Add User (password field right in that dialog, "Auto Confirm User" checked) — deliberately bypassing email/SMTP entirely after the custom-SMTP password-recovery path proved unreliable (intermittent `535 "Invalid username"` SMTP auth failures against Resend, one confirmed success sandwiched between many failures — never fully root-caused, see `Context/decisions.md`). The original `tur67594@temple.edu` account was deleted; its orphaned `profiles` row was deleted and replaced with one for the new account's `auth.users.id`.
 - **Pending:** a second admin account for a friend — email not yet provided by the user ("will look later"). Same no-email bootstrap process once it's available: Supabase Dashboard → Add User (with password) → tell me the email + desired display name → I grant `role: "admin"` via direct DB insert. No code changes needed for any number of admins — `profiles.role` is a per-row flag, not a singleton.
 - **Password recovery** (`/admin/reset-password`, "Forgot password?" on the sign-in page) is fully implemented and spec-documented, but **not confirmed working end-to-end** — the custom SMTP (Resend) setup behind it is still flaky. Not currently blocking anything since admin bootstrap no longer depends on it; worth finishing later if self-service reset is wanted.
 - **Known gaps:** of the 61 active venues, 26 still have no `zoneKey` (see 2026-08-21 entry — this is deliberately left as a human curation task, not automatable) and 22 have no `hours` (confirmed via web research as venues with no credible posted schedule, mostly independent trucks — correctly left `null`/"Hours unknown" rather than guessed). Two venues (**Pretzel Dough**, **Vegan Tree**) were skipped entirely during the 2026-08-21 enrichment pass and need a manual look — Pretzel Dough's existence near campus couldn't be confirmed under that name, and Vegan Tree shows as **CLOSED** on current Yelp listings at both known locations (possible retirement candidate). See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed in the 2026-08-18 session, and `Context/backlog.md` for deferred items.
-- **Venue photo upload (admin-only) shipped 2026-08-25.** Admins can upload/replace/remove a photo per venue from `/admin/venues/[id]`; it renders as a hero image on the public `/eat/[slug]` page when present. Storage is Vercel Blob (`venue-images`, public-read store, linked to the `tueats` Vercel project), not Supabase Storage — see `Context/decisions.md` 2026-08-25 for why. User-submitted photos are explicitly deferred to the accounts phase (milestone ②) — see the same entry.
+- **Venue photos: one consolidated system as of 2026-08-25.** Admin upload/replace/remove (`/admin/venues/[id]`) and the co-founder's `VenuePhotoGallery` (unchanged appearance) now share one `venue_photos` table — legacy (migrated static) photos plus at most one admin-uploaded photo per venue, all rendered in the same gallery strip on `/eat/[slug]`. Storage for admin uploads is Vercel Blob (`venue-images`, public-read store, linked to the `tueats` Vercel project), not Supabase Storage. Full history: `Context/decisions.md` has three related 2026-08-25 entries (admin-only scoping + Blob choice, the co-founder's original frontend-only decision, and the consolidation that resolved the conflict between them). User-submitted photos are still deferred to the accounts phase (milestone ②).
 - **Next up:**
   1. Manually review **Vegan Tree** (possibly closed — consider retiring) and **Pretzel Dough** (existence unconfirmed) via `/admin`.
   2. Curate `zoneKey` for the 26 venues still missing it — this needs a human with local knowledge of the actual truck corridor, not automation (see 2026-08-21 entry for why).
   3. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for a second admin account.
   4. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   5. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
-  6. Manually verify the venue-photo upload flow end-to-end in `/admin` (sign in → upload → confirm it renders on the public page) — built and smoke-tested this session, but the actual authenticated upload wasn't exercised since the admin password wasn't available to this session.
-  7. Still-uncommitted from 2026-08-24: the venue-detail-page rewrite (type-aware location text, "Get directions", hours formatting, "Last verified") — awaiting go-ahead to commit.
+  6. Manually verify the admin photo-upload flow end-to-end through the real `/admin` UI (sign in → upload a real file → confirm it appears in the gallery) — the data-layer wiring (upsert/delete → gallery query) was verified directly against `tueats-dev` this session, and the file-upload path (Vercel Blob `put`/`del`) was verified in the earlier 2026-08-25 session, but the two have never been exercised together through a real authenticated browser session.
+
+---
+
+## 2026-08-25 — Consolidated the two venue-photo systems
+
+The earlier merge of the co-founder's map-zones branch left two
+independent venue-photo systems coexisting un-reconciled: this session's
+DB+Blob admin upload, and the co-founder's frontend-only static registry
+(`config/venue-photos.ts` + `public/photos/<slug>/`, rendered by their
+`VenuePhotoGallery`). Consolidated into one, per explicit instruction to
+preserve the co-founder's frontend exactly and only change the data
+source.
+
+**What changed:**
+- New `venue_photos` table (`venue_id`, `url`, `alt`,
+  `source: 'legacy' | 'admin'`, `sort_order`) replaces `venues.image_url`
+  (migration `0005_tough_captain_america.sql`, applied to `tueats-dev`).
+  A single column couldn't hold `7-eleven`'s 3 existing placeholder
+  photos, so a real one-to-many table was necessary, not optional.
+- The migration's data-seed step moved those 3 existing photos into
+  `venue_photos` as `source: 'legacy'` rows, byte-for-byte and
+  path-for-path unchanged (`public/photos/_placeholders/` untouched) —
+  confirmed via direct DB query before and after.
+- `VenuePhotoGallery` (`src/components/venues/venue-photo-gallery.tsx`)
+  is now an async Server Component querying `getVenuePhotosBySlug()`
+  instead of the static config — same props, same JSX, same CSS classes,
+  same "nothing without photos" behavior. Verified render-identical on
+  `/eat/7-eleven` (3 frames, same alt text, same DOM) before and after.
+- `uploadVenueImage`/`removeVenueImage` (`src/actions/admin.ts`) now
+  target the one `source: 'admin'` row per venue via
+  `upsertAdminVenuePhoto`/`deleteAdminVenuePhoto`
+  (`src/lib/db/queries/venue-photos.ts`) instead of `venues.image_url`.
+  Admin UI is unchanged — still single upload/replace/remove.
+- Removed this session's own hero-image block from `venue-detail.tsx`
+  (and its `.detail-hero-image` CSS) — keeping it would have shown an
+  admin-uploaded photo twice once both systems shared data. This was the
+  session's own addition, not the co-founder's, so it was fair game to
+  remove without asking; called out anyway in `Context/decisions.md`.
+- Deleted the now-fully-superseded `src/config/venue-photos.ts`.
+- `Context/backlog.md`'s "Venue photo storage + upload backend" row is
+  resolved (removed) — this is that work.
+
+**Verification:** typecheck/lint/test/build all pass (64 tests, same as
+after the merge — no test changes needed). A Playwright check confirmed
+`/eat/7-eleven` renders identically (3 photo frames, same alt text, no
+console/network errors beyond one pre-existing first-compile artifact
+unrelated to this change). Since admin credentials weren't available to
+this session, the upload→gallery wiring itself was verified by calling
+`upsertAdminVenuePhoto`/`deleteAdminVenuePhoto` directly against
+`tueats-dev`, confirming: legacy photos untouched, an admin photo appends
+correctly and renders in the live gallery (4 frames, correct order),
+removal cleanly restores exactly the original 3. Not yet verified: the
+actual file-upload button in `/admin` combined with this new table (see
+"Next up" above).
 
 ---
 

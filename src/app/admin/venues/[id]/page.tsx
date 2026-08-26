@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AdminAccessDenied } from "@/components/admin/access-denied";
 import { VenueEditor } from "@/components/admin/venue-editor";
 import { AuthError, requireAdmin } from "@/lib/auth";
-import { getVenueById } from "@/lib/db/queries";
+import { getAdminVenuePhoto, getVenueById } from "@/lib/db/queries";
 
 export const metadata: Metadata = {
   title: "Edit venue",
@@ -30,5 +30,6 @@ export default async function EditVenuePage({
     notFound();
   }
 
-  return <VenueEditor source={venue} />;
+  const adminPhoto = await getAdminVenuePhoto(id);
+  return <VenueEditor adminPhotoUrl={adminPhoto?.url ?? null} source={venue} />;
 }

@@ -10,12 +10,15 @@ import {
 import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import {
+  deleteAdminVenuePhoto,
+  getAdminVenuePhoto,
   getVenueById,
   insertVenue,
   listProblemReports,
   listSlugsExcept,
   updateProblemReportStatus,
   updateVenue,
+  upsertAdminVenuePhoto,
 } from "@/lib/db/queries";
 import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
@@ -134,6 +137,7 @@ export async function uploadVenueImage(
     if (!existing) {
       return { ok: false, error: "Venue not found" };
     }
+    const existingPhoto = await getAdminVenuePhoto(id);
 
     const extension = file.type.split("/")[1];
     const blob = await put(`venues/${id}-${Date.now()}.${extension}`, file, {
@@ -141,13 +145,16 @@ export async function uploadVenueImage(
       addRandomSuffix: false,
     });
 
-    const updated = await updateVenue(id, { imageUrl: blob.url });
+    await upsertAdminVenuePhoto(id, {
+      url: blob.url,
+      alt: `${existing.name} photo`,
+    });
 
-    if (existing.imageUrl && existing.imageUrl !== blob.url) {
-      await del(existing.imageUrl).catch(() => {});
+    if (existingPhoto && existingPhoto.url !== blob.url) {
+      await del(existingPhoto.url).catch(() => {});
     }
 
-    revalidateVenue(updated.slug);
+    revalidateVenue(existing.slug);
     return { ok: true, data: { imageUrl: blob.url } };
   } catch (error) {
     return fail(error);
@@ -163,14 +170,14 @@ export async function removeVenueImage(raw: unknown): Promise<ActionResult> {
     if (!existing) {
       return { ok: false, error: "Venue not found" };
     }
-    if (!existing.imageUrl) {
+
+    const removed = await deleteAdminVenuePhoto(id);
+    if (!removed) {
       return { ok: true, data: undefined };
     }
+    await del(removed.url).catch(() => {});
 
-    const updated = await updateVenue(id, { imageUrl: null });
-    await del(existing.imageUrl).catch(() => {});
-
-    revalidateVenue(updated.slug);
+    revalidateVenue(existing.slug);
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error);

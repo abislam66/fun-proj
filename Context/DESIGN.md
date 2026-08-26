@@ -103,7 +103,7 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 ### Venue detail (`/eat/[slug]`)
 
 - **Content order (all breakpoints):** name → hedged open-status (mono) → cuisine / zone / payment → photos (only when a venue has them) → description → hours → last-verified → report. Phase 2: student rating primary, Google snapshot secondary and never merged.
-- **Photos:** horizontal snap-scroll strip of 4:3 frames (`radius-lg`, border, `surface-raised` letterbox), no heading, no lightbox. Venues without photos get **nothing** — no placeholder frame (cards only when they contain content). Source is the frontend-only registry `src/config/venue-photos.ts` + files in `public/photos/<slug>/`.
+- **Photos:** horizontal snap-scroll strip of 4:3 frames (`radius-lg`, border, `surface-raised` letterbox), no heading, no lightbox. Venues without photos get **nothing** — no placeholder frame (cards only when they contain content). Source is `venue_photos` (DB + Vercel Blob for admin uploads) as of 2026-08-25 — see `Context/decisions.md`; appearance is unchanged from the original frontend-only version.
 - **Mobile:** Single column, back returns to explorer with preserved filters/map position.
 - **Desktop:** Typography-led reading column (~40rem) with generous vertical rhythm; optional sticky mini context (open status + primary cuisine) as the user scrolls. Not a cramped phone article stretched to 1200px. Back / “View on map” restores the split explorer state.
 

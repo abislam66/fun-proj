@@ -17,7 +17,6 @@ export interface Venue {
   type: VenueType;
   name: string;
   description: string | null;
-  imageUrl: string | null;
   status: "published" | "retired";
   zoneKey: ZoneKey | null;
   location: string;

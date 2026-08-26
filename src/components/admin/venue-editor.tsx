@@ -40,11 +40,17 @@ const dayLabels: Record<WeekdayKey, string> = {
   sun: "Sun",
 };
 
-export function VenueEditor({ source }: { source?: VenueRow }) {
+export function VenueEditor({
+  source,
+  adminPhotoUrl = null,
+}: {
+  source?: VenueRow;
+  adminPhotoUrl?: string | null;
+}) {
   return (
     <VenueEditorForm
       key={source ? `${source.id}:${source.updatedAt.toISOString()}` : "new"}
-      source={source ? toDraft(source) : EMPTY_VENUE_DRAFT}
+      source={source ? toDraft(source, adminPhotoUrl) : EMPTY_VENUE_DRAFT}
     />
   );
 }

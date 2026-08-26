@@ -1199,15 +1199,6 @@ button {
   color: var(--color-ink);
 }
 
-.detail-hero-image {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  margin-bottom: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  object-fit: cover;
-}
-
 .detail-hero {
   padding-bottom: var(--spacing-xl);
   border-bottom: 1px solid var(--color-border);

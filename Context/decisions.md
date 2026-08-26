@@ -7,14 +7,51 @@
 
 ---
 
-## 2026-08-25 — Venue photos: Vercel Blob for storage, admin-only for now
+## 2026-08-25 — Two venue-photo systems consolidated into one (`venue_photos` table)
 
-> **⚠️ Conflicts with the "frontend-only, no backend" entry below,
-> logged independently by the co-founder the same day.** Two different
-> answers to "how do venue photos work" exist in the codebase right now
-> (this admin-upload path, and their static `public/photos/` +
-> `venue-photos.ts` gallery) — both currently coexist un-reconciled after
-> today's merge. Needs a human decision: see the merge summary.
+Resolved the conflict flagged in the entry directly below: this session's
+admin-upload path (DB + Vercel Blob) and the co-founder's frontend-only
+`VenuePhotoGallery` (static `public/photos/<slug>/` + `config/venue-photos.ts`)
+were two independent answers to "how do venue photos work," merged
+side by side with neither wired to the other. Per explicit instruction,
+**the co-founder's `VenuePhotoGallery` appearance, layout, styling, and
+interactions were not touched at all** — only its data source changed
+from the static config to a DB query.
+
+**New table, not a reused single column.** The existing `venues.image_url`
+(added earlier this session, never actually used — no admin had uploaded
+a photo yet, confirmed empty before dropping it) could only ever hold one
+photo per venue. The frontend-only registry had **3** photos on one venue
+(`7-eleven`), and "preserve all existing photos" ruled out anything that
+would lose 2 of them. `venue_photos` (`venue_id`, `url`, `alt`,
+`source: 'legacy' | 'admin'`, `sort_order`) supports the many-photos-per-venue
+shape `VenuePhotoGallery` was already built for. The 3 existing placeholder
+photos were migrated in as `source: 'legacy'` rows pointing at their
+original `public/photos/_placeholders/` files — same bytes, same paths,
+untouched — via a data migration in `drizzle/0005_tough_captain_america.sql`.
+
+**Admin UI unchanged.** `uploadVenueImage`/`removeVenueImage` still do
+exactly what they did before (single upload/replace/remove) — they just
+now target the one `source: 'admin'` row per venue in `venue_photos`
+instead of `venues.image_url`. Legacy rows are never touched by admin
+actions. An admin-uploaded photo is appended after any legacy photos and
+shows up in the *same* gallery strip, at the *same* position photos
+already occupy — no second photo UI on the page.
+
+**Removed, not cofounder's:** the separate "hero image" block this
+session had added directly to `venue-detail.tsx` (a `next/image` render of
+`venue.imageUrl` above the hero). It was this session's own addition, not
+the co-founder's — keeping it would have shown an admin-uploaded photo
+twice (once as a hero, once in the gallery) once both systems shared data.
+Removed along with its now-dead `.detail-hero-image` CSS rule.
+
+`src/config/venue-photos.ts` is deleted (fully superseded). See
+`Context/backlog.md`'s now-removed "Venue photo storage + upload backend"
+row — this entry is what actioned it.
+
+---
+
+## 2026-08-25 — Venue photos: Vercel Blob for storage, admin-only for now
 
 Added venue image upload. Two scoping decisions worth recording:
 
