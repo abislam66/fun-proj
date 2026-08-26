@@ -23,7 +23,6 @@ export interface VenueDraft {
   name: string;
   type: VenueType;
   description: string;
-  imageUrl: string | null;
   status: VenueStatusValue;
   lat: string;
   lng: string;
@@ -49,7 +48,6 @@ export const EMPTY_VENUE_DRAFT: VenueDraft = {
   name: "",
   type: "truck",
   description: "",
-  imageUrl: null,
   status: "draft",
   lat: CAMPUS_BOUNDS.south.toFixed(4),
   lng: CAMPUS_BOUNDS.west.toFixed(4),
@@ -77,10 +75,7 @@ function triStateToPayment(value: PaymentTriState): boolean | null {
   return null;
 }
 
-export function toDraft(
-  row: VenueRow,
-  adminPhotoUrl: string | null = null,
-): VenueDraft {
+export function toDraft(row: VenueRow): VenueDraft {
   const hours = (row.hours as VenueHours | null) ?? {};
   return {
     id: row.id,
@@ -88,7 +83,6 @@ export function toDraft(
     name: row.name,
     type: row.type,
     description: row.description ?? "",
-    imageUrl: adminPhotoUrl,
     status: row.status,
     lat: String(row.lat),
     lng: String(row.lng),

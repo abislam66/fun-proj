@@ -46,9 +46,12 @@ export const problemKindEnum = pgEnum("problem_kind", [
 
 /**
  * "legacy" = migrated from the pre-backend static registry
- * (src/config/venue-photos.ts + public/photos/<slug>/), never touched by
- * admin upload/remove. "admin" = the one slot uploadVenueImage/
- * removeVenueImage manage per venue, backed by Vercel Blob.
+ * (src/config/venue-photos.ts + public/photos/<slug>/) — kept alongside
+ * admin-uploaded photos in the gallery, but its files live in the public
+ * folder, not Vercel Blob, so blob cleanup on delete only ever targets
+ * "admin" rows. "admin" = photos uploaded/removed/reordered through the
+ * admin photo manager (up to MAX_VENUE_PHOTOS per venue), backed by
+ * Vercel Blob.
  */
 export const venuePhotoSourceEnum = pgEnum("venue_photo_source", [
   "legacy",

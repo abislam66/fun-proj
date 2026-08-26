@@ -7,6 +7,70 @@
 
 ---
 
+## 2026-08-26 — Venue photos extended to a real multi-photo gallery (up to 10)
+
+The single-admin-photo model (one `source: "admin"` row per venue,
+upsert-in-place) is gone. Admin can now upload, remove, reorder, and set a
+cover photo across up to `MAX_VENUE_PHOTOS` (10) photos per venue, all in
+the same `venue_photos` table introduced during the 2026-08-25 photo-
+system consolidation — no new table or column was needed, since that
+table was already row-per-photo with a `sort_order`. Extending it was a
+matter of removing the "only ever one admin row" constraint from the
+query/action layer, not a schema change.
+
+**What changed:**
+- `getAdminVenuePhoto`/`upsertAdminVenuePhoto`/`deleteAdminVenuePhoto`
+  (single-row, upsert-in-place) replaced by `getVenuePhotosForAdmin`
+  (full list), `insertVenuePhoto` (always appends), `deleteVenuePhotoById`,
+  and `setVenuePhotoOrder` (rewrites `sort_order` to match a given id
+  list) in `lib/db/queries/venue-photos.ts`.
+- Server actions: `uploadVenueImage`/`removeVenueImage` replaced by
+  `uploadVenuePhoto`, `deleteVenuePhoto`, `reorderVenuePhotos` in
+  `actions/admin.ts`. The 10-photo cap is enforced app-level (count before
+  insert), not a DB constraint — consistent with how validation elsewhere
+  in this codebase lives in the action/schema layer, not in Postgres
+  constraints, except the one existing campus-bounds check.
+- "Set as cover" is not a new field — it's `reorderVenuePhotos` with the
+  chosen photo moved to the front (`sort_order = 0`), reusing the existing
+  reorder machinery via a new pure helper
+  (`lib/admin-photo-order.ts::movePhotoToFront`). The public gallery
+  already treats index 0 as the priority-loaded photo
+  (`venue-photo-gallery.tsx`'s `priority={index === 0}`), so this needed
+  no gallery change at all — cover photo and sort_order 0 were already the
+  same concept, just not admin-controllable before.
+- Blob cleanup on delete now checks `photo.source === "admin"` before
+  calling Blob `del()` — legacy photos point at local `/photos/...` paths
+  (from the pre-backend static registry), never a Blob URL, so they must
+  never be passed to `del()`. Verified directly against a real
+  legacy-source row that this guard is actually exercised, not just
+  assumed correct by inspection.
+- **The public `VenuePhotoGallery` component was not touched at all** —
+  it already rendered a bare horizontal strip with no arrows/dots/count
+  UI regardless of photo count, so "0 → nothing, 1 → no unnecessary
+  controls, 2–10 → existing gallery" was already true of the co-founder's
+  design before this work; extending to 10 admin-manageable photos needed
+  zero frontend changes to preserve.
+- Admin editor UI: the old single "Photo" section (preview + replace/
+  remove) became a "Photos (X / 10)" grid — each photo gets ↑/↓ reorder,
+  "Make cover" (hidden for the current cover), and "Remove" buttons, plus
+  an upload control that disables itself at the cap instead of erroring
+  after the fact.
+
+**Verified live against `tueats-dev` + the real Vercel Blob store**
+(`.scratch/verify-photo-system.mjs`, deleted after use, not committed):
+picked a real zero-photo venue, drove it through 0 → 1 → 10 photos,
+confirmed the 11th-upload cap check, reorder, make-cover, delete-with-
+blob-cleanup, and delete-of-a-legacy-row-without-touching-Blob — then
+fully restored the venue to 0 photos and deleted every test blob. Existing
+photos (7-eleven's 3 legacy rows, one pre-existing admin photo on
+Korea House) were confirmed untouched before and after.
+
+**Not verified:** the actual admin UI (upload/reorder/cover buttons)
+through a real logged-in browser session — same standing limitation as
+the zone-system work, no admin credentials available to this session.
+
+---
+
 ## 2026-08-26 — Old 4-zone system replaced by the co-founder's 8-zone map system
 
 Admins now explicitly control both a venue's map zone and its exact

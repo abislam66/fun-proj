@@ -50,3 +50,4 @@ export const ALLOWED_VENUE_IMAGE_TYPES = [
   "image/png",
   "image/webp",
 ] as const;
+export const MAX_VENUE_PHOTOS = 10;

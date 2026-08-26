@@ -6,26 +6,32 @@ import { revalidateTag } from "next/cache";
 import {
   ALLOWED_VENUE_IMAGE_TYPES,
   MAX_VENUE_IMAGE_BYTES,
+  MAX_VENUE_PHOTOS,
 } from "@/config/site";
 import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import {
-  deleteAdminVenuePhoto,
-  getAdminVenuePhoto,
+  deleteVenuePhotoById,
   getVenueById,
+  getVenuePhotoById,
+  getVenuePhotosForAdmin,
   insertVenue,
+  insertVenuePhoto,
   listProblemReports,
   listSlugsExcept,
+  setVenuePhotoOrder,
   updateProblemReportStatus,
   updateVenue,
-  upsertAdminVenuePhoto,
+  type AdminVenuePhoto,
 } from "@/lib/db/queries";
 import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
 import {
+  reorderVenuePhotosSchema,
   resolveProblemReportSchema,
   venueIdSchema,
   venueInputSchema,
+  venuePhotoIdSchema,
 } from "@/lib/validation";
 
 export type ActionResult<T = void> =
@@ -107,10 +113,18 @@ export async function upsertVenue(
   }
 }
 
-/** Admin: upload/replace a venue's photo. Old blob is deleted once the new one is saved. */
-export async function uploadVenueImage(
+function toAdminPhoto(row: {
+  id: string;
+  url: string;
+  alt: string;
+}): AdminVenuePhoto {
+  return { id: row.id, url: row.url, alt: row.alt };
+}
+
+/** Admin: add a photo to a venue's gallery (up to MAX_VENUE_PHOTOS). */
+export async function uploadVenuePhoto(
   formData: FormData,
-): Promise<ActionResult<{ imageUrl: string }>> {
+): Promise<ActionResult<{ photo: AdminVenuePhoto }>> {
   try {
     await requireAdmin();
     const id = formData.get("id");
@@ -137,7 +151,14 @@ export async function uploadVenueImage(
     if (!existing) {
       return { ok: false, error: "Venue not found" };
     }
-    const existingPhoto = await getAdminVenuePhoto(id);
+
+    const currentPhotos = await getVenuePhotosForAdmin(id);
+    if (currentPhotos.length >= MAX_VENUE_PHOTOS) {
+      return {
+        ok: false,
+        error: `This venue already has ${MAX_VENUE_PHOTOS} photos — remove one before adding another.`,
+      };
+    }
 
     const extension = file.type.split("/")[1];
     const blob = await put(`venues/${id}-${Date.now()}.${extension}`, file, {
@@ -145,40 +166,72 @@ export async function uploadVenueImage(
       addRandomSuffix: false,
     });
 
-    await upsertAdminVenuePhoto(id, {
+    const photo = await insertVenuePhoto(id, {
       url: blob.url,
-      alt: `${existing.name} photo`,
+      alt: `${existing.name} photo ${currentPhotos.length + 1}`,
     });
 
-    if (existingPhoto && existingPhoto.url !== blob.url) {
-      await del(existingPhoto.url).catch(() => {});
-    }
-
     revalidateVenue(existing.slug);
-    return { ok: true, data: { imageUrl: blob.url } };
+    return { ok: true, data: { photo: toAdminPhoto(photo) } };
   } catch (error) {
     return fail(error);
   }
 }
 
-/** Admin: remove a venue's photo. */
-export async function removeVenueImage(raw: unknown): Promise<ActionResult> {
+/** Admin: remove one photo from a venue's gallery. Blob is only deleted for admin-uploaded photos. */
+export async function deleteVenuePhoto(raw: unknown): Promise<ActionResult> {
   try {
     await requireAdmin();
-    const { id } = venueIdSchema.parse(raw);
-    const existing = await getVenueById(id);
+    const { venueId, photoId } = venuePhotoIdSchema.parse(raw);
+    const existing = await getVenueById(venueId);
     if (!existing) {
       return { ok: false, error: "Venue not found" };
     }
 
-    const removed = await deleteAdminVenuePhoto(id);
-    if (!removed) {
-      return { ok: true, data: undefined };
+    const photo = await getVenuePhotoById(photoId);
+    if (!photo || photo.venueId !== venueId) {
+      return { ok: false, error: "Photo not found" };
     }
-    await del(removed.url).catch(() => {});
+
+    await deleteVenuePhotoById(photoId);
+    if (photo.source === "admin") {
+      await del(photo.url).catch(() => {});
+    }
 
     revalidateVenue(existing.slug);
     return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: reorder a venue's photos (also used to set the cover photo — move it to index 0). */
+export async function reorderVenuePhotos(
+  raw: unknown,
+): Promise<ActionResult<{ photos: AdminVenuePhoto[] }>> {
+  try {
+    await requireAdmin();
+    const { venueId, photoIds } = reorderVenuePhotosSchema.parse(raw);
+    const existing = await getVenueById(venueId);
+    if (!existing) {
+      return { ok: false, error: "Venue not found" };
+    }
+
+    const current = await getVenuePhotosForAdmin(venueId);
+    const currentIds = new Set(current.map((photo) => photo.id));
+    const sameSet =
+      photoIds.length === current.length &&
+      photoIds.every((id) => currentIds.has(id));
+    if (!sameSet) {
+      return {
+        ok: false,
+        error: "Photo list changed elsewhere — refresh and try again.",
+      };
+    }
+
+    const reordered = await setVenuePhotoOrder(venueId, photoIds);
+    revalidateVenue(existing.slug);
+    return { ok: true, data: { photos: reordered.map(toAdminPhoto) } };
   } catch (error) {
     return fail(error);
   }

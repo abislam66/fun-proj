@@ -5,6 +5,8 @@ export {
   venueInputSchema,
   publishVenueSchema,
   venueIdSchema,
+  venuePhotoIdSchema,
+  reorderVenuePhotosSchema,
   problemKindSchema,
   reportProblemSchema,
   resolveProblemReportSchema,

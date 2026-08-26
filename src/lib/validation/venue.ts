@@ -7,6 +7,7 @@ import {
   MAX_PROBLEM_NOTE_LENGTH,
   MAX_VENUE_DESCRIPTION_LENGTH,
   MAX_VENUE_NAME_LENGTH,
+  MAX_VENUE_PHOTOS,
 } from "@/config/site";
 import { WEEKDAY_KEYS } from "@/lib/hours";
 import { OTHER_MAP_ZONE } from "@/lib/venues";
@@ -70,6 +71,20 @@ export const publishVenueSchema = z
 export const venueIdSchema = z
   .object({
     id: z.uuid(),
+  })
+  .strict();
+
+export const venuePhotoIdSchema = z
+  .object({
+    venueId: z.uuid(),
+    photoId: z.uuid(),
+  })
+  .strict();
+
+export const reorderVenuePhotosSchema = z
+  .object({
+    venueId: z.uuid(),
+    photoIds: z.array(z.uuid()).min(1).max(MAX_VENUE_PHOTOS),
   })
   .strict();
 

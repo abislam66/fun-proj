@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import {
+  deleteVenuePhoto,
   publishVenue,
-  removeVenueImage,
+  reorderVenuePhotos,
   retireVenue,
-  uploadVenueImage,
+  uploadVenuePhoto,
   upsertVenue,
   verifyVenue,
 } from "@/actions/admin";
@@ -17,7 +18,9 @@ import { VenueLocationPicker } from "@/components/admin/venue-location-picker";
 import { Button, Input } from "@/components/ui/primitives";
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
 import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
-import { ALLOWED_VENUE_IMAGE_TYPES } from "@/config/site";
+import { ALLOWED_VENUE_IMAGE_TYPES, MAX_VENUE_PHOTOS } from "@/config/site";
+import { movePhoto, movePhotoToFront } from "@/lib/admin-photo-order";
+import type { AdminVenuePhoto } from "@/lib/db/queries";
 import type { VenueRow } from "@/lib/db/schema";
 import { WEEKDAY_KEYS, type WeekdayKey } from "@/lib/hours";
 import {
@@ -45,20 +48,27 @@ const dayLabels: Record<WeekdayKey, string> = {
 
 export function VenueEditor({
   source,
-  adminPhotoUrl = null,
+  photos = [],
 }: {
   source?: VenueRow;
-  adminPhotoUrl?: string | null;
+  photos?: AdminVenuePhoto[];
 }) {
   return (
     <VenueEditorForm
       key={source ? `${source.id}:${source.updatedAt.toISOString()}` : "new"}
-      source={source ? toDraft(source, adminPhotoUrl) : EMPTY_VENUE_DRAFT}
+      initialPhotos={photos}
+      source={source ? toDraft(source) : EMPTY_VENUE_DRAFT}
     />
   );
 }
 
-function VenueEditorForm({ source }: { source: VenueDraft }) {
+function VenueEditorForm({
+  source,
+  initialPhotos,
+}: {
+  source: VenueDraft;
+  initialPhotos: AdminVenuePhoto[];
+}) {
   const router = useRouter();
   const isNew = !source.id;
   const [draft, setDraft] = useState(source);
@@ -66,8 +76,10 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
   const [notice, setNotice] = useState("");
   const [noticeIsError, setNoticeIsError] = useState(false);
   const [pending, setPending] = useState(false);
-  const [imagePending, setImagePending] = useState(false);
+  const [photos, setPhotos] = useState<AdminVenuePhoto[]>(initialPhotos);
+  const [photoPending, setPhotoPending] = useState(false);
   const zoneWarning = zoneMismatchWarning(draft);
+  const atPhotoLimit = photos.length >= MAX_VENUE_PHOTOS;
 
   function setField<K extends keyof VenueDraft>(
     field: K,
@@ -175,39 +187,75 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
     setNoticeIsError(false);
   }
 
-  async function uploadImage(file: File) {
-    if (!draft.id) return;
-    setImagePending(true);
+  async function uploadPhoto(file: File) {
+    if (!draft.id || atPhotoLimit) return;
+    setPhotoPending(true);
     const formData = new FormData();
     formData.set("id", draft.id);
     formData.set("file", file);
-    const result = await uploadVenueImage(formData);
-    setImagePending(false);
+    const result = await uploadVenuePhoto(formData);
+    setPhotoPending(false);
 
     if (!result.ok) {
       setNotice(result.error);
       setNoticeIsError(true);
       return;
     }
-    setField("imageUrl", result.data.imageUrl);
-    setNotice("Image uploaded.");
+    setPhotos((current) => [...current, result.data.photo]);
+    setNotice("Photo uploaded.");
     setNoticeIsError(false);
   }
 
-  async function removeImage() {
+  async function removePhoto(photoId: string) {
     if (!draft.id) return;
-    setImagePending(true);
-    const result = await removeVenueImage({ id: draft.id });
-    setImagePending(false);
+    setPhotoPending(true);
+    const result = await deleteVenuePhoto({ venueId: draft.id, photoId });
+    setPhotoPending(false);
 
     if (!result.ok) {
       setNotice(result.error);
       setNoticeIsError(true);
       return;
     }
-    setField("imageUrl", null);
-    setNotice("Image removed.");
+    setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+    setNotice("Photo removed.");
     setNoticeIsError(false);
+  }
+
+  async function applyPhotoOrder(nextOrder: string[]) {
+    if (!draft.id) return;
+    setPhotoPending(true);
+    const result = await reorderVenuePhotos({
+      venueId: draft.id,
+      photoIds: nextOrder,
+    });
+    setPhotoPending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return;
+    }
+    setPhotos(result.data.photos);
+  }
+
+  function movePhotoUpDown(photoId: string, direction: "up" | "down") {
+    void applyPhotoOrder(
+      movePhoto(
+        photos.map((photo) => photo.id),
+        photoId,
+        direction,
+      ),
+    );
+  }
+
+  function makeCoverPhoto(photoId: string) {
+    void applyPhotoOrder(
+      movePhotoToFront(
+        photos.map((photo) => photo.id),
+        photoId,
+      ),
+    );
   }
 
   function toggleCuisine(cuisine: CuisineKey) {
@@ -346,57 +394,100 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
           </EditorSection>
 
           <EditorSection
-            description="Shown at the top of the venue's public page."
-            title="Photo"
+            description="Shown at the top of the venue's public page. The cover photo (first) is used as the priority image."
+            title={`Photos (${photos.length} / ${MAX_VENUE_PHOTOS})`}
           >
             {isNew ? (
               <p className="admin-inline-note">
-                Save the venue once before adding a photo.
+                Save the venue once before adding photos.
               </p>
             ) : (
-              <div className="admin-image-field">
-                {draft.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- admin-only preview, not the public page
-                  <img
-                    alt={`${draft.name || "Venue"} photo`}
-                    className="admin-image-preview"
-                    src={draft.imageUrl}
-                  />
+              <div className="admin-photo-field">
+                {photos.length === 0 ? (
+                  <p className="admin-inline-note">No photos yet.</p>
                 ) : (
-                  <p className="admin-inline-note">No photo yet.</p>
+                  <ul className="admin-photo-grid">
+                    {photos.map((photo, index) => (
+                      <li className="admin-photo-item" key={photo.id}>
+                        <div className="admin-photo-thumb-wrap">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- admin-only preview, not the public page */}
+                          <img
+                            alt={photo.alt}
+                            className="admin-photo-thumb"
+                            src={photo.url}
+                          />
+                          {index === 0 ? (
+                            <span className="admin-photo-cover-badge">
+                              Cover
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="admin-photo-item-actions">
+                          <Button
+                            aria-label="Move photo earlier"
+                            disabled={photoPending || index === 0}
+                            onClick={() => movePhotoUpDown(photo.id, "up")}
+                            type="button"
+                            variant="ghost"
+                          >
+                            ↑
+                          </Button>
+                          <Button
+                            aria-label="Move photo later"
+                            disabled={photoPending || index === photos.length - 1}
+                            onClick={() => movePhotoUpDown(photo.id, "down")}
+                            type="button"
+                            variant="ghost"
+                          >
+                            ↓
+                          </Button>
+                          {index !== 0 ? (
+                            <Button
+                              disabled={photoPending}
+                              onClick={() => makeCoverPhoto(photo.id)}
+                              type="button"
+                              variant="ghost"
+                            >
+                              Make cover
+                            </Button>
+                          ) : null}
+                          <Button
+                            disabled={photoPending}
+                            onClick={() => removePhoto(photo.id)}
+                            type="button"
+                            variant="ghost"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 <div className="admin-image-actions">
-                  <label className="button button-secondary admin-image-upload">
-                    {imagePending
-                      ? "Uploading…"
-                      : draft.imageUrl
-                        ? "Replace photo"
-                        : "Upload photo"}
+                  <label
+                    className={`button button-secondary admin-image-upload${
+                      atPhotoLimit ? " is-disabled" : ""
+                    }`}
+                  >
+                    {photoPending ? "Uploading…" : "Add photo"}
                     <input
                       accept={ALLOWED_VENUE_IMAGE_TYPES.join(",")}
                       className="sr-only"
-                      disabled={imagePending}
+                      disabled={photoPending || atPhotoLimit}
                       onChange={(event) => {
                         const file = event.target.files?.[0];
                         event.target.value = "";
-                        if (file) void uploadImage(file);
+                        if (file) void uploadPhoto(file);
                       }}
                       type="file"
                     />
                   </label>
-                  {draft.imageUrl ? (
-                    <Button
-                      disabled={imagePending}
-                      onClick={removeImage}
-                      type="button"
-                      variant="ghost"
-                    >
-                      Remove photo
-                    </Button>
-                  ) : null}
                 </div>
                 <p className="admin-inline-note">
-                  JPEG, PNG, or WebP — up to 5 MB.
+                  {atPhotoLimit
+                    ? `Maximum of ${MAX_VENUE_PHOTOS} photos reached — remove one to add another.`
+                    : "JPEG, PNG, or WebP — up to 5 MB each."}
                 </p>
               </div>
             )}

@@ -15,14 +15,63 @@
 - **Password recovery** (`/admin/reset-password`, "Forgot password?" on the sign-in page) is fully implemented and spec-documented, but **not confirmed working end-to-end** — the custom SMTP (Resend) setup behind it is still flaky. Not currently blocking anything since admin bootstrap no longer depends on it; worth finishing later if self-service reset is wanted.
 - **Known gaps:** of the 61 active venues, 22 have no `hours` (confirmed via web research as venues with no credible posted schedule, mostly independent trucks — correctly left `null`/"Hours unknown" rather than guessed). Two venues (**Pretzel Dough**, **Vegan Tree**) were skipped entirely during the 2026-08-21 enrichment pass and need a manual look — Pretzel Dough's existence near campus couldn't be confirmed under that name, and Vegan Tree shows as **CLOSED** on current Yelp listings at both known locations (possible retirement candidate). See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed in the 2026-08-18 session, and `Context/backlog.md` for deferred items.
 - **Venue zones: admin-controlled as of 2026-08-26.** The old disconnected `zoneKey` (4 values, admin-picked, display-text-only) is gone. `venues.map_zone` is now the single source of truth, admin-selected from the co-founder's real 8 map zones (or explicit "Other/Outside mapped zones") in `/admin/venues/[id]`, with a live warning if the picked zone disagrees with what the coordinates actually compute to. Of 74 live venues, 25 sit inside a real drawn zone and 49 are "other" (most of campus is outside the 8 hand-drawn areas — expected, not a data problem). See `Context/decisions.md` 2026-08-26.
-- **Venue photos: one consolidated system as of 2026-08-25.** Admin upload/replace/remove (`/admin/venues/[id]`) and the co-founder's `VenuePhotoGallery` (unchanged appearance) now share one `venue_photos` table — legacy (migrated static) photos plus at most one admin-uploaded photo per venue, all rendered in the same gallery strip on `/eat/[slug]`. Storage for admin uploads is Vercel Blob (`venue-images`, public-read store, linked to the `tueats` Vercel project), not Supabase Storage. Full history: `Context/decisions.md` has three related 2026-08-25 entries (admin-only scoping + Blob choice, the co-founder's original frontend-only decision, and the consolidation that resolved the conflict between them). User-submitted photos are still deferred to the accounts phase (milestone ②).
+- **Venue photos: multi-photo gallery (up to 10) as of 2026-08-26.** The single-admin-photo model is gone — admin can upload, remove, reorder, and set a cover photo across up to `MAX_VENUE_PHOTOS` (10) photos per venue in `/admin/venues/[id]`, all still in the one `venue_photos` table from the 2026-08-25 consolidation (no schema change needed, just query/action layer changes). The co-founder's public `VenuePhotoGallery` was not touched — it already rendered any photo count with no extra controls, so 0/1/2–10 behavior was already correct by design. Storage is still Vercel Blob (`venue-images`); blob cleanup on delete only ever targets admin-uploaded photos, never legacy (locally-hosted) ones. Full detail: `Context/decisions.md` 2026-08-26.
 - **Next up:**
   1. Manually review **Vegan Tree** (possibly closed — consider retiring) and **Pretzel Dough** (existence unconfirmed) via `/admin`.
   2. Optional: give a building/landmark to the ~7 venues whose location text got generic after the zone-system replacement (see the 2026-08-26 decisions entry for the exact list) — cosmetic, not urgent.
   3. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for a second admin account.
   4. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   5. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
-  6. Manually verify, through a real authenticated browser session, both (a) the admin photo-upload flow (sign in → upload a real file → confirm it appears in the gallery) and (b) the new map-zone picker/dropdown/warning UI (sign in → add or edit a venue → click the location picker → confirm the warning appears/clears correctly → publish) — both were verified this session at the data/logic layer (direct DB calls, unit tests) but never through the real `/admin` UI, since no admin credentials were available to either session.
+  6. Manually verify, through a real authenticated browser session: (a) the multi-photo admin UI (upload several, reorder, set cover, remove, hit the 10-photo cap), (b) the map-zone picker/dropdown/warning UI, and (c) the original photo-upload flow. All three were verified this session or the last at the data/logic layer (direct DB + real Blob calls, unit tests) but never through the real `/admin` UI, since no admin credentials were available to either session.
+
+---
+
+## 2026-08-26 — Multi-photo venue gallery (up to 10), reorder + cover photo
+
+Extended the single-admin-photo model to a real gallery: up to
+`MAX_VENUE_PHOTOS` (10) photos per venue, with upload/remove/reorder/set-
+cover, all still on the one `venue_photos` table from the prior day's
+consolidation. No schema migration was needed — that table was already
+row-per-photo with a `sort_order`; the single-photo constraint lived only
+in the query layer (`upsertAdminVenuePhoto` always replaced the one
+`source: "admin"` row) and has been removed.
+
+**What shipped:**
+- `lib/db/queries/venue-photos.ts`: `getVenuePhotosForAdmin` (full list),
+  `insertVenuePhoto` (always appends), `deleteVenuePhotoById`,
+  `setVenuePhotoOrder` (rewrites `sort_order` to a given id order via a
+  transaction).
+- `actions/admin.ts`: `uploadVenuePhoto` (enforces the 10-photo cap
+  app-level before hitting Blob), `deleteVenuePhoto` (only calls Blob
+  `del()` for `source: "admin"` rows — legacy photos are local files, not
+  Blob objects), `reorderVenuePhotos` (validates the submitted id set
+  exactly matches the venue's current photos before writing).
+- "Make cover" reuses `reorderVenuePhotos` with the target photo moved to
+  the front — no new field, since the gallery already treats index 0 as
+  the priority-loaded cover image. New pure helpers
+  (`lib/admin-photo-order.ts`: `movePhotoToFront`, `movePhoto`) back the
+  cover button and the ↑/↓ reorder buttons; both are unit-tested (13
+  cases covering the not-in-list and both-ends no-op edge cases).
+- Admin editor UI: "Photo" → "Photos (X / 10)" — a small grid of
+  thumbnails, each with ↑/↓, "Make cover" (hidden on the current cover),
+  and "Remove"; upload control disables itself at the cap.
+- **Zero changes to the public `VenuePhotoGallery` component or its
+  CSS.** It already rendered a bare horizontal strip with no controls at
+  any photo count, so the "0 → nothing, 1 → no extra controls, 2–10 →
+  existing gallery" requirement was already satisfied by the co-founder's
+  original design.
+
+**Verification:** typecheck/lint/78 tests (13 new)/build all pass. Live-
+verified against `tueats-dev` + the real Vercel Blob store with a
+temporary script (deleted after use): drove a real zero-photo venue
+through 0 → 1 → 10 photos, confirmed the cap blocks an 11th, reorder,
+make-cover, delete-with-blob-cleanup, and delete-of-a-legacy-row-without-
+touching-Blob — then fully restored the venue to 0 photos and deleted
+every test blob. Confirmed existing photos (7-eleven's 3 legacy rows, one
+pre-existing admin photo on Korea House) were untouched throughout.
+**Not verified:** the admin UI itself through a real browser session — no
+admin credentials available this session. Full reasoning in
+`Context/decisions.md` (2026-08-26).
 
 ---
 

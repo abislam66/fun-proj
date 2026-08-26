@@ -14,8 +14,11 @@ export {
 } from "./venues";
 export {
   getVenuePhotosBySlug,
-  getAdminVenuePhoto,
-  upsertAdminVenuePhoto,
-  deleteAdminVenuePhoto,
+  getVenuePhotosForAdmin,
+  getVenuePhotoById,
+  insertVenuePhoto,
+  deleteVenuePhotoById,
+  setVenuePhotoOrder,
   type VenuePhoto,
+  type AdminVenuePhoto,
 } from "./venue-photos";

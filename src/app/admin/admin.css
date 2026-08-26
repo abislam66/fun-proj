@@ -513,19 +513,63 @@ a.button {
   accent-color: var(--color-cherry);
 }
 
-.admin-image-field {
+.admin-photo-field {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
-.admin-image-preview {
+.admin-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--spacing-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-photo-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.admin-photo-thumb-wrap {
+  position: relative;
+}
+
+.admin-photo-thumb {
   width: 100%;
-  max-width: 16rem;
   aspect-ratio: 4 / 3;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   object-fit: cover;
+}
+
+.admin-photo-cover-badge {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-full);
+  background: var(--color-cherry);
+  color: var(--color-surface);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-photo-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.admin-photo-item-actions .button {
+  min-height: 1.9rem;
+  padding: 0.25rem 0.5rem;
+  font-size: var(--text-micro);
 }
 
 .admin-image-actions {
@@ -536,6 +580,11 @@ a.button {
 
 .admin-image-upload {
   cursor: pointer;
+}
+
+.admin-image-upload.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .admin-location-picker {
