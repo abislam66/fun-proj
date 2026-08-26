@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 
 import { CUISINE_KEYS } from "@/config/cuisines";
-import { ZONE_KEYS } from "@/config/zones";
+import { MAP_ZONE_KEYS } from "@/config/map-zones";
 import { db } from "@/lib/db";
 import {
   problemReports,
@@ -12,7 +12,7 @@ import {
   type VenueRow,
 } from "@/lib/db/schema";
 import type { VenueHours } from "@/lib/hours";
-import type { Venue } from "@/lib/venues";
+import { OTHER_MAP_ZONE, type Venue } from "@/lib/venues";
 
 export type PublicVenue = Omit<VenueRow, "hours"> & {
   hours: VenueHours | null;
@@ -27,9 +27,11 @@ export function toVenue(row: PublicVenue): Venue {
     name: row.name,
     description: row.description,
     status: row.status === "retired" ? "retired" : "published",
-    zoneKey: ZONE_KEYS.includes(row.zoneKey as (typeof ZONE_KEYS)[number])
-      ? (row.zoneKey as Venue["zoneKey"])
-      : null,
+    mapZone:
+      row.mapZone === OTHER_MAP_ZONE ||
+      MAP_ZONE_KEYS.includes(row.mapZone as (typeof MAP_ZONE_KEYS)[number])
+        ? (row.mapZone as Venue["mapZone"])
+        : null,
     location:
       [row.building, row.floor].filter(Boolean).join(" · ") ||
       "Near Temple Main Campus",

@@ -13,10 +13,11 @@ import {
   verifyVenue,
 } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { VenueLocationPicker } from "@/components/admin/venue-location-picker";
 import { Button, Input } from "@/components/ui/primitives";
-import { ALLOWED_VENUE_IMAGE_TYPES } from "@/config/site";
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
-import { ZONES, type ZoneKey } from "@/config/zones";
+import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
+import { ALLOWED_VENUE_IMAGE_TYPES } from "@/config/site";
 import type { VenueRow } from "@/lib/db/schema";
 import { WEEKDAY_KEYS, type WeekdayKey } from "@/lib/hours";
 import {
@@ -25,10 +26,12 @@ import {
   hasValidationErrors,
   toDraft,
   validateVenueDraft,
+  zoneMismatchWarning,
   type PaymentTriState,
   type VenueDraft,
   type VenueDraftErrors,
 } from "@/lib/admin-venue-form";
+import { OTHER_MAP_ZONE, type VenueMapZone } from "@/lib/venues";
 
 const dayLabels: Record<WeekdayKey, string> = {
   mon: "Mon",
@@ -64,6 +67,7 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
   const [noticeIsError, setNoticeIsError] = useState(false);
   const [pending, setPending] = useState(false);
   const [imagePending, setImagePending] = useState(false);
+  const zoneWarning = zoneMismatchWarning(draft);
 
   function setField<K extends keyof VenueDraft>(
     field: K,
@@ -402,23 +406,27 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
             description="Used for filters and the venue detail page."
             title="Classification"
           >
-            <Field error={errors.zoneKey} label="Campus zone" required>
+            <Field error={errors.mapZone} label="Map zone" required>
               <select
-                aria-invalid={Boolean(errors.zoneKey)}
+                aria-invalid={Boolean(errors.mapZone)}
                 className="admin-select"
                 onChange={(event) =>
-                  setField("zoneKey", event.target.value as ZoneKey | "")
+                  setField("mapZone", event.target.value as VenueMapZone | "")
                 }
-                value={draft.zoneKey}
+                value={draft.mapZone}
               >
                 <option value="">Choose a zone</option>
-                {Object.values(ZONES).map((zone) => (
-                  <option key={zone.key} value={zone.key}>
-                    {zone.label}
+                {MAP_ZONE_KEYS_SORTED.map((key) => (
+                  <option key={key} value={key}>
+                    {MAP_ZONES[key].label}
                   </option>
                 ))}
+                <option value={OTHER_MAP_ZONE}>Other / Outside mapped zones</option>
               </select>
             </Field>
+            {zoneWarning ? (
+              <p className="admin-zone-warning">{zoneWarning}</p>
+            ) : null}
             <fieldset className="admin-fieldset">
               <legend>Cuisines</legend>
               <div className="admin-check-grid">
@@ -460,15 +468,17 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
 
         <div className="editor-column">
           <EditorSection
-            description="Map editing is deferred. Phase 1 stores and reviews coordinates only."
-            title="Location — deferred map field"
+            description="Click the map or drag the pin, or type exact coordinates below."
+            title="Location"
           >
-            <div className="deferred-map-summary">
-              <strong>No map controls yet</strong>
-              <span>
-                Coordinate summary: {draft.lat || "—"}, {draft.lng || "—"}
-              </span>
-            </div>
+            <VenueLocationPicker
+              lat={Number.isFinite(Number(draft.lat)) ? Number(draft.lat) : null}
+              lng={Number.isFinite(Number(draft.lng)) ? Number(draft.lng) : null}
+              onChange={(lat, lng) => {
+                setField("lat", lat.toFixed(6));
+                setField("lng", lng.toFixed(6));
+              }}
+            />
             <div className="admin-field-grid">
               <Field error={errors.lat} label="Latitude" required>
                 <Input

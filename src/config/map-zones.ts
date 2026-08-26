@@ -1,6 +1,8 @@
 /**
- * Map-only campus zones. Separate from list-filter `config/zones.ts`
- * (`norris` / `montgomery` / `twelfth`) — those keys are not these clusters.
+ * Map-only campus zones — the single source of truth for venue zones as
+ * of 2026-08-26 (`venues.map_zone` stores one of these keys, or the
+ * admin-only "other" sentinel from `lib/venues.ts`, which is deliberately
+ * not a key here so it can't leak into the public filter bar).
  *
  * Two marks, used together on the campus overview:
  * - `MAP_ZONE_MARK.streetLine` — cherry corridor (Student Center, W Montgomery,

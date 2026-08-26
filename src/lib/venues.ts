@@ -1,8 +1,17 @@
 import type { CuisineKey } from "@/config/cuisines";
-import { MAP_ZONE_KEYS, type MapZoneKey } from "@/config/map-zones";
-import { ZONES, type ZoneKey } from "@/config/zones";
+import { MAP_ZONE_KEYS, MAP_ZONES, type MapZoneKey } from "@/config/map-zones";
 import { isHoursUnknown, isOpenNow, type VenueHours } from "@/lib/hours";
 import { pointInMapZone } from "@/lib/map/point-in-polygon";
+
+/**
+ * Admin-only sentinel for "outside every drawn map zone" — deliberately
+ * NOT a `MAP_ZONES` entry, so it can never leak into the public zone
+ * filter bar (which renders its chips directly from `MAP_ZONES`).
+ */
+export const OTHER_MAP_ZONE = "other" as const;
+export type VenueMapZone = MapZoneKey | typeof OTHER_MAP_ZONE;
+/** Display text for `OTHER_MAP_ZONE` — carries over the old system's wording. */
+export const OTHER_MAP_ZONE_LABEL = "Elsewhere near campus";
 
 export type VenueType =
   | "truck"
@@ -18,7 +27,7 @@ export interface Venue {
   name: string;
   description: string | null;
   status: "published" | "retired";
-  zoneKey: ZoneKey | null;
+  mapZone: VenueMapZone | null;
   location: string;
   building?: string | null;
   floor?: string | null;
@@ -57,9 +66,9 @@ function uniqueSorted<T extends string>(values: T[]): T[] {
  * and states it plainly. `building` already holds whatever's most
  * specific an admin has entered — a street address for an off-campus
  * shop, a building/room name for an on-campus one — so it's shown as-is
- * rather than guessing which it is. The "other" zone bucket ("Elsewhere
- * near campus") is deliberately excluded as a fallback: it's a catch-all
- * label, not a real place, so it reads as filler rather than information.
+ * rather than guessing which it is. `OTHER_MAP_ZONE` ("outside every
+ * drawn zone") is deliberately excluded as a fallback: it's a catch-all,
+ * not a real place, so it reads as filler rather than information.
  */
 export function venueLocationText(venue: Venue): {
   text: string;
@@ -72,8 +81,8 @@ export function venueLocationText(venue: Venue): {
       : venue.building
     : null;
   const zoneLabel =
-    venue.zoneKey && venue.zoneKey !== "other"
-      ? ZONES[venue.zoneKey].label
+    venue.mapZone && venue.mapZone !== OTHER_MAP_ZONE
+      ? MAP_ZONES[venue.mapZone].label
       : null;
 
   const known = landmark ?? zoneLabel;

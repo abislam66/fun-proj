@@ -4,6 +4,7 @@ import { getMockVenueBySlug, MOCK_VENUES } from "@/lib/venue-fixtures";
 import {
   EMPTY_VENUE_FILTERS,
   filterVenues,
+  OTHER_MAP_ZONE,
   parseVenueFilters,
   serializeVenueFilters,
   venueLocationText,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/venues";
 
 describe("venueLocationText", () => {
-  const truck = getMockVenueBySlug("cherry-cart")!; // zoneKey norris, building set
+  const truck = getMockVenueBySlug("cherry-cart")!; // mapZone tyler-trucks, building set
 
   it("prefixes a truck's known landmark with 'Near'", () => {
     expect(venueLocationText(truck)).toEqual({
@@ -48,13 +49,17 @@ describe("venueLocationText", () => {
   it("falls back to a real zone label when no building is known", () => {
     const noBuilding: Venue = { ...truck, building: null };
     expect(venueLocationText(noBuilding)).toEqual({
-      text: "Near Norris Street",
+      text: "Near Tyler trucks",
       approximate: true,
     });
   });
 
-  it("never surfaces the 'other' zone bucket as if it were a real place", () => {
-    const catchAllZone: Venue = { ...truck, building: null, zoneKey: "other" };
+  it("never surfaces the 'other' map zone as if it were a real place", () => {
+    const catchAllZone: Venue = {
+      ...truck,
+      building: null,
+      mapZone: OTHER_MAP_ZONE,
+    };
     expect(venueLocationText(catchAllZone)).toEqual({
       text: "Near Temple Main Campus",
       approximate: true,
@@ -66,7 +71,7 @@ describe("venueLocationText", () => {
       ...truck,
       type: "restaurant",
       building: null,
-      zoneKey: null,
+      mapZone: null,
     };
     expect(venueLocationText(noData)).toEqual({
       text: "Location not yet added",

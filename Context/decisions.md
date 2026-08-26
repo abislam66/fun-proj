@@ -7,6 +7,67 @@
 
 ---
 
+## 2026-08-26 — Old 4-zone system replaced by the co-founder's 8-zone map system
+
+Admins now explicitly control both a venue's map zone and its exact
+coordinates in `/admin/venues/[id]`, instead of the old, disconnected
+setup where the admin picked a value from an unrelated 4-zone vocabulary
+(`config/zones.ts`: norris/montgomery/twelfth/other) while the co-founder's
+real 8-zone map system (`config/map-zones.ts`) computed silently in the
+background with no admin visibility.
+
+**What changed:**
+- `venues.zone_key` → `venues.map_zone` (migrations `0006`/`0007`), storing
+  one of the 8 `MapZoneKey`s or the literal `"other"` sentinel
+  (`OTHER_MAP_ZONE`, `src/lib/venues.ts`) — deliberately **not** added to
+  `config/map-zones.ts`'s `MAP_ZONES` object, so it can never leak into
+  the public filter bar as a 9th chip. Confirmed live: exactly 8 zone
+  chips still render, unchanged.
+- Backfilled via `scripts/backfill-map-zones.ts` (kept in the repo,
+  idempotent, same one-off-script pattern as `seed-kml.ts`) using the
+  same `mapZoneContaining()` that already drives the live public zone
+  filter — not a guess, since it can't disagree with itself. Live
+  `tueats-dev` result: 74 venues, 25 landed in a real zone, 49 became
+  `"other"` (most of campus sits outside the 8 hand-drawn areas — expected
+  given how small/specific those areas are, not a bug).
+- **The live public zone filter (`filterVenues`, `venue-map.tsx`,
+  `filter-bar.tsx`) was not touched at all.** It already computed zone
+  membership live from lat/lng, automatically, before this change — this
+  work only added admin-side visibility and control on top of an already-
+  correct mechanism. Confirmed nothing there changed behaviorally.
+- Admin editor gained a "Map zone" dropdown (8 real zones + explicit
+  "Other / Outside mapped zones") and a small new interactive location
+  picker (`VenueLocationPicker`, click/drag on a minimal MapLibre map) —
+  the old plain lat/lng number inputs stay as a fallback/precise-entry
+  option alongside it, not replaced.
+- New non-blocking validation: `zoneMismatchWarning()`
+  (`lib/admin-venue-form.ts`) compares the admin's picked zone against
+  what `mapZoneContaining()` computes from the current coordinates, in
+  both directions, and shows a warning without ever auto-correcting
+  either field. Caught a real bug during testing: `Number("")` is `0`,
+  not `NaN`, so blank coordinate fields were briefly treated as a real
+  point (0,0) and produced a false "outside every zone" warning before
+  the admin had entered anything — fixed by checking for blank strings
+  explicitly before parsing.
+- `config/zones.ts` deleted (fully superseded, zero remaining consumers).
+  `config/map-zones.ts` itself was left untouched except one factual
+  comment-only fix (it referenced the now-deleted file).
+
+**Publishing still requires a zone chosen** (real or explicit "other") —
+same UX invariant as before, just retargeted to the new vocabulary.
+
+**Known content side-effect (not a bug):** since old/new zone vocabularies
+describe different geography, a handful of venues that had a specific old
+zone label with no `building` set now show generic "outside mapped zones"
+text instead (`venueLocationText`/`VenueLocation`) — verified against live
+data to be about 7 venues (e.g. `top-bap`, `hanks-cafe`, `cha-cha`), not
+the 49 it might look like at first glance (most either already showed
+generic text, already have a building override, or land on a different
+but still-real new-zone label). Worth a manual building/landmark touch-up
+for those few, not a systemic problem.
+
+---
+
 ## 2026-08-25 — Two venue-photo systems consolidated into one (`venue_photos` table)
 
 Resolved the conflict flagged in the entry directly below: this session's

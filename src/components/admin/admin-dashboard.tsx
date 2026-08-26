@@ -179,7 +179,7 @@ export function AdminDashboard({
                       {venue.status}
                     </span>
                   </td>
-                  <td>{venue.zoneKey || "Not set"}</td>
+                  <td>{venue.mapZone || "Not set"}</td>
                   <td>
                     {venue.lastVerifiedAt
                       ? venue.lastVerifiedAt.toLocaleDateString()

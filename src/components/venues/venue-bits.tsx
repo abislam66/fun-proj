@@ -1,7 +1,7 @@
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
-import { ZONES } from "@/config/zones";
+import { MAP_ZONES } from "@/config/map-zones";
 import { getOpenStatus } from "@/lib/hours";
-import type { Venue } from "@/lib/venues";
+import { OTHER_MAP_ZONE, OTHER_MAP_ZONE_LABEL, type Venue } from "@/lib/venues";
 
 export function CuisineTags({ cuisines }: { cuisines: CuisineKey[] }) {
   return (
@@ -39,8 +39,13 @@ export function PaymentTag({ card }: { card: boolean | null }) {
 export function VenueLocation({ venue }: { venue: Venue }) {
   // No zone → no filler: every venue is near campus, so saying "Near
   // campus" carries no information.
+  const zoneLabel = venue.mapZone
+    ? venue.mapZone === OTHER_MAP_ZONE
+      ? OTHER_MAP_ZONE_LABEL
+      : MAP_ZONES[venue.mapZone].label
+    : null;
   const parts = [
-    venue.zoneKey ? ZONES[venue.zoneKey].label : null,
+    zoneLabel,
     venue.building ? `Near ${venue.building}` : null,
   ].filter(Boolean);
 

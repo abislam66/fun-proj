@@ -538,24 +538,26 @@ a.button {
   cursor: pointer;
 }
 
-.deferred-map-summary {
+.admin-location-picker {
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-md);
-  border: 1px dashed var(--color-ink-muted);
-  border-radius: var(--radius-md);
-  background: var(--color-canvas);
+  gap: var(--spacing-sm);
 }
 
-.deferred-map-summary strong {
+.admin-location-picker-map {
+  height: 18rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.admin-zone-warning {
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-cherry);
+  border-radius: var(--radius-md);
+  background: var(--color-cherry-soft);
   color: var(--color-cherry-deep);
   font-size: var(--text-small);
-}
-
-.deferred-map-summary span {
-  color: var(--color-ink-secondary);
-  font-family: var(--font-data), monospace;
-  font-size: var(--text-micro);
 }
 
 .admin-hours {

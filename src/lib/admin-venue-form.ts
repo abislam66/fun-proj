@@ -1,9 +1,11 @@
-import { CAMPUS_BOUNDS } from "@/config/site";
 import type { CuisineKey } from "@/config/cuisines";
-import type { ZoneKey } from "@/config/zones";
+import { MAP_ZONES, type MapZoneKey } from "@/config/map-zones";
+import { CAMPUS_BOUNDS } from "@/config/site";
 import type { VenueRow } from "@/lib/db/schema";
 import type { VenueHours } from "@/lib/hours";
+import { mapZoneContaining } from "@/lib/map/point-in-polygon";
 import type { VenueInput } from "@/lib/validation";
+import { OTHER_MAP_ZONE, type VenueMapZone } from "@/lib/venues";
 
 export type VenueType =
   | "truck"
@@ -25,7 +27,7 @@ export interface VenueDraft {
   status: VenueStatusValue;
   lat: string;
   lng: string;
-  zoneKey: ZoneKey | "";
+  mapZone: VenueMapZone | "";
   building: string;
   floor: string;
   acceptsCash: PaymentTriState;
@@ -38,7 +40,7 @@ export interface VenueDraft {
 }
 
 export type VenueDraftErrors = Partial<
-  Record<"name" | "lat" | "lng" | "zoneKey" | "cuisines" | "hours", string>
+  Record<"name" | "lat" | "lng" | "mapZone" | "cuisines" | "hours", string>
 >;
 
 export const EMPTY_VENUE_DRAFT: VenueDraft = {
@@ -51,7 +53,7 @@ export const EMPTY_VENUE_DRAFT: VenueDraft = {
   status: "draft",
   lat: CAMPUS_BOUNDS.south.toFixed(4),
   lng: CAMPUS_BOUNDS.west.toFixed(4),
-  zoneKey: "",
+  mapZone: "",
   building: "",
   floor: "",
   acceptsCash: "unknown",
@@ -90,7 +92,7 @@ export function toDraft(
     status: row.status,
     lat: String(row.lat),
     lng: String(row.lng),
-    zoneKey: (row.zoneKey as ZoneKey | null) ?? "",
+    mapZone: (row.mapZone as VenueMapZone | null) ?? "",
     building: row.building ?? "",
     floor: row.floor ?? "",
     acceptsCash: paymentToTriState(row.acceptsCash),
@@ -111,7 +113,7 @@ export function fromDraft(draft: VenueDraft): Record<string, unknown> {
     description: draft.description.trim() || null,
     lat: Number(draft.lat),
     lng: Number(draft.lng),
-    zoneKey: draft.zoneKey || null,
+    mapZone: draft.mapZone || null,
     building: draft.building.trim() || null,
     floor: draft.floor.trim() || null,
     acceptsCash: triStateToPayment(draft.acceptsCash),
@@ -148,8 +150,8 @@ export function validateVenueDraft(
   ) {
     errors.lng = `Use a longitude from ${CAMPUS_BOUNDS.west} to ${CAMPUS_BOUNDS.east}.`;
   }
-  if (forPublish && !draft.zoneKey) {
-    errors.zoneKey = "Choose a zone before publishing.";
+  if (forPublish && !draft.mapZone) {
+    errors.mapZone = "Choose a zone before publishing.";
   }
   if (forPublish && draft.cuisines.length === 0) {
     errors.cuisines = "Choose at least one cuisine before publishing.";
@@ -173,4 +175,40 @@ export function validateVenueDraft(
 
 export function hasValidationErrors(errors: VenueDraftErrors): boolean {
   return Object.keys(errors).length > 0;
+}
+
+/**
+ * Non-blocking check: does the admin's picked zone actually match what
+ * `mapZoneContaining` (the same function driving the live public zone
+ * filter) computes from the current lat/lng? Never auto-corrects either
+ * value — just tells the admin so they can decide. Returns null when
+ * there's nothing to warn about (including while lat/lng/zone are still
+ * incomplete).
+ */
+export function zoneMismatchWarning(draft: VenueDraft): string | null {
+  if (!draft.mapZone || !draft.lat.trim() || !draft.lng.trim()) {
+    return null;
+  }
+  const lat = Number(draft.lat);
+  const lng = Number(draft.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  const computed: VenueMapZone = mapZoneContaining(lng, lat) ?? OTHER_MAP_ZONE;
+  if (computed === draft.mapZone) return null;
+
+  const computedLabel =
+    computed === OTHER_MAP_ZONE
+      ? "outside every mapped zone"
+      : MAP_ZONES[computed as MapZoneKey].label;
+
+  if (draft.mapZone === OTHER_MAP_ZONE) {
+    return `These coordinates actually fall inside ${computedLabel} — did you mean to pick that zone instead of "Other"?`;
+  }
+
+  const selectedLabel = MAP_ZONES[draft.mapZone as MapZoneKey].label;
+  return computed === OTHER_MAP_ZONE
+    ? `These coordinates don't fall inside ${selectedLabel}'s drawn area — they're outside every mapped zone.`
+    : `These coordinates fall inside ${computedLabel}, not ${selectedLabel}.`;
 }

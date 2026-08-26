@@ -13,15 +13,71 @@
 - **Live admin login:** `abislam64@gmail.com` (not `@temple.edu` — admin isn't domain-restricted, see spec). Password was set directly via Supabase Dashboard → Authentication → Users → Add User (password field right in that dialog, "Auto Confirm User" checked) — deliberately bypassing email/SMTP entirely after the custom-SMTP password-recovery path proved unreliable (intermittent `535 "Invalid username"` SMTP auth failures against Resend, one confirmed success sandwiched between many failures — never fully root-caused, see `Context/decisions.md`). The original `tur67594@temple.edu` account was deleted; its orphaned `profiles` row was deleted and replaced with one for the new account's `auth.users.id`.
 - **Pending:** a second admin account for a friend — email not yet provided by the user ("will look later"). Same no-email bootstrap process once it's available: Supabase Dashboard → Add User (with password) → tell me the email + desired display name → I grant `role: "admin"` via direct DB insert. No code changes needed for any number of admins — `profiles.role` is a per-row flag, not a singleton.
 - **Password recovery** (`/admin/reset-password`, "Forgot password?" on the sign-in page) is fully implemented and spec-documented, but **not confirmed working end-to-end** — the custom SMTP (Resend) setup behind it is still flaky. Not currently blocking anything since admin bootstrap no longer depends on it; worth finishing later if self-service reset is wanted.
-- **Known gaps:** of the 61 active venues, 26 still have no `zoneKey` (see 2026-08-21 entry — this is deliberately left as a human curation task, not automatable) and 22 have no `hours` (confirmed via web research as venues with no credible posted schedule, mostly independent trucks — correctly left `null`/"Hours unknown" rather than guessed). Two venues (**Pretzel Dough**, **Vegan Tree**) were skipped entirely during the 2026-08-21 enrichment pass and need a manual look — Pretzel Dough's existence near campus couldn't be confirmed under that name, and Vegan Tree shows as **CLOSED** on current Yelp listings at both known locations (possible retirement candidate). See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed in the 2026-08-18 session, and `Context/backlog.md` for deferred items.
+- **Known gaps:** of the 61 active venues, 22 have no `hours` (confirmed via web research as venues with no credible posted schedule, mostly independent trucks — correctly left `null`/"Hours unknown" rather than guessed). Two venues (**Pretzel Dough**, **Vegan Tree**) were skipped entirely during the 2026-08-21 enrichment pass and need a manual look — Pretzel Dough's existence near campus couldn't be confirmed under that name, and Vegan Tree shows as **CLOSED** on current Yelp listings at both known locations (possible retirement candidate). See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed in the 2026-08-18 session, and `Context/backlog.md` for deferred items.
+- **Venue zones: admin-controlled as of 2026-08-26.** The old disconnected `zoneKey` (4 values, admin-picked, display-text-only) is gone. `venues.map_zone` is now the single source of truth, admin-selected from the co-founder's real 8 map zones (or explicit "Other/Outside mapped zones") in `/admin/venues/[id]`, with a live warning if the picked zone disagrees with what the coordinates actually compute to. Of 74 live venues, 25 sit inside a real drawn zone and 49 are "other" (most of campus is outside the 8 hand-drawn areas — expected, not a data problem). See `Context/decisions.md` 2026-08-26.
 - **Venue photos: one consolidated system as of 2026-08-25.** Admin upload/replace/remove (`/admin/venues/[id]`) and the co-founder's `VenuePhotoGallery` (unchanged appearance) now share one `venue_photos` table — legacy (migrated static) photos plus at most one admin-uploaded photo per venue, all rendered in the same gallery strip on `/eat/[slug]`. Storage for admin uploads is Vercel Blob (`venue-images`, public-read store, linked to the `tueats` Vercel project), not Supabase Storage. Full history: `Context/decisions.md` has three related 2026-08-25 entries (admin-only scoping + Blob choice, the co-founder's original frontend-only decision, and the consolidation that resolved the conflict between them). User-submitted photos are still deferred to the accounts phase (milestone ②).
 - **Next up:**
   1. Manually review **Vegan Tree** (possibly closed — consider retiring) and **Pretzel Dough** (existence unconfirmed) via `/admin`.
-  2. Curate `zoneKey` for the 26 venues still missing it — this needs a human with local knowledge of the actual truck corridor, not automation (see 2026-08-21 entry for why).
+  2. Optional: give a building/landmark to the ~7 venues whose location text got generic after the zone-system replacement (see the 2026-08-26 decisions entry for the exact list) — cosmetic, not urgent.
   3. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for a second admin account.
   4. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   5. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
-  6. Manually verify the admin photo-upload flow end-to-end through the real `/admin` UI (sign in → upload a real file → confirm it appears in the gallery) — the data-layer wiring (upsert/delete → gallery query) was verified directly against `tueats-dev` this session, and the file-upload path (Vercel Blob `put`/`del`) was verified in the earlier 2026-08-25 session, but the two have never been exercised together through a real authenticated browser session.
+  6. Manually verify, through a real authenticated browser session, both (a) the admin photo-upload flow (sign in → upload a real file → confirm it appears in the gallery) and (b) the new map-zone picker/dropdown/warning UI (sign in → add or edit a venue → click the location picker → confirm the warning appears/clears correctly → publish) — both were verified this session at the data/logic layer (direct DB calls, unit tests) but never through the real `/admin` UI, since no admin credentials were available to either session.
+
+---
+
+## 2026-08-26 — Admin-controlled map zone + exact location, replacing the old zone system
+
+Replaced the disconnected old 4-zone admin field with the co-founder's
+real 8-zone map system as the actual stored source of truth, per explicit
+request to trace the full admin→map pipeline first (previous session) and
+then fix it without touching any of the co-founder's public map/filter
+behavior.
+
+**Investigation before writing code:** queried live `tueats-dev` directly
+during planning (not guessed) — confirmed the public zone filter
+(`filterVenues`) already never read the old `zoneKey` at all, computing
+membership live via `mapZoneContaining()` for every venue automatically.
+That meant the actual filter mechanism needed zero changes; only admin
+visibility/control was missing. Also confirmed via a real backfill dry
+run: 25/74 venues land in one of the 8 real zones, 49 would be "other" —
+and cross-checked against `building` data to find the real content impact
+was ~7 venues losing a specific zone-based label (not the 49 it looked
+like), since `building` already wins over zone text where set.
+
+**What shipped:**
+- `venues.map_zone` replaces `zone_key` (migrations `0006`/`0007` — add,
+  backfill via `scripts/backfill-map-zones.ts`, then drop). Backfill uses
+  the same `mapZoneContaining()` the live filter already trusted — not a
+  new heuristic.
+- Admin editor: new "Map zone" dropdown (8 real zones + explicit "Other /
+  Outside mapped zones", the latter deliberately kept out of
+  `config/map-zones.ts` so it can't leak into the public filter bar —
+  confirmed live, still exactly 8 public chips) plus a new minimal
+  click-to-place/drag map picker (`VenueLocationPicker`) alongside the
+  existing plain lat/lng inputs (kept, not replaced).
+- New non-blocking `zoneMismatchWarning()`: compares the admin's picked
+  zone against what the coordinates actually compute to, warns in either
+  direction, never auto-corrects. Caught and fixed a real bug during
+  testing — `Number("")` is `0`, not `NaN`, so blank coordinate fields
+  were briefly computing a false "outside every zone" warning at (0,0)
+  before the admin had entered anything.
+- `config/zones.ts` deleted (fully superseded).
+- 6 new tests (`admin-venue-form.test.ts`) cover the warning function's
+  both directions plus the blank-input edge case that caught the bug
+  above.
+
+**Verification:** typecheck/lint/70 tests/build all pass. Confirmed live:
+exactly 8 zone chips still render publicly (no leaked 9th "Other" chip —
+the "Other" chip visible in a raw scrape is the unrelated pre-existing
+cuisine tag), the backfill hit 100% of rows with zero nulls, and
+`zoneMismatchWarning` behaves correctly in both mismatch directions plus
+the "nothing entered yet" case via direct calls against real polygon
+coordinates. **Not verified:** the actual admin UI click-through (picker,
+dropdown, warning banner, publish) through a real logged-in browser
+session — no admin credentials available this session either. Full
+reasoning and the exact list of venues whose location text changed is in
+`Context/decisions.md` (2026-08-26).
 
 ---
 

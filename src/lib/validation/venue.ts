@@ -1,14 +1,15 @@
 import { z } from "zod";
 
 import { CUISINE_KEYS } from "@/config/cuisines";
+import { MAP_ZONE_KEYS } from "@/config/map-zones";
 import {
   CAMPUS_BOUNDS,
   MAX_PROBLEM_NOTE_LENGTH,
   MAX_VENUE_DESCRIPTION_LENGTH,
   MAX_VENUE_NAME_LENGTH,
 } from "@/config/site";
-import { ZONE_KEYS } from "@/config/zones";
 import { WEEKDAY_KEYS } from "@/lib/hours";
+import { OTHER_MAP_ZONE } from "@/lib/venues";
 
 const timeSchema = z
   .string()
@@ -48,7 +49,7 @@ export const venueInputSchema = z
       .optional(),
     lat: z.number().min(CAMPUS_BOUNDS.south).max(CAMPUS_BOUNDS.north),
     lng: z.number().min(CAMPUS_BOUNDS.west).max(CAMPUS_BOUNDS.east),
-    zoneKey: z.enum(ZONE_KEYS).nullable().optional(),
+    mapZone: z.enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE]).nullable().optional(),
     building: z.string().trim().max(120).nullable().optional(),
     floor: z.string().trim().max(40).nullable().optional(),
     acceptsCash: z.boolean().nullable().optional(),

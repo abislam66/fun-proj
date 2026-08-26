@@ -66,7 +66,8 @@ export const venues = pgTable(
     status: venueStatusEnum("status").notNull().default("draft"),
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),
-    zoneKey: text("zone_key"),
+    /** One of MapZoneKey (config/map-zones.ts) or the literal "other" — never a MAP_ZONES entry. */
+    mapZone: text("map_zone"),
     building: text("building"),
     floor: text("floor"),
     /** null = unknown (unknown ≠ no) */

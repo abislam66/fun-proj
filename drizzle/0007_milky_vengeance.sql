@@ -1,0 +1,1 @@
+ALTER TABLE "venues" DROP COLUMN "zone_key";
