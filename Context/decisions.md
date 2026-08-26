@@ -7,6 +7,36 @@
 
 ---
 
+## 2026-08-25 — Venue photos: Vercel Blob for storage, admin-only for now
+
+Added venue image upload. Two scoping decisions worth recording:
+
+**Admin-only, not user-uploaded.** The request was "let admins and users
+upload images." V1 has no student/member accounts at all
+(`auth-security.md`'s explicit V1 note) — there's no auth surface to gate
+a user upload behind, and building one would mean pulling milestone ②
+(accounts) forward, which `CLAUDE.md`'s phase-discipline rule forbids
+while milestone ① is still incomplete. Only the admin half was built;
+user-submitted photos wait for the accounts phase, same as ratings/reviews.
+
+**Vercel Blob, not Supabase Storage.** `auth-security.md` states plainly:
+"Never read or write data through `supabase-js` — data access is Drizzle,
+server-side, period. (`supabase-js` is for auth flows only.)" Supabase
+Storage is accessed through that same `supabase-js` client, so using it
+here would mean stretching "auth flows only" to cover file storage too.
+Vercel Blob avoids the question entirely — it's a Vercel product (keeps
+the vendor count at two: Vercel + Supabase, per `architecture-planning.md`'s
+existing note on that), called directly from inside the server action
+(`put()`/`del()` from `@vercel/blob`) after `requireAdmin()` has already
+run, so the single-write-path shape (validate → authorize → write →
+revalidateTag) is unchanged. A Blob store (`venue-images`, public-read) was
+created and linked to the `tueats` Vercel project via `vercel blob
+create-store`; `BLOB_READ_WRITE_TOKEN` was pulled into `.env.local`
+automatically and needs the same treatment as the other secrets when the
+project is eventually deployed (Preview/Production env vars in Vercel).
+
+---
+
 ## 2026-08-21 — `zoneKey` will not be auto-computed from coordinates
 
 During the venue enrichment pass, a lat/lng bounding-box + latitude-band

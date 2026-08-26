@@ -13,12 +13,62 @@
 - **Pending:** a second admin account for a friend — email not yet provided by the user ("will look later"). Same no-email bootstrap process once it's available: Supabase Dashboard → Add User (with password) → tell me the email + desired display name → I grant `role: "admin"` via direct DB insert. No code changes needed for any number of admins — `profiles.role` is a per-row flag, not a singleton.
 - **Password recovery** (`/admin/reset-password`, "Forgot password?" on the sign-in page) is fully implemented and spec-documented, but **not confirmed working end-to-end** — the custom SMTP (Resend) setup behind it is still flaky. Not currently blocking anything since admin bootstrap no longer depends on it; worth finishing later if self-service reset is wanted.
 - **Known gaps:** of the 61 active venues, 26 still have no `zoneKey` (see 2026-08-21 entry — this is deliberately left as a human curation task, not automatable) and 22 have no `hours` (confirmed via web research as venues with no credible posted schedule, mostly independent trucks — correctly left `null`/"Hours unknown" rather than guessed). Two venues (**Pretzel Dough**, **Vegan Tree**) were skipped entirely during the 2026-08-21 enrichment pass and need a manual look — Pretzel Dough's existence near campus couldn't be confirmed under that name, and Vegan Tree shows as **CLOSED** on current Yelp listings at both known locations (possible retirement candidate). See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed in the 2026-08-18 session, and `Context/backlog.md` for deferred items.
+- **Venue photo upload (admin-only) shipped 2026-08-25.** Admins can upload/replace/remove a photo per venue from `/admin/venues/[id]`; it renders as a hero image on the public `/eat/[slug]` page when present. Storage is Vercel Blob (`venue-images`, public-read store, linked to the `tueats` Vercel project), not Supabase Storage — see `Context/decisions.md` 2026-08-25 for why. User-submitted photos are explicitly deferred to the accounts phase (milestone ②) — see the same entry.
 - **Next up:**
   1. Manually review **Vegan Tree** (possibly closed — consider retiring) and **Pretzel Dough** (existence unconfirmed) via `/admin`.
   2. Curate `zoneKey` for the 26 venues still missing it — this needs a human with local knowledge of the actual truck corridor, not automation (see 2026-08-21 entry for why).
   3. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for a second admin account.
   4. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   5. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
+  6. Manually verify the venue-photo upload flow end-to-end in `/admin` (sign in → upload → confirm it renders on the public page) — built and smoke-tested this session, but the actual authenticated upload wasn't exercised since the admin password wasn't available to this session.
+  7. Still-uncommitted from 2026-08-24: the venue-detail-page rewrite (type-aware location text, "Get directions", hours formatting, "Last verified") — awaiting go-ahead to commit.
+
+---
+
+## 2026-08-25 — Venue photo upload (admin-only)
+
+Added the ability for admins to upload/replace/remove a photo per venue,
+shown as a hero image on the public venue detail page. Scoped to
+admin-only after clarifying with the user: V1 has no student/member
+accounts, so "user upload" has no auth surface to attach to yet — that
+half is deferred to milestone ② (accounts), not built as a workaround.
+Full reasoning for both scoping calls (admin-only, and Vercel Blob over
+Supabase Storage) is in `Context/decisions.md`.
+
+**What changed:**
+- `venues.image_url` column (migration `0004_yummy_bloodaxe.sql`, applied
+  to `tueats-dev`).
+- `uploadVenueImage`/`removeVenueImage` server actions
+  (`src/actions/admin.ts`) — same `requireAdmin()` → validate → write →
+  `revalidateTag` shape as every other admin action, using `@vercel/blob`'s
+  `put()`/`del()` for the file itself instead of Drizzle (there's no table
+  row for a blob).
+- Admin editor (`venue-editor.tsx`) gained a "Photo" section — gated on
+  the venue already being saved once (needs a real `id` for the blob path).
+- Public detail page (`venue-detail.tsx`) renders the photo via `next/image`
+  when present; `next.config.ts` allowlists the Blob public-storage host.
+- A `venue-images` Blob store was created and linked to the `tueats`
+  Vercel project (`vercel blob create-store`); `BLOB_READ_WRITE_TOKEN` was
+  pulled into `.env.local` automatically as part of that.
+
+**Verification:** typecheck/lint/format-check/test/build all pass (40
+existing tests unchanged — no new unit tests, matching the existing
+pattern where admin server actions are integration-verified rather than
+unit-tested, same as `upsertVenue`/`publishVenue`/etc.). A Playwright
+smoke pass against an isolated dev server confirmed no console/network
+errors on the home page, a venue detail page, and `/admin/sign-in`. The
+authenticated upload/remove path itself was **not** exercised this
+session — it needs a real admin login, and the password wasn't available
+here. Worth a hands-on pass before considering this fully done.
+
+One incidental fix along the way: `pnpm install` was failing
+(`ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`) because `node_modules` was linked
+against a virtual store under an unrelated project directory
+(`C:\Users\abisl\fun-proj`). Running `pnpm install --no-frozen-lockfile`
+rebuilt it correctly against this project's own `node_modules/.pnpm` — required
+stopping the user's running dev server first (native binary file lock),
+restarted cleanly afterward. If this recurs, it's an environment quirk,
+not a project bug.
 
 ---
 
