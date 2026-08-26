@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "seed:kml": "tsx --env-file=.env.local scripts/seed-kml.ts"
+    "seed:kml": "tsx --env-file=.env.local scripts/seed-kml.ts",
+    "enrich:venues": "tsx --env-file=.env.local scripts/enrich-venues/apply.ts"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "5.2.8",
