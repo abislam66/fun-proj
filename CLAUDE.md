@@ -15,6 +15,7 @@ The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD a
 - `Context/progress.md` — running log, newest entries first. Add a dated entry after any meaningful unit of work (this satisfies the progress rule in `Specs/conventions.md`), and keep the "Current status / Next up" block at the top accurate — it is the fastest way for a fresh session to orient.
 - `Context/backlog.md` — deliberately deferred items, each with a revisit trigger. Add a row whenever something is skipped "for later"; scan the triggers when planning new work. It is not a roadmap — planned work lives in `Specs/features.md`.
 - `Context/decisions.md` — append-only log of decisions too small for a `Specs/` change but important enough that silently reversing them would cause confusion (the _why_, not the _what_ or _when_). Add an entry whenever you make a call like this; check it before "fixing" something that looks broken but might be intentional.
+- New markdown docs (beyond `Specs/`, which stays spec-first) default into `Context/` rather than the repo root — e.g. `Context/DESIGN.md`. `CLAUDE.md` itself stays at the root since Claude Code only auto-loads it from there.
 
 ## Which spec answers what
 
@@ -28,14 +29,14 @@ The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD a
 | Versions, naming, style, test priorities                                           | `Specs/conventions.md`           |
 | Environments, migrations, CI/CD, env vars                                          | `Specs/deployment.md`            |
 | AI features (deferred + gated — do not implement)                                  | `Specs/llm-integration.md`       |
-| Visual / UI decisions (colors, type, pins, motion)                                 | `DESIGN.md`                      |
+| Visual / UI decisions (colors, type, pins, motion)                                 | `Context/DESIGN.md`              |
 
 ## Design System
 
-Always read `DESIGN.md` before making any visual or UI decisions.
+Always read `Context/DESIGN.md` before making any visual or UI decisions.
 All font choices, colors, spacing, map/pin treatment, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
-In QA mode, flag any code that doesn't match `DESIGN.md`.
+In QA mode, flag any code that doesn't match `Context/DESIGN.md`.
 Pin assets and MapLibre notes live in `public/pins/` and `docs/design/map-and-pins.md`.
 
 ## Commands

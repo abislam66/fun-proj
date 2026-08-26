@@ -8,7 +8,7 @@ drizzle
 
 # Protected or pre-existing documentation is outside the app formatting scope.
 Context/backlog.md
-DESIGN.md
+Context/DESIGN.md
 README.md
 Specs/
 docs/

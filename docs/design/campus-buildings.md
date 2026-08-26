@@ -2,7 +2,7 @@
 
 How TuEats can give **every Temple main-campus building its own 2D look** on the MapLibre map, without leaving the existing stack (MapLibre GL JS 5 + OpenFreeMap).
 
-Visual source of truth remains [`DESIGN.md`](../../DESIGN.md). Pin notes: [`map-and-pins.md`](./map-and-pins.md). Seed data: [`public/maps/campus-buildings.geojson`](../../public/maps/campus-buildings.geojson).
+Visual source of truth remains [`DESIGN.md`](../../Context/DESIGN.md). Pin notes: [`map-and-pins.md`](./map-and-pins.md). Seed data: [`public/maps/campus-buildings.geojson`](../../public/maps/campus-buildings.geojson).
 
 ---
 
@@ -105,7 +105,7 @@ Implementation: `src/components/map/campus-building-layer.tsx`, mounted from `Ve
 2. **Per-feature overrides** — edit one building’s `fill` / `stroke` / `label` in the GeoJSON (e.g. Charles Library unique tint).
 3. **Later (optional)** — `feature-state` hover, pattern fills, or SVG/icon at centroid for a handful of icons (Bell Tower). Still 2D.
 
-Do **not** put Temple trademarks / owl marks on buildings (`DESIGN.md` anti-patterns).
+Do **not** put Temple trademarks / owl marks on buildings (`Context/DESIGN.md` anti-patterns).
 
 ---
 

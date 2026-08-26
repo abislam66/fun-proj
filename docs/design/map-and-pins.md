@@ -1,6 +1,6 @@
 # Map & pin implementation notes (Phase 1)
 
-Source of truth for visual decisions: root [`DESIGN.md`](../../DESIGN.md). Assets: [`public/pins/`](../../public/pins/).
+Source of truth for visual decisions: [`Context/DESIGN.md`](../../Context/DESIGN.md). Assets: [`public/pins/`](../../public/pins/).
 
 ## Basemap
 
@@ -106,4 +106,4 @@ Keep cuisine pills. Don’t invent truck-only pin components.
 - [ ] Open status is **not** encoded on the pin color
 - [ ] Attribution visible
 - [ ] Location never leaves the browser
-- [ ] Pins match `public/pins/` + `DESIGN.md`
+- [ ] Pins match `public/pins/` + `Context/DESIGN.md`

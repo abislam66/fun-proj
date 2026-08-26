@@ -2,7 +2,7 @@
 
 **Cuisine pills** — cherry rounded label + stem tip. The pin’s only job is answering “what kind of food?” Open status, ratings, and cash live on the list / mini-card / detail — not on the pin.
 
-See `DESIGN.md` and `docs/design/map-and-pins.md`.
+See `Context/DESIGN.md` and `docs/design/map-and-pins.md`.
 
 ## Label map (primary cuisine → pin text)
 
