@@ -12,10 +12,21 @@ type SheetSnap = "peek" | "mid" | "full";
 
 const SNAP_ORDER: SheetSnap[] = ["peek", "mid", "full"];
 
-export function MobileSheet({ children }: { children: ReactNode }) {
+export function MobileSheet({
+  children,
+  collapseSignal = 0,
+}: {
+  children: ReactNode;
+  /** Increment to tuck the sheet to peek (e.g. after a list selection). */
+  collapseSignal?: number;
+}) {
   const [snap, setSnap] = useState<SheetSnap>("mid");
   const startY = useRef(0);
   const startIndex = useRef(1);
+
+  useEffect(() => {
+    if (collapseSignal > 0) setSnap("peek");
+  }, [collapseSignal]);
 
   useEffect(() => {
     document.documentElement.dataset.sheet = snap;
@@ -45,10 +56,24 @@ export function MobileSheet({ children }: { children: ReactNode }) {
     setSnap(SNAP_ORDER[nextIndex] ?? "mid");
   }
 
+  // Tucked-in sheet is a preview, not a surface: content is inert (no
+  // scrolling, tapping, or focus) until the user expands it. A tap on the
+  // tucked sheet body expands instead — inert content retargets clicks to
+  // the section. Handle interactions are excluded: a drag down to peek
+  // still synthesizes a click (pointer capture keeps its target on the
+  // handle), and without the guard that click would bounce the sheet
+  // straight back open.
+  function onSectionClick(event: React.MouseEvent<HTMLElement>) {
+    if (snap !== "peek") return;
+    if ((event.target as HTMLElement).closest(".sheet-handle")) return;
+    setSnap("mid");
+  }
+
   return (
     <section
       aria-label="Venue results"
       className={`mobile-sheet mobile-sheet-${snap}`}
+      onClick={onSectionClick}
     >
       <button
         aria-label={`Results sheet ${snap}. Drag or tap to change height.`}
@@ -59,7 +84,9 @@ export function MobileSheet({ children }: { children: ReactNode }) {
       >
         <span />
       </button>
-      <div className="sheet-content">{children}</div>
+      <div className="sheet-content" inert={snap === "peek"}>
+        {children}
+      </div>
     </section>
   );
 }

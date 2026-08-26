@@ -1,6 +1,8 @@
 import type { CuisineKey } from "@/config/cuisines";
+import { MAP_ZONE_KEYS, type MapZoneKey } from "@/config/map-zones";
 import { ZONES, type ZoneKey } from "@/config/zones";
 import { isHoursUnknown, isOpenNow, type VenueHours } from "@/lib/hours";
+import { pointInMapZone } from "@/lib/map/point-in-polygon";
 
 export type VenueType =
   | "truck"
@@ -8,7 +10,6 @@ export type VenueType =
   | "cafe"
   | "vending"
   | "convenience";
-export type PaymentFilter = "cash" | "card";
 
 export interface Venue {
   id: string;
@@ -37,8 +38,7 @@ export interface VenueFilters {
   query: string;
   openNow: boolean;
   cuisines: CuisineKey[];
-  zones: ZoneKey[];
-  payments: PaymentFilter[];
+  zones: MapZoneKey[];
 }
 
 export const EMPTY_VENUE_FILTERS: VenueFilters = {
@@ -46,7 +46,6 @@ export const EMPTY_VENUE_FILTERS: VenueFilters = {
   openNow: false,
   cuisines: [],
   zones: [],
-  payments: [],
 };
 
 function uniqueSorted<T extends string>(values: T[]): T[] {
@@ -91,7 +90,6 @@ export function venueLocationText(venue: Venue): {
 export function parseVenueFilters(params: URLSearchParams): VenueFilters {
   const cuisineValues = params.getAll("cuisine");
   const zoneValues = params.getAll("zone");
-  const paymentValues = params.getAll("payment");
   const cuisineKeys: CuisineKey[] = [
     "american",
     "caribbean",
@@ -101,8 +99,6 @@ export function parseVenueFilters(params: URLSearchParams): VenueFilters {
     "mexican",
     "other",
   ];
-  const zoneKeys: ZoneKey[] = ["norris", "montgomery", "twelfth", "other"];
-
   return {
     query: params.get("q")?.trim() ?? "",
     openNow: params.get("open") === "1",
@@ -112,13 +108,8 @@ export function parseVenueFilters(params: URLSearchParams): VenueFilters {
       ),
     ),
     zones: uniqueSorted(
-      zoneValues.filter((value): value is ZoneKey =>
-        zoneKeys.includes(value as ZoneKey),
-      ),
-    ),
-    payments: uniqueSorted(
-      paymentValues.filter(
-        (value): value is PaymentFilter => value === "cash" || value === "card",
+      zoneValues.filter((value): value is MapZoneKey =>
+        (MAP_ZONE_KEYS as string[]).includes(value),
       ),
     ),
   };
@@ -133,9 +124,6 @@ export function serializeVenueFilters(filters: VenueFilters): string {
     params.append("cuisine", value),
   );
   uniqueSorted(filters.zones).forEach((value) => params.append("zone", value));
-  uniqueSorted(filters.payments).forEach((value) =>
-    params.append("payment", value),
-  );
   return params.toString();
 }
 
@@ -161,14 +149,8 @@ export function filterVenues(
     }
     if (
       filters.zones.length > 0 &&
-      (!venue.zoneKey || !filters.zones.includes(venue.zoneKey))
+      !filters.zones.some((key) => pointInMapZone(venue.lng, venue.lat, key))
     ) {
-      return false;
-    }
-    if (filters.payments.includes("cash") && venue.acceptsCash !== true) {
-      return false;
-    }
-    if (filters.payments.includes("card") && venue.acceptsCard !== true) {
       return false;
     }
     return true;

@@ -93,14 +93,17 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 
 - **Split composition from first paint:** list + filters + search on the left; MapLibre on the right filling remaining height (under a slim top bar with wordmark + about/account).
 - **Shared state:** Same URL searchParams and payload as mobile — filter/search/selection stay in sync across panes. Hovering or focusing a list row highlights the matching cuisine pill on the map; selecting a pin scrolls/focuses the list row.
+- **Rows select, never navigate:** Clicking a list row (desktop pane or mobile sheet) selects the venue on the map — fly-to plus anchored mini-card; on mobile the sheet tucks to peek so the map is visible. The mini-card's "View details" is the only path from the explorer to `/eat/[slug]`. The map is the primary surface — list rows feed it.
+- **Staged arrival:** The mini-card never pops while the camera is still traveling. Selection sequences like a user would move: fly into the host zone (or ease a zone-less venue to street zoom ~16), and only on arrival does the popup appear over the pill. No movement needed → instant pop.
 - **List density:** Comfortable rows with name, cuisine tags, zone, open-status badge, payment icons — designed for mouse scan, not thumb-only.
-- **Map:** Larger campus view earns the desktop width; cuisine pills remain legible; controls sit top-right of the map pane (not floating over the list).
+- **Map:** Larger campus view earns the desktop width; cuisine pills remain legible; controls sit bottom-right of the map pane, stacked above the attribution line (not floating over the list).
 - **No mobile chrome on desktop:** No grab-handle sheet, no peek/mid/full detents, no “tap to expand list.” If it looks like a phone UI scaled up, it’s wrong.
 - **Empty / filtered states:** Friendly empty copy in the list pane; map still shows campus (pins filtered). Never a blank white half-screen.
 
 ### Venue detail (`/eat/[slug]`)
 
-- **Content order (all breakpoints):** name → hedged open-status (mono) → cuisine / zone / payment → description → hours → last-verified → report. Phase 2: student rating primary, Google snapshot secondary and never merged.
+- **Content order (all breakpoints):** name → hedged open-status (mono) → cuisine / zone / payment → photos (only when a venue has them) → description → hours → last-verified → report. Phase 2: student rating primary, Google snapshot secondary and never merged.
+- **Photos:** horizontal snap-scroll strip of 4:3 frames (`radius-lg`, border, `surface-raised` letterbox), no heading, no lightbox. Venues without photos get **nothing** — no placeholder frame (cards only when they contain content). Source is the frontend-only registry `src/config/venue-photos.ts` + files in `public/photos/<slug>/`.
 - **Mobile:** Single column, back returns to explorer with preserved filters/map position.
 - **Desktop:** Typography-led reading column (~40rem) with generous vertical rhythm; optional sticky mini context (open status + primary cuisine) as the user scrolls. Not a cramped phone article stretched to 1200px. Back / “View on map” restores the split explorer state.
 
@@ -132,11 +135,11 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 |----------|--------|
 | Basemap | OpenFreeMap **Positron** — `https://tiles.openfreemap.org/styles/positron` |
 | Config | `NEXT_PUBLIC_MAP_STYLE_URL` (swappable) |
-| Viewport | Campus bbox only (~lat 39.979–39.984, lng −75.157–−75.150) — never Philly-wide |
+| Viewport | Campus bbox only (~lat 39.971–39.984, lng −75.161–−75.150) — includes west-of-Broad athletics and the Girard sports complex; never Philly-wide |
 | Chrome | Custom zoom + locate; Satoshi labels; cherry focus ring; quiet OSM/OpenFreeMap attribution |
 | Desktop map pane | Fills the right split full height; controls inset in the map pane; list hover ↔ pin highlight |
 | Locate me | Client-only blue-dot; never sent to server |
-| Zones | List-filter language only in v1 — no zone polygon fills |
+| Zones | Campus overview uses two marks together: `streetLine` corridors (Student Center, W Montgomery, SERC trucks, Tyler trucks) and `buildingFill` washes (Vantage & The View buildings; The Wall plaza immediately west of Anderson Hall, not Anderson itself; Richie's Cafe footprint only, not Facilities; Liacouras Walk 1926–1938 building only, not 1940 Residence Hall). Zone names sit on a light cherry plate (`#F3E6E9`) with a thin cherry outline. Click a zone to zoom in and show pins. List-filter `zone_key` is a separate model. |
 | Campus buildings | Curated GeoJSON overlay — per-building 2D fill/stroke/label; mute stock Positron footprints ([docs/design/campus-buildings.md](docs/design/campus-buildings.md)) |
 | Optional later | Faint dashed campus outline; Maputnik fork to strip base POI clutter / align land+water to tokens |
 
@@ -152,6 +155,7 @@ See [docs/design/map-and-pins.md](docs/design/map-and-pins.md) and [public/pins/
 - **Rendering:** Prefer one shared Marker/component that injects the label (don’t explode asset count). Reference SVGs in `public/pins/`. Symbol layer or HTML markers OK at ~40 venues; HTML Marker for selected.
 - **Density:** Collision fade / light cluster at overview; every pill tappable at street zoom (~16+).
 - **Phase 3 types:** Same pill; cuisine still primary. Optional tiny type mark later — not required for trucks.
+- **Meal-plan dining info pins:** The Student Center food court, J&H dining hall, and Morgan Hall food court are meal-plan dining — out of product scope, never venues, never in the DB. Each building gets **one** neutral info pin that just names what's there (`src/config/campus-dining.ts`). Treatment: same pill+stem silhouette at **2/3 the venue-pill size**, with **white surface fill, stone `#B8B4AA` border, ink-secondary regular-weight text, whole layer dimmed to 65% opacity** — deliberately not cherry, small, and visibly faded, so it can't be mistaken for a tappable venue. Non-interactive (no hover, no click, no mini-card). Zoom-gated: hidden at the campus overview (`minzoom` 16 vs. overview zoom 14.6), appearing only once the user zooms to building scale (overlap allowed, placement ignored — like zone label plates); once a zone is selected the whole layer hides so venue pills take over. Don't add more of these casually — cherry venue pills stay the dominant map layer.
 
 ## Component inventory
 
@@ -190,3 +194,18 @@ Maps to `Specs/architecture-planning.md`:
 | 2026-07-20 | Curated GeoJSON campus buildings (2D), not basemap fork alone | OpenMapTiles buildings have no names; per-building design needs our footprints + paint tokens |
 | 2026-07-17 | Cabinet Grotesk + Satoshi + JetBrains Mono | Modern athletic utility; blacklist of overused UI fonts honored |
 | 2026-07-17 | Desktop is first-class (split explorer), not stretched mobile | Portfolio / hiring-manager viewport; mobile-first priority unchanged |
+| 2026-08-25 | Neutral info pins for meal-plan dining halls (SC food court, J&H, Morgan) | Meal-plan places are out of scope, not venues; one white/stone non-interactive pill per building names what's there without competing with cherry venue pills |
+| 2026-08-25 | Dining info pins dimmed (65% opacity), shrunk to 2/3 pill size, zoom-gated to ≥16 | Static, unclickable pins dominated the campus overview at full pill size; they now recede into map furniture and only appear at building-scale zoom |
+| 2026-08-25 | Map controls (zoom/reset/locate) moved to bottom-right, above attribution | Keeps the top edge clear for the campus/zone chip and puts controls in thumb reach on mobile |
+| 2026-08-25 | Mini-card anchors above the selected pin, popup-style | The fixed corner card read as detached chrome; anchoring to the pin ties the preview to the tapped venue — the whole card remains a link to the detail page |
+| 2026-08-25 | Detail photo strip (frontend-only registry, no backend) | Photos slot between the hero and description as a snap-scroll strip; venues without photos render nothing — restrained, no placeholder chrome |
+| 2026-08-25 | Mini-card never shows address/zone | Location lines made cards inconsistent (present only when zone/building data existed) and wrapped to two lines; the popup is name + tags + status + View details — address lives on the detail page |
+| 2026-08-25 | Venue pill names baked into opaque sprites (like zone labels) | Overlapping pills may overlap but must occlude cleanly; live text-fields paint above neighboring pills' icons, bleeding one name across another |
+| 2026-08-25 | Mobile map controls: horizontal row riding above the sheet | The vertical column sank behind the bottom sheet's peek; on <64rem the row tracks the sheet's snap height (via `data-sheet` on `<html>`), desktop keeps the corner column |
+| 2026-08-25 | Tucked (peek) sheet is inert — expand to interact | At peek the sheet is a preview of the list, not a surface: content can't scroll, tap, or take focus; tapping the tucked body expands to mid. Prevents accidental list scrolls/taps while the map is the subject |
+| 2026-08-25 | List rows select on the map instead of navigating | Map-heavy UI: a row click flies to the venue and opens its mini-card (mobile sheet tucks to peek); detail pages open only via the mini-card's View details. The ↗ row arrow was dropped with the navigation |
+| 2026-08-25 | Mini-card waits for camera arrival | Popping the card at the overview while the map was still flying read as disjointed; the sequence now mirrors manual use — zone in, land on the truck, then pop. Zone-less venues ease to street zoom (16) before popping |
+| 2026-08-25 | Mini-card: arrow disc replaces "View details"; price range added | Wordless → in a cherry-soft disc (fills cherry on hover/focus) signals the card navigates; price sits beside it in data mono. Price is a hardcoded "$12" placeholder until venues carry real price data |
+| 2026-08-25 | Filter menus expand inline (drawer), not as floating popovers | Cuisine/Zone options open in-flow below the chip row on a raised panel, pushing results down — one menu at a time, animated 0fr→1fr, chip shows aria-expanded state. Floating overlays over the list are out |
+| 2026-08-25 | Drawer options are horizontal tap-toggle pills, not checkboxes | Options wrap as small pills; selected = solid cherry fill with white text (`aria-pressed`), unselected = white with border. Vertical checkbox lists are out |
+| 2026-08-25 | Multi-zone selection shows pills for all selected zones | Zone mode is a set, not a single key: the camera fits the union of selected zone bounds, pills render for every venue in them, chip reads "N zones". Zoom-out-to-exit applies only to a single zone (a multi-zone fit legitimately sits below the overview threshold) |

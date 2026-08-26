@@ -125,7 +125,7 @@ Seed snapshot (2026-07-20 OSM extract): **52** named features after dedupe.
 - Buildings are **context**, not the hero — cuisine pills stay the loudest map signal.
 - Category fills stay near `--color-map-land` / stone neutrals; only student-life / landmark get a soft cherry wash (not solid `#9D2235`).
 - Labels: Satoshi lives in the UI chrome; map glyphs use OpenFreeMap **Noto Sans** (style glyphs constraint). Keep labels short; collision fades housing/parking first.
-- Zones remain list/filter language — no zone polygon fills (existing Phase 1 decision).
+- Zones on the map use `MAP_ZONE_MARK.streetLine` / `MAP_ZONE_MARK.buildingFill` (`src/config/map-zones.ts`). List-filter `zone_key` is separate.
 
 ---
 

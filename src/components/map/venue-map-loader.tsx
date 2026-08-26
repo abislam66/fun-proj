@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 
+import type { MapZoneKey } from "@/config/map-zones";
 import type { Venue } from "@/lib/venues";
 
 function MapLoadingShell() {
@@ -27,17 +28,21 @@ export function VenueMapLoader({
   selectedId,
   hoveredId,
   backPath,
+  selectedZones,
   onSelect,
   onHover,
   onClearSelection,
+  onSelectZone,
 }: {
   venues: Venue[];
   selectedId: string | null;
   hoveredId: string | null;
   backPath: string;
+  selectedZones: MapZoneKey[];
   onSelect: (venueId: string) => void;
   onHover: (venueId: string | null) => void;
   onClearSelection: () => void;
+  onSelectZone: (key: MapZoneKey | null) => void;
 }) {
   return (
     <VenueMap
@@ -46,7 +51,9 @@ export function VenueMapLoader({
       onClearSelection={onClearSelection}
       onHover={onHover}
       onSelect={onSelect}
+      onSelectZone={onSelectZone}
       selectedId={selectedId}
+      selectedZones={selectedZones}
       venues={venues}
     />
   );

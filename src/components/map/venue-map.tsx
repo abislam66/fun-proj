@@ -6,53 +6,113 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
 import { CampusBuildingLayer } from "@/components/map/campus-building-layer";
+import { CampusDiningLayer } from "@/components/map/campus-dining-layer";
 import { LocateControl } from "@/components/map/locate-control";
 import { MapAttribution } from "@/components/map/map-attribution";
+import {
+  MAP_ZONE_CLICK_LAYER_IDS,
+  MapZoneLayer,
+} from "@/components/map/map-zone-layer";
 import {
   VenuePillLayer,
   VENUE_PILL_LAYER_ID,
 } from "@/components/map/venue-pill-layer";
-import { CuisineTags, OpenStatus } from "@/components/venues/venue-bits";
+import {
+  CuisineTags,
+  OpenStatus,
+  PaymentTag,
+} from "@/components/venues/venue-bits";
+import {
+  MAP_ZONES,
+  MAP_ZONE_OVERVIEW_MAX_ZOOM,
+  mapZoneBounds,
+  type MapZoneKey,
+} from "@/config/map-zones";
 import {
   CAMPUS_BOUNDS,
   CAMPUS_MAX_BOUNDS,
   DEFAULT_VIEWPORT,
   MAP_STYLE_URL,
 } from "@/config/site";
+import { getOpenStatus } from "@/lib/hours";
+import { mapZoneContaining } from "@/lib/map/point-in-polygon";
 import type { Venue } from "@/lib/venues";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// Screen-px gap between the pin coordinate (the pill's stem tip) and the
+// mini-card bottom: the 43px-tall pill plus breathing room. Keep in sync
+// with the .map-mini-card-anchor transform in globals.css.
+const MINI_CARD_PIN_CLEARANCE = 52;
+
+// Zoom a selection flies to when its venue has no host zone (zone flights
+// have their own fitBounds). Street level, where pills read individually.
+const VENUE_STREET_ZOOM = 16;
+
+// Placeholder until venues carry real price data (user call, 2026-08-25:
+// "just for now, make it $12") — every mini-card shows this value.
+const PLACEHOLDER_PRICE_RANGE = "$12";
+
+// Below the desktop breakpoint the results sheet overlays the bottom of
+// the map canvas; zone flights pad for its tucked height so the zone
+// centers in the visible strip, not the half-covered full canvas. Keep in
+// sync with .mobile-sheet-peek (10.25rem) and the 64rem breakpoint.
+const MOBILE_SHEET_PEEK_PX = 164;
+const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 
 export function VenueMap({
   venues,
   selectedId,
   hoveredId,
   backPath,
+  selectedZones,
   onSelect,
   onHover,
   onClearSelection,
+  onSelectZone,
 }: {
   venues: Venue[];
   selectedId: string | null;
   hoveredId: string | null;
   backPath: string;
+  /** Zone filter selection — any number of zones can be active at once. */
+  selectedZones: MapZoneKey[];
   onSelect: (venueId: string) => void;
   onHover: (venueId: string | null) => void;
   onClearSelection: () => void;
+  onSelectZone: (key: MapZoneKey | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const miniCardAnchorRef = useRef<HTMLDivElement | null>(null);
   const onClearSelectionRef = useRef(onClearSelection);
+  const onSelectZoneRef = useRef(onSelectZone);
+  const enteringZoneRef = useRef(false);
+  const selectedZonesRef = useRef<MapZoneKey[]>(selectedZones);
   const [map, setMap] = useState<MapLibreMap | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The mini-card stages behind the camera: it mounts only once the map
+  // has arrived at the selection (zone fly-in / street zoom complete).
+  const [poppedVenueId, setPoppedVenueId] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
 
   const selectedVenue = venues.find((venue) => venue.id === selectedId) ?? null;
+  const zonesActive = selectedZones.length > 0;
+  // Pills render whenever any zones are selected (venues are already
+  // filtered to them); a selected venue OUTSIDE every zone still gets its
+  // own pill so the mini-card never floats bare.
+  const pinVenues = zonesActive ? venues : selectedVenue ? [selectedVenue] : [];
+  const poppedVenue =
+    selectedVenue && poppedVenueId === selectedVenue.id ? selectedVenue : null;
 
   useEffect(() => {
     onClearSelectionRef.current = onClearSelection;
   }, [onClearSelection]);
+
+  useEffect(() => {
+    onSelectZoneRef.current = onSelectZone;
+  }, [onSelectZone]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -69,7 +129,7 @@ export function VenueMap({
         center: DEFAULT_VIEWPORT.center,
         zoom: DEFAULT_VIEWPORT.zoom,
         maxBounds: CAMPUS_MAX_BOUNDS,
-        minZoom: 14,
+        minZoom: 13.5,
         maxZoom: 18.5,
         attributionControl: false,
         logoPosition: "bottom-left",
@@ -108,11 +168,25 @@ export function VenueMap({
           });
           if (hits.length > 0) return;
         }
+        const zoneLayers = MAP_ZONE_CLICK_LAYER_IDS.filter((id) =>
+          instance.getLayer(id),
+        );
+        if (zoneLayers.length > 0) {
+          const zoneHits = instance.queryRenderedFeatures(e.point, {
+            layers: [...zoneLayers],
+          });
+          if (zoneHits.length > 0) return;
+        }
         onClearSelectionRef.current();
       });
     }
 
-    void init();
+    // The MapLibre constructor throws synchronously when WebGL is
+    // unavailable (old devices, disabled GPU) — without the catch, the UI
+    // hangs on "Loading campus map…" forever instead of falling back.
+    init().catch(() => {
+      if (!disposed) setFailed(true);
+    });
 
     return () => {
       disposed = true;
@@ -130,6 +204,124 @@ export function VenueMap({
     return () => window.removeEventListener("resize", resize);
   }, [map]);
 
+  useEffect(() => {
+    if (!map || !selectedVenue) return;
+    const hostZone = mapZoneContaining(selectedVenue.lng, selectedVenue.lat);
+    if (hostZone && !selectedZonesRef.current.includes(hostZone)) {
+      onSelectZoneRef.current(hostZone);
+      return;
+    }
+    // No host zone to fly into: go to the truck itself — center it and
+    // come down to street zoom if the map is still zoomed out.
+    const position: [number, number] = [selectedVenue.lng, selectedVenue.lat];
+    if (
+      map.getBounds().contains(position) &&
+      map.getZoom() >= VENUE_STREET_ZOOM
+    ) {
+      return;
+    }
+    map.easeTo({
+      center: position,
+      zoom: Math.max(map.getZoom(), VENUE_STREET_ZOOM),
+      duration: reduceMotion ? 0 : 650,
+    });
+  }, [map, selectedVenue, reduceMotion]);
+
+  // The mini-card tracks the selected pin: its anchor's left/top are
+  // written directly (no re-render) from the pin's projected screen point
+  // on every map move.
+  useEffect(() => {
+    if (!map || !poppedVenue) return;
+    const position: [number, number] = [poppedVenue.lng, poppedVenue.lat];
+    function place() {
+      const node = miniCardAnchorRef.current;
+      if (!node || !map) return;
+      const point = map.project(position);
+      const margin = 8;
+      const half = node.offsetWidth / 2;
+      const mapWidth = map.getContainer().clientWidth;
+      // Clamp horizontally so a pin near the map edge doesn't clip the card.
+      const x = Math.min(
+        Math.max(point.x, half + margin),
+        mapWidth - half - margin,
+      );
+      node.style.left = `${x}px`;
+      node.style.top = `${point.y}px`;
+      // Near the top edge there's no room above the pill — open below it.
+      node.classList.toggle(
+        "map-mini-card-anchor-below",
+        point.y - node.offsetHeight - MINI_CARD_PIN_CLEARANCE < margin,
+      );
+    }
+    place();
+    map.on("move", place);
+    map.on("resize", place);
+    return () => {
+      map.off("move", place);
+      map.off("resize", place);
+    };
+  }, [map, poppedVenue]);
+
+  // AnimatePresence keeps the outgoing card mounted through its exit fade,
+  // and that late unmount detaches the ref (null) AFTER the entering card
+  // attached it — only ever overwrite with a real node.
+  function setMiniCardAnchor(node: HTMLDivElement | null) {
+    if (node) miniCardAnchorRef.current = node;
+  }
+
+  useEffect(() => {
+    selectedZonesRef.current = selectedZones;
+  }, [selectedZones]);
+
+  useEffect(() => {
+    if (!map || selectedZones.length === 0) return;
+    flyToZones(map, selectedZones, reduceMotion, enteringZoneRef);
+  }, [map, selectedZones, reduceMotion]);
+
+  // Stage the mini-card behind the camera: zone flight first, then the
+  // pop. Declared AFTER the camera effects above so a movement they just
+  // started is already observable via isMoving(); while the host zone is
+  // still being selected (prop not yet caught up) this bails and re-runs
+  // when the zone lands. No movement at all → pop immediately.
+  useEffect(() => {
+    if (!map || !selectedVenue) {
+      setPoppedVenueId(null);
+      return;
+    }
+    const hostZone = mapZoneContaining(selectedVenue.lng, selectedVenue.lat);
+    if (hostZone && !selectedZones.includes(hostZone)) return;
+    if (map.isMoving()) {
+      const pop = () => setPoppedVenueId(selectedVenue.id);
+      map.once("moveend", pop);
+      return () => {
+        map.off("moveend", pop);
+      };
+    }
+    setPoppedVenueId(selectedVenue.id);
+  }, [map, selectedVenue, selectedZones]);
+
+  useEffect(() => {
+    if (!map) return;
+    function onZoomEnd() {
+      if (enteringZoneRef.current) return;
+      // Zoom-out-to-exit applies only to a single zone: a multi-zone fit
+      // legitimately lands below the overview threshold, and clearing it
+      // there would wipe the user's filter selection mid-look.
+      if (
+        selectedZonesRef.current.length === 1 &&
+        map &&
+        map.getZoom() < MAP_ZONE_OVERVIEW_MAX_ZOOM
+      ) {
+        onSelectZoneRef.current(null);
+        onClearSelectionRef.current();
+      }
+    }
+    map.on("zoomend", onZoomEnd);
+    return () => {
+      map.off("zoomend", onZoomEnd);
+    };
+  }, [map]);
+
   function zoomBy(delta: number) {
     if (!map) return;
     map.easeTo({
@@ -138,12 +330,53 @@ export function VenueMap({
     });
   }
 
+  function resetView() {
+    if (!map) return;
+    onSelectZone(null);
+    onClearSelection();
+    map.fitBounds(
+      [
+        [CAMPUS_BOUNDS.west, CAMPUS_BOUNDS.south],
+        [CAMPUS_BOUNDS.east, CAMPUS_BOUNDS.north],
+      ],
+      {
+        padding: 48,
+        duration: reduceMotion ? 0 : 450,
+        maxZoom: DEFAULT_VIEWPORT.zoom,
+      },
+    );
+  }
+
+  function selectZone(key: MapZoneKey) {
+    onSelectZone(key);
+  }
+
+  function closeMiniCard() {
+    onClearSelection();
+    // The close button unmounts with the card — hand focus back to the
+    // map canvas so keyboard users aren't dropped at the document root.
+    mapRef.current?.getCanvas().focus();
+  }
+
   return (
     <div
       className="venue-map"
       aria-label="Temple campus food map"
+      aria-describedby="venue-map-usage"
       role="region"
     >
+      <p className="sr-only" id="venue-map-usage">
+        Interactive map of food venues around Temple University&apos;s main
+        campus. At campus zoom, tap a named zone to fly in and see the trucks
+        there. Use All zones or zoom out to return to the campus overview. Focus
+        the map, then pan with the arrow keys and zoom with the plus and minus
+        keys. Every venue on the map is also in the venue list.
+      </p>
+      <p aria-live="polite" className="sr-only">
+        {selectedVenue
+          ? `${selectedVenue.name}. ${getOpenStatus(selectedVenue.hours).label}.`
+          : ""}
+      </p>
       <div className="venue-map-canvas" ref={containerRef} />
 
       {!ready && !failed ? (
@@ -178,16 +411,63 @@ export function VenueMap({
         >
           −
         </button>
+        <button
+          aria-label="Reset view to campus"
+          className="map-control-button"
+          disabled={!ready}
+          onClick={resetView}
+          title="Reset view to campus"
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            fill="none"
+            height="16"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="1.5"
+            viewBox="0 0 16 16"
+            width="16"
+          >
+            <path d="M2 5V3a1 1 0 0 1 1-1h2" />
+            <path d="M11 2h2a1 1 0 0 1 1 1v2" />
+            <path d="M14 11v2a1 1 0 0 1-1 1h-2" />
+            <path d="M5 14H3a1 1 0 0 1-1-1v-2" />
+          </svg>
+        </button>
         <LocateControl map={map} />
       </div>
 
-      <div className="map-campus-chip" aria-hidden="true">
-        Temple Main Campus
+      <div className="map-zone-chrome">
+        <div className="map-campus-chip">
+          {selectedZones.length === 1
+            ? MAP_ZONES[selectedZones[0]!].label
+            : zonesActive
+              ? `${selectedZones.length} zones`
+              : "Temple Main Campus"}
+        </div>
+        {zonesActive ? (
+          <button
+            className="map-all-zones"
+            disabled={!ready}
+            onClick={resetView}
+            type="button"
+          >
+            All zones
+          </button>
+        ) : null}
       </div>
 
       <MapAttribution />
 
       <CampusBuildingLayer map={map} />
+
+      <MapZoneLayer map={map} onSelect={selectZone} zonesActive={zonesActive} />
+
+      {/* Overlay stack (overlay-order.ts) paints above Positron, so road
+          names never cover buildings, zones, or pins. Dining mounts before
+          VenuePillLayer so venue pills stay on top of info pins. */}
+      <CampusDiningLayer map={map} visible={!zonesActive} />
 
       <VenuePillLayer
         hoveredId={hoveredId}
@@ -195,33 +475,138 @@ export function VenueMap({
         onHover={onHover}
         onSelect={onSelect}
         selectedId={selectedId}
-        venues={venues}
+        venues={pinVenues}
       />
 
       <AnimatePresence>
-        {selectedVenue ? (
+        {poppedVenue ? (
+          // Outer div: positioned at the pin by the placement effect (its
+          // CSS transform centers the card above the pill) — framer must
+          // not own its transform, so only opacity animates here. Inner
+          // div carries the y-slide.
           <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            className="map-mini-card-wrap"
-            exit={{ opacity: 0, y: 8 }}
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-            key={selectedVenue.id}
+            animate={{ opacity: 1 }}
+            className="map-mini-card-anchor"
+            exit={{ opacity: 0 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
+            key={poppedVenue.id}
+            ref={setMiniCardAnchor}
             transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
           >
-            <Link
-              className="venue-mini-card map-mini-card"
-              href={`/eat/${selectedVenue.slug}?from=${encodeURIComponent(backPath)}`}
+            <motion.div
+              animate={{ y: 0 }}
+              className="map-mini-card-wrap"
+              exit={{ y: 8 }}
+              initial={reduceMotion ? false : { y: 12 }}
+              transition={{
+                duration: reduceMotion ? 0 : 0.2,
+                ease: "easeOut",
+              }}
             >
-              <div className="map-mini-card-top">
-                <h3>{selectedVenue.name}</h3>
-                <span aria-hidden="true">↗</span>
+              <div className="map-mini-card">
+                <Link
+                  className="map-mini-card-link"
+                  href={`/eat/${poppedVenue.slug}?from=${encodeURIComponent(backPath)}`}
+                >
+                  <div className="map-mini-card-top">
+                    <h3>{poppedVenue.name}</h3>
+                  </div>
+                  <div className="venue-tags">
+                    <CuisineTags cuisines={poppedVenue.cuisines} />
+                    <PaymentTag card={poppedVenue.acceptsCard} />
+                  </div>
+                  <div className="map-mini-card-footer">
+                    <OpenStatus venue={poppedVenue} />
+                    <span className="map-mini-card-meta">
+                      <span className="map-mini-card-price">
+                        {PLACEHOLDER_PRICE_RANGE}
+                      </span>
+                      {/* Arrow-only affordance; the whole card is the link. */}
+                      <span aria-hidden="true" className="map-mini-card-go">
+                        <svg
+                          fill="none"
+                          height="15"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="1.75"
+                          viewBox="0 0 16 16"
+                          width="15"
+                        >
+                          <path d="M3 8h10" />
+                          <path d="m8.5 3.5 4.5 4.5-4.5 4.5" />
+                        </svg>
+                      </span>
+                      <span className="sr-only">View details</span>
+                    </span>
+                  </div>
+                </Link>
+                <button
+                  aria-label="Close venue preview"
+                  className="map-mini-card-close"
+                  onClick={closeMiniCard}
+                  type="button"
+                >
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="14"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.5"
+                    viewBox="0 0 16 16"
+                    width="14"
+                  >
+                    <path d="m4 4 8 8" />
+                    <path d="m12 4-8 8" />
+                  </svg>
+                </button>
               </div>
-              <CuisineTags cuisines={selectedVenue.cuisines} />
-              <OpenStatus venue={selectedVenue} />
-            </Link>
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>
     </div>
   );
+}
+
+function flyToZones(
+  map: MapLibreMap,
+  keys: MapZoneKey[],
+  reduceMotion: boolean | null,
+  enteringZoneRef: { current: boolean },
+) {
+  enteringZoneRef.current = true;
+  // Union of every selected zone's bbox — one zone behaves exactly as the
+  // old single-zone flight.
+  const boxes = keys.map((key) => mapZoneBounds(key));
+  const bounds = {
+    west: Math.min(...boxes.map((b) => b.west)),
+    south: Math.min(...boxes.map((b) => b.south)),
+    east: Math.max(...boxes.map((b) => b.east)),
+    north: Math.max(...boxes.map((b) => b.north)),
+  };
+  const pad = Math.max(...keys.map((key) => MAP_ZONES[key].padding));
+  const bottomInset = window.matchMedia(DESKTOP_MEDIA_QUERY).matches
+    ? 0
+    : MOBILE_SHEET_PEEK_PX;
+  map.fitBounds(
+    [
+      [bounds.west, bounds.south],
+      [bounds.east, bounds.north],
+    ],
+    {
+      padding: {
+        top: pad,
+        right: pad,
+        bottom: pad + bottomInset,
+        left: pad,
+      },
+      duration: reduceMotion ? 0 : 450,
+      maxZoom: 17.4,
+    },
+  );
+  map.once("moveend", () => {
+    enteringZoneRef.current = false;
+  });
 }

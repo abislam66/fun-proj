@@ -9,6 +9,13 @@
 
 ## 2026-08-25 — Venue photos: Vercel Blob for storage, admin-only for now
 
+> **⚠️ Conflicts with the "frontend-only, no backend" entry below,
+> logged independently by the co-founder the same day.** Two different
+> answers to "how do venue photos work" exist in the codebase right now
+> (this admin-upload path, and their static `public/photos/` +
+> `venue-photos.ts` gallery) — both currently coexist un-reconciled after
+> today's merge. Needs a human decision: see the merge summary.
+
 Added venue image upload. Two scoping decisions worth recording:
 
 **Admin-only, not user-uploaded.** The request was "let admins and users
@@ -34,6 +41,161 @@ created and linked to the `tueats` Vercel project via `vercel blob
 create-store`; `BLOB_READ_WRITE_TOKEN` was pulled into `.env.local`
 automatically and needs the same treatment as the other secrets when the
 project is eventually deployed (Preview/Production env vars in Vercel).
+
+---
+
+## 2026-08-25 — List rows select on the map; they never navigate
+
+`VenueRow` is a button, not a link (user call: "our UI is very map-heavy, we need to be consistent with that"). Clicking a row selects the venue — map flies to it and the anchored mini-card opens; on mobile the results sheet tucks to peek (via `collapseSignal` on `MobileSheet`) so the map is actually visible. The mini-card's "View details" is the ONLY explorer path to `/eat/[slug]`. A selected venue outside every map zone renders its own single pill (`pinVenues` fallback in venue-map.tsx) so the popup never floats bare. Don't "restore" row links; no spec conflict — Feature 2's ACs don't require row navigation, and Feature 1's mini-card→detail AC still holds.
+
+---
+
+## 2026-08-25 — Payment filter removed (user call; spec conflict flagged)
+
+The "Accepts card" chip — and the whole `payments` field of `VenueFilters` (parse/serialize/filter, `?payment=` param) — was removed at the user's request. The model supported cash+card but the UI only ever exposed card, and most seeded venues have `acceptsCard: null`, so the filter mostly emptied the list. **This diverges from `Specs/features.md:45`**, which lists payment among Feature 1's combinable filters — flagged here, spec not edited (per `Specs/conventions.md`). Venue payment DATA stays: `acceptsCash`/`acceptsCard` still render as the "Cash Only" tag and on detail/admin. Old `?payment=` URLs now parse as unknown params and are ignored.
+
+---
+
+## 2026-08-25 — Venue pill names are baked sprites, not text-fields
+
+Same root cause and fix as the zone labels below: MapLibre paints a symbol layer's icons first, then all its text, so overlapping pills let a lower pill's name bleed across the pill above it. `buildVenuePillIcon` now bakes the name into one opaque sprite per venue × state (normal/hover/selected), registered lazily and cache-busted by name; the layer is icon-only with an `icon-size` zoom ramp reproducing the old text scaling. Don't reintroduce a `text-field` on this layer — overlap + live text always bleeds.
+
+---
+
+## 2026-08-25 — Venue photos are frontend-only static content, no backend
+
+Detail-page photos ship with **no backend at all** — the user's explicit call ("we won't touch backend logic or infrastructure, frontend only"). No DB column, no Supabase Storage bucket, no upload server action, no service-role key; nothing in `Specs/` changed. Instead, image files are committed under `public/photos/<slug>/` and registered per-slug in `src/config/venue-photos.ts`; `VenuePhotoGallery` renders a strip when entries exist and nothing otherwise. Don't "fix" the missing upload path — when photos should come from admins instead of repo commits, that's the spec-change project in `Context/backlog.md`.
+
+---
+
+## 2026-08-25 — Map overlays always cover OSM labels
+
+Positron road names (and other basemap symbols) paint _under_ every TuEats overlay. Inserting our symbol layers ahead of the style’s first label put pins _under_ “West Montgomery Avenue”. Stack lives in `overlay-order.ts`; `liftOverlaysAboveBasemap` keeps it on remount.
+
+---
+
+## 2026-08-25 — Listing pins stay one line
+
+Venue-name pills use `icon-text-fit: width` and a wide `text-max-width` so names like “Nanu's Hot Chicken” stay on one line instead of growing into a taller stadium. DESIGN.md still specifies cuisine labels on pins; implementation continues to show venue names (flagged 2026-08-20).
+
+---
+
+## 2026-08-25 — Zone name plates are opaque sprites
+
+MapLibre draws every symbol `icon-image` in a layer, then every `text-field`. A stretchable plate plus live type let “Student Center” bleed through “W Montgomery”. Zone names are now baked into opaque sprites so the top plate fully covers the one under it.
+
+---
+
+## 2026-08-25 — Liacouras Walk is buildingFill, not 1940 Residence Hall
+
+`liacouras-walk` uses `MAP_ZONE_MARK.buildingFill` on OSM 1926–1938 N. Liacouras Walk — the building labeled “Liacouras Walk” south of 1940 Residence Hall. The path, 1940, and 1810 Liacouras stay unfilled.
+
+---
+
+## 2026-08-25 — Richie's Cafe is buildingFill, not the Facilities block
+
+`richies-cafe` uses `MAP_ZONE_MARK.buildingFill` on the OSM Richie's Cafe footprint on W Berks. Facilities and the rest of that block stay unfilled — same “paint the named place, not the neighbor” rule as The Wall vs Anderson.
+
+---
+
+## 2026-08-25 — Tyler trucks runs Tomlinson to short of Tyler’s east edge
+
+`tyler-trucks` follows W Norris from Tomlinson’s west edge, through 13th and Presser, and stops a bit before Tyler’s east edge — not at 13th and not out to 12th/SERC. Still not list-filter `norris`.
+
+---
+
+## 2026-08-25 — Tyler trucks is a map zone, not list-filter `norris`
+
+`tyler-trucks` is a campus-overview street-line on W Norris. It is not `config/zones.ts` `norris` (list/admin filter). Same split as `w-montgomery` vs `montgomery`.
+
+---
+
+## 2026-08-25 — W Montgomery is a map zone, not list-filter `montgomery`
+
+`w-montgomery` is a campus-overview street-line along Klein Law on Montgomery, stopping short of 13th so a visible gap sits before the Student Center L. It is not `config/zones.ts` `montgomery` (list/admin filter). Same split as the other map clusters.
+
+---
+
+## 2026-08-25 — The Wall paints the plaza, not Anderson Hall
+
+`the-wall` is `MAP_ZONE_MARK.buildingFill` because students mean the 12th Street vendor-pad plaza (OSM outdoor seating / food-pad west of Anderson), not a street centerline and not Anderson Hall itself. The cherry wash sits immediately left of Anderson's west facade. Paley and Anderson stay unfilled.
+
+---
+
+## 2026-08-25 — Map marks: `streetLine` vs `buildingFill`
+
+The winning overview is both marks at once, not a hull overlay. Named so we can talk about them without saying "the red line" vs "the building outline":
+
+- `MAP_ZONE_MARK.streetLine` — cherry corridor. Student Center, W Montgomery, SERC trucks, Tyler trucks.
+- `MAP_ZONE_MARK.buildingFill` — cherry wash. Vantage & The View buildings; The Wall plaza west of Anderson (not Anderson); Richie's Cafe (cafe only, not Facilities); Liacouras Walk (1926–1938 building only, not 1940).
+
+Rounded hulls were the rejected A/B. Do not reintroduce a public toggle unless we are comparing again.
+
+---
+
+## 2026-08-25 — Map zones are a new overlay, not list-filter `zone_key`
+
+The home map A/B (Student Center / Vantage & The View / The Wall / SERC trucks)
+is **not** the existing `config/zones.ts` keys (`norris`, `montgomery`,
+`twelfth`, `other`). Those remain list/admin filter language. Map clusters are
+`src/config/map-zones.ts` plus `public/maps/map-zones.geojson`. Venue membership
+for the prototype is spatial (point-in-polygon), not `venues.zone_key`, because
+most seeded rows have no zone and the user will upload corridor data later.
+
+**Why two treatments:** the user asked to compare street/corridor highlights vs
+rounded hulls on the live map before locking DESIGN.md. Cherry stays rare
+(line casement + soft fill, not a solid flood). Vantage & The View is buildings,
+not a street, even in the Streets treatment.
+
+**Why this contradicts DESIGN.md on purpose:** DESIGN.md currently says zones
+are list-filter language only with no polygon fills. Specs Feature 1 still says
+every truck appears as a pin. Neither file was edited. After a winner is picked,
+update DESIGN.md / `docs/design/map-and-pins.md` and drop the Streets/Shapes
+toggle. Do not reuse map-zone keys as list `zone_key` values without an explicit
+decision.
+
+---
+
+## 2026-08-25 — Student Center food-court chains are retired, not mapped as venues
+
+Saladworks, Zen Japanese Food Fast, Chick-fil-A (Student Center), and BurgerFi
+were seeded as published venues because the KML dump treated every pin as
+off-meal-plan food. They're meal-plan food-court tenants inside Howard Gittis
+Student Center — out of scope (`Specs/overview.md`). The user asked to drop
+those cherry pills and keep only the white "Student Center Food Court" info
+pin.
+
+**Why retire, not delete:** venues are retired never deleted. Public
+`getPublishedVenues()` already hides `status: retired`. Detail URLs can stay
+as Closed. The Morgan Hall Chick-fil-A draft was left alone (not in the
+screenshot, not published).
+
+**How to apply:** don't republish these four without an explicit scope change.
+Other meal-plan tenants that show up the same way should be retired the same
+way, not filtered in the map layer.
+
+---
+
+## 2026-08-25 — Meal-plan dining halls get one static info pin each, not venue rows
+
+The product explicitly does not cover meal-plan dining, but the Student Center
+food court, J&H dining hall, and Morgan Hall food court are the most food-dense
+buildings on campus — leaving them blank makes the map look wrong. Per the
+user's ask, each building now carries exactly one pin that just says what it is.
+
+**Why:** these are map annotations, not venues. Modeling them as venues (even
+retired/unpublished ones) would pull out-of-scope places into the DB, the admin
+UI, and the single write path for no benefit. They live in static config
+(`src/config/campus-dining.ts`) rendered by `CampusDiningLayer` — neutral
+white/stone pill, non-interactive, always losing label collisions to venue
+pills. Coordinates are the curated building-footprint centroids (Morgan's pin
+sits between the two towers, where the dining floor is).
+
+**How to apply:** don't "promote" these to venues later without an explicit
+scope change, and don't reuse the cherry venue pill for anything
+non-tappable — the neutral treatment is what signals "information, not a
+choice". If more out-of-scope-but-visible places show up, add them to the same
+config, sparingly.
 
 ---
 

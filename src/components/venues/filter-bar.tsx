@@ -1,9 +1,17 @@
 "use client";
 
+import { useId, useState } from "react";
+
 import { CUISINES, CUISINE_KEYS, type CuisineKey } from "@/config/cuisines";
-import { ZONES, ZONE_KEYS, type ZoneKey } from "@/config/zones";
+import {
+  MAP_ZONES,
+  MAP_ZONE_KEYS_SORTED,
+  type MapZoneKey,
+} from "@/config/map-zones";
 import { Chip, Input } from "@/components/ui/primitives";
-import type { PaymentFilter, VenueFilters } from "@/lib/venues";
+import type { VenueFilters } from "@/lib/venues";
+
+type FilterMenuKey = "cuisine" | "zone";
 
 function toggle<T extends string>(values: T[], value: T): T[] {
   return values.includes(value)
@@ -18,11 +26,30 @@ export function FilterBar({
   filters: VenueFilters;
   onChange: (filters: VenueFilters) => void;
 }) {
+  // Menu options expand inline below the chip row — an in-panel drawer
+  // that pushes the results down. Never a floating popover over the list.
+  const [openMenu, setOpenMenu] = useState<FilterMenuKey | null>(null);
+  // The last menu keeps rendering while the drawer collapses, so closing
+  // animates instead of snapping empty.
+  const [renderedMenu, setRenderedMenu] = useState<FilterMenuKey>("cuisine");
+  const drawerId = useId();
+
   function update<K extends keyof VenueFilters>(
     key: K,
     value: VenueFilters[K],
   ) {
     onChange({ ...filters, [key]: value });
+  }
+
+  function toggleMenu(menu: FilterMenuKey) {
+    setOpenMenu((current) => (current === menu ? null : menu));
+    setRenderedMenu(menu);
+  }
+
+  function menuChipClass(menu: FilterMenuKey, count: number) {
+    return ["chip", (count > 0 || openMenu === menu) && "chip-active"]
+      .filter(Boolean)
+      .join(" ");
   }
 
   return (
@@ -46,60 +73,82 @@ export function FilterBar({
         >
           Open now
         </Chip>
-        <details className="filter-menu">
-          <summary
-            className={filters.cuisines.length ? "chip chip-active" : "chip"}
-          >
-            Cuisine
-            {filters.cuisines.length ? ` · ${filters.cuisines.length}` : ""}
-          </summary>
-          <div className="filter-popover">
-            {CUISINE_KEYS.map((key) => (
-              <label key={key}>
-                <input
-                  checked={filters.cuisines.includes(key)}
-                  onChange={() =>
-                    update(
-                      "cuisines",
-                      toggle<CuisineKey>(filters.cuisines, key),
-                    )
-                  }
-                  type="checkbox"
-                />
-                {CUISINES[key].label}
-              </label>
-            ))}
-          </div>
-        </details>
-        <details className="filter-menu">
-          <summary
-            className={filters.zones.length ? "chip chip-active" : "chip"}
-          >
-            Area{filters.zones.length ? ` · ${filters.zones.length}` : ""}
-          </summary>
-          <div className="filter-popover">
-            {ZONE_KEYS.map((key) => (
-              <label key={key}>
-                <input
-                  checked={filters.zones.includes(key)}
-                  onChange={() =>
-                    update("zones", toggle<ZoneKey>(filters.zones, key))
-                  }
-                  type="checkbox"
-                />
-                {ZONES[key].label}
-              </label>
-            ))}
-          </div>
-        </details>
-        <Chip
-          active={filters.payments.includes("card")}
-          onClick={() =>
-            update("payments", toggle<PaymentFilter>(filters.payments, "card"))
-          }
+        <button
+          aria-controls={drawerId}
+          aria-expanded={openMenu === "cuisine"}
+          className={menuChipClass("cuisine", filters.cuisines.length)}
+          onClick={() => toggleMenu("cuisine")}
+          type="button"
         >
-          Accepts card
-        </Chip>
+          Cuisine
+          {filters.cuisines.length ? ` · ${filters.cuisines.length}` : ""}
+        </button>
+        <button
+          aria-controls={drawerId}
+          aria-expanded={openMenu === "zone"}
+          className={menuChipClass("zone", filters.zones.length)}
+          onClick={() => toggleMenu("zone")}
+          type="button"
+        >
+          Zone{filters.zones.length ? ` · ${filters.zones.length}` : ""}
+        </button>
+      </div>
+      <div
+        className={
+          openMenu ? "filter-drawer filter-drawer-open" : "filter-drawer"
+        }
+        id={drawerId}
+        inert={openMenu === null}
+      >
+        <div className="filter-drawer-clip">
+          {/* Horizontal multi-select: tap toggles; cherry fill = selected. */}
+          <div className="filter-options">
+            {renderedMenu === "cuisine"
+              ? CUISINE_KEYS.map((key) => {
+                  const selected = filters.cuisines.includes(key);
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={
+                        selected
+                          ? "filter-option filter-option-active"
+                          : "filter-option"
+                      }
+                      key={key}
+                      onClick={() =>
+                        update(
+                          "cuisines",
+                          toggle<CuisineKey>(filters.cuisines, key),
+                        )
+                      }
+                      type="button"
+                    >
+                      {CUISINES[key].label}
+                    </button>
+                  );
+                })
+              : MAP_ZONE_KEYS_SORTED.map((key) => {
+                  const selected = filters.zones.includes(key);
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={
+                        selected
+                          ? "filter-option filter-option-active"
+                          : "filter-option"
+                      }
+                      key={key}
+                      onClick={() =>
+                        update("zones", toggle<MapZoneKey>(filters.zones, key))
+                      }
+                      type="button"
+                    >
+                      {MAP_ZONES[key].label}
+                    </button>
+                  );
+                })}
+          </div>
+        </div>
       </div>
     </div>
   );
