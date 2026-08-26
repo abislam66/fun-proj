@@ -51,6 +51,7 @@ export const venues = pgTable(
     type: venueTypeEnum("type").notNull().default("truck"),
     name: text("name").notNull(),
     description: text("description"),
+    imageUrl: text("image_url"),
     status: venueStatusEnum("status").notNull().default("draft"),
     lat: doublePrecision("lat").notNull(),
     lng: doublePrecision("lng").notNull(),

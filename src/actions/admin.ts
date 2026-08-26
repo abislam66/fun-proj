@@ -1,7 +1,12 @@
 "use server";
 
+import { del, put } from "@vercel/blob";
 import { revalidateTag } from "next/cache";
 
+import {
+  ALLOWED_VENUE_IMAGE_TYPES,
+  MAX_VENUE_IMAGE_BYTES,
+} from "@/config/site";
 import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import {
@@ -94,6 +99,79 @@ export async function upsertVenue(
 
     revalidateTag("venues");
     return { ok: true, data: { id: created.id, slug: created.slug } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: upload/replace a venue's photo. Old blob is deleted once the new one is saved. */
+export async function uploadVenueImage(
+  formData: FormData,
+): Promise<ActionResult<{ imageUrl: string }>> {
+  try {
+    await requireAdmin();
+    const id = formData.get("id");
+    const file = formData.get("file");
+
+    if (typeof id !== "string" || !id) {
+      return { ok: false, error: "Missing venue id" };
+    }
+    if (!(file instanceof File)) {
+      return { ok: false, error: "No image file provided" };
+    }
+    if (
+      !ALLOWED_VENUE_IMAGE_TYPES.includes(
+        file.type as (typeof ALLOWED_VENUE_IMAGE_TYPES)[number],
+      )
+    ) {
+      return { ok: false, error: "Image must be JPEG, PNG, or WebP" };
+    }
+    if (file.size > MAX_VENUE_IMAGE_BYTES) {
+      return { ok: false, error: "Image must be under 5 MB" };
+    }
+
+    const existing = await getVenueById(id);
+    if (!existing) {
+      return { ok: false, error: "Venue not found" };
+    }
+
+    const extension = file.type.split("/")[1];
+    const blob = await put(`venues/${id}-${Date.now()}.${extension}`, file, {
+      access: "public",
+      addRandomSuffix: false,
+    });
+
+    const updated = await updateVenue(id, { imageUrl: blob.url });
+
+    if (existing.imageUrl && existing.imageUrl !== blob.url) {
+      await del(existing.imageUrl).catch(() => {});
+    }
+
+    revalidateVenue(updated.slug);
+    return { ok: true, data: { imageUrl: blob.url } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: remove a venue's photo. */
+export async function removeVenueImage(raw: unknown): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const { id } = venueIdSchema.parse(raw);
+    const existing = await getVenueById(id);
+    if (!existing) {
+      return { ok: false, error: "Venue not found" };
+    }
+    if (!existing.imageUrl) {
+      return { ok: true, data: undefined };
+    }
+
+    const updated = await updateVenue(id, { imageUrl: null });
+    await del(existing.imageUrl).catch(() => {});
+
+    revalidateVenue(updated.slug);
+    return { ok: true, data: undefined };
   } catch (error) {
     return fail(error);
   }

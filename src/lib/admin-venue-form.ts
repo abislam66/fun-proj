@@ -21,6 +21,7 @@ export interface VenueDraft {
   name: string;
   type: VenueType;
   description: string;
+  imageUrl: string | null;
   status: VenueStatusValue;
   lat: string;
   lng: string;
@@ -46,6 +47,7 @@ export const EMPTY_VENUE_DRAFT: VenueDraft = {
   name: "",
   type: "truck",
   description: "",
+  imageUrl: null,
   status: "draft",
   lat: CAMPUS_BOUNDS.south.toFixed(4),
   lng: CAMPUS_BOUNDS.west.toFixed(4),
@@ -81,6 +83,7 @@ export function toDraft(row: VenueRow): VenueDraft {
     name: row.name,
     type: row.type,
     description: row.description ?? "",
+    imageUrl: row.imageUrl,
     status: row.status,
     lat: String(row.lat),
     lng: String(row.lng),

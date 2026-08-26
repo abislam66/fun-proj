@@ -6,12 +6,15 @@ import { useState } from "react";
 
 import {
   publishVenue,
+  removeVenueImage,
   retireVenue,
+  uploadVenueImage,
   upsertVenue,
   verifyVenue,
 } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Input } from "@/components/ui/primitives";
+import { ALLOWED_VENUE_IMAGE_TYPES } from "@/config/site";
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
 import { ZONES, type ZoneKey } from "@/config/zones";
 import type { VenueRow } from "@/lib/db/schema";
@@ -54,6 +57,7 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
   const [notice, setNotice] = useState("");
   const [noticeIsError, setNoticeIsError] = useState(false);
   const [pending, setPending] = useState(false);
+  const [imagePending, setImagePending] = useState(false);
 
   function setField<K extends keyof VenueDraft>(
     field: K,
@@ -158,6 +162,41 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
       lastVerifiedAt: result.data.lastVerifiedAt,
     }));
     setNotice("Venue marked verified just now.");
+    setNoticeIsError(false);
+  }
+
+  async function uploadImage(file: File) {
+    if (!draft.id) return;
+    setImagePending(true);
+    const formData = new FormData();
+    formData.set("id", draft.id);
+    formData.set("file", file);
+    const result = await uploadVenueImage(formData);
+    setImagePending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return;
+    }
+    setField("imageUrl", result.data.imageUrl);
+    setNotice("Image uploaded.");
+    setNoticeIsError(false);
+  }
+
+  async function removeImage() {
+    if (!draft.id) return;
+    setImagePending(true);
+    const result = await removeVenueImage({ id: draft.id });
+    setImagePending(false);
+
+    if (!result.ok) {
+      setNotice(result.error);
+      setNoticeIsError(true);
+      return;
+    }
+    setField("imageUrl", null);
+    setNotice("Image removed.");
     setNoticeIsError(false);
   }
 
@@ -294,6 +333,63 @@ function VenueEditorForm({ source }: { source: VenueDraft }) {
                 value={draft.description}
               />
             </Field>
+          </EditorSection>
+
+          <EditorSection
+            description="Shown at the top of the venue's public page."
+            title="Photo"
+          >
+            {isNew ? (
+              <p className="admin-inline-note">
+                Save the venue once before adding a photo.
+              </p>
+            ) : (
+              <div className="admin-image-field">
+                {draft.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin-only preview, not the public page
+                  <img
+                    alt={`${draft.name || "Venue"} photo`}
+                    className="admin-image-preview"
+                    src={draft.imageUrl}
+                  />
+                ) : (
+                  <p className="admin-inline-note">No photo yet.</p>
+                )}
+                <div className="admin-image-actions">
+                  <label className="button button-secondary admin-image-upload">
+                    {imagePending
+                      ? "Uploading…"
+                      : draft.imageUrl
+                        ? "Replace photo"
+                        : "Upload photo"}
+                    <input
+                      accept={ALLOWED_VENUE_IMAGE_TYPES.join(",")}
+                      className="sr-only"
+                      disabled={imagePending}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void uploadImage(file);
+                      }}
+                      type="file"
+                    />
+                  </label>
+                  {draft.imageUrl ? (
+                    <Button
+                      disabled={imagePending}
+                      onClick={removeImage}
+                      type="button"
+                      variant="ghost"
+                    >
+                      Remove photo
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="admin-inline-note">
+                  JPEG, PNG, or WebP — up to 5 MB.
+                </p>
+              </div>
+            )}
           </EditorSection>
 
           <EditorSection

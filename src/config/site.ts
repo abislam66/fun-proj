@@ -41,3 +41,10 @@ export const PROBLEM_REPORT_RATE_LIMIT = {
 export const MAX_PROBLEM_NOTE_LENGTH = 500;
 export const MAX_VENUE_DESCRIPTION_LENGTH = 2000;
 export const MAX_VENUE_NAME_LENGTH = 120;
+
+export const MAX_VENUE_IMAGE_BYTES = 5 * 1024 * 1024;
+export const ALLOWED_VENUE_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;

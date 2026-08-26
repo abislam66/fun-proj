@@ -1,5 +1,5 @@
 import type { CuisineKey } from "@/config/cuisines";
-import type { ZoneKey } from "@/config/zones";
+import { ZONES, type ZoneKey } from "@/config/zones";
 import { isHoursUnknown, isOpenNow, type VenueHours } from "@/lib/hours";
 
 export type VenueType =
@@ -16,6 +16,7 @@ export interface Venue {
   type: VenueType;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   status: "published" | "retired";
   zoneKey: ZoneKey | null;
   location: string;
@@ -50,6 +51,41 @@ export const EMPTY_VENUE_FILTERS: VenueFilters = {
 
 function uniqueSorted<T extends string>(values: T[]): T[] {
   return [...new Set(values)].sort();
+}
+
+/**
+ * Detail-page location text. Trucks are approximate (move/set up
+ * informally) and get a "Near" prefix; every other type is a fixed spot
+ * and states it plainly. `building` already holds whatever's most
+ * specific an admin has entered — a street address for an off-campus
+ * shop, a building/room name for an on-campus one — so it's shown as-is
+ * rather than guessing which it is. The "other" zone bucket ("Elsewhere
+ * near campus") is deliberately excluded as a fallback: it's a catch-all
+ * label, not a real place, so it reads as filler rather than information.
+ */
+export function venueLocationText(venue: Venue): {
+  text: string;
+  approximate: boolean;
+} {
+  const approximate = venue.type === "truck";
+  const landmark = venue.building
+    ? venue.floor
+      ? `${venue.building}, Floor ${venue.floor}`
+      : venue.building
+    : null;
+  const zoneLabel =
+    venue.zoneKey && venue.zoneKey !== "other"
+      ? ZONES[venue.zoneKey].label
+      : null;
+
+  const known = landmark ?? zoneLabel;
+  if (known) {
+    return { text: approximate ? `Near ${known}` : known, approximate };
+  }
+  return {
+    text: approximate ? "Near Temple Main Campus" : "Location not yet added",
+    approximate,
+  };
 }
 
 export function parseVenueFilters(params: URLSearchParams): VenueFilters {

@@ -26,6 +26,7 @@ export function toVenue(row: PublicVenue): Venue {
     type: row.type,
     name: row.name,
     description: row.description,
+    imageUrl: row.imageUrl,
     status: row.status === "retired" ? "retired" : "published",
     zoneKey: ZONE_KEYS.includes(row.zoneKey as (typeof ZONE_KEYS)[number])
       ? (row.zoneKey as Venue["zoneKey"])

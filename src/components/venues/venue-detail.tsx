@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
@@ -7,9 +8,9 @@ import {
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
-import { ZONES } from "@/config/zones";
 import { WEEKDAY_KEYS, type VenueHours } from "@/lib/hours";
-import type { Venue } from "@/lib/venues";
+import { googleMapsDirectionsUrl } from "@/lib/maps";
+import { venueLocationText, type Venue } from "@/lib/venues";
 
 const DAY_LABELS = {
   mon: "Monday",
@@ -21,15 +22,14 @@ const DAY_LABELS = {
   sun: "Sunday",
 } as const;
 
+/** "5:30 AM" / "10:00 PM" — always shows minutes, matches the weekly-schedule format. */
 function displayTime(value: string): string {
   const [hourText, minuteText] = value.split(":");
   const hour = Number(hourText);
   const minute = Number(minuteText);
-  const period = hour >= 12 ? "p.m." : "a.m.";
+  const period = hour >= 12 ? "PM" : "AM";
   const displayHour = hour % 12 || 12;
-  return minute
-    ? `${displayHour}:${String(minute).padStart(2, "0")} ${period}`
-    : `${displayHour} ${period}`;
+  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
 }
 
 function HoursTable({ hours }: { hours: VenueHours | null }) {
@@ -46,7 +46,7 @@ function HoursTable({ hours }: { hours: VenueHours | null }) {
                 ? ranges
                     .map(
                       (range) =>
-                        `${displayTime(range.open)}–${displayTime(range.close)}`,
+                        `${displayTime(range.open)} – ${displayTime(range.close)}`,
                     )
                     .join(", ")
                 : "Closed"}
@@ -73,6 +73,7 @@ export function VenueDetail({
         timeZone: "UTC",
       }).format(new Date(`${venue.lastVerifiedAt}T12:00:00Z`))
     : null;
+  const location = venueLocationText(venue);
 
   return (
     <div className="public-page">
@@ -91,6 +92,17 @@ export function VenueDetail({
           </div>
         ) : null}
 
+        {venue.imageUrl ? (
+          <Image
+            alt={venue.name}
+            className="detail-hero-image"
+            height={720}
+            priority
+            src={venue.imageUrl}
+            width={1280}
+          />
+        ) : null}
+
         <header className="detail-hero">
           <p className="eyebrow">{venue.type}</p>
           <h1>{venue.name}</h1>
@@ -103,17 +115,24 @@ export function VenueDetail({
           </div>
         </header>
 
-        <section className="detail-section">
-          <h2>Good to know</h2>
-          <p>{venue.description ?? "No description has been added yet."}</p>
-        </section>
+        {venue.description ? (
+          <section className="detail-section">
+            <h2>Good to know</h2>
+            <p>{venue.description}</p>
+          </section>
+        ) : null}
 
         <section className="detail-section">
           <h2>Location</h2>
-          <p>{venue.zoneKey ? ZONES[venue.zoneKey].label : venue.location}</p>
-          {venue.building ? (
-            <p className="location-landmark">Near {venue.building}</p>
-          ) : null}
+          <p>{location.text}</p>
+          <a
+            className="text-link directions-link"
+            href={googleMapsDirectionsUrl(venue)}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Get directions <span aria-hidden="true">↗</span>
+          </a>
         </section>
 
         <section className="detail-section">
@@ -126,7 +145,7 @@ export function VenueDetail({
 
         <section className="verification-block">
           <div>
-            <span className="eyebrow">Last updated</span>
+            <span className="eyebrow">Last verified</span>
             <strong>{verified ?? "Not yet verified"}</strong>
           </div>
           {venue.status !== "retired" ? (
