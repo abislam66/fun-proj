@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Map as MapLibreMap, MapGeoJSONFeature } from "maplibre-gl";
 
 import {
+  MAP_ZONES,
   MAP_ZONE_GEOJSON_ROLE,
   MAP_ZONE_GEOJSON_URL,
   MAP_ZONE_KEYS,
@@ -11,8 +12,10 @@ import {
 } from "@/config/map-zones";
 import {
   buildZoneLabelIcon,
-  ZONE_LABEL_ICON,
+  ZONE_LABEL_ICON_PREFIX,
+  zoneLabelIconId,
 } from "@/lib/map/zone-label-icon";
+import { beforeIdFor, liftOverlaysAboveBasemap } from "@/lib/map/overlay-order";
 
 const SOURCE_ID = "map-zones";
 const HIT_LAYER_ID = "map-zones-hit";
@@ -41,12 +44,6 @@ export const MAP_ZONE_CLICK_LAYER_IDS = [
 
 const CHERRY = "#9D2235";
 const CHERRY_SOFT = "#F8ECEF";
-const CHERRY_DEEP = "#6E1826";
-
-function firstSymbolLayerId(map: MapLibreMap): string | undefined {
-  const layers = map.getStyle().layers ?? [];
-  return layers.find((layer) => layer.type === "symbol")?.id;
-}
 
 function zoneKeyFromFeatures(
   features: MapGeoJSONFeature[] | undefined,
@@ -76,11 +73,12 @@ function setOverviewVisible(map: MapLibreMap, overview: boolean) {
  */
 export function MapZoneLayer({
   map,
-  selectedKey,
+  zonesActive,
   onSelect,
 }: {
   map: MapLibreMap | null;
-  selectedKey: MapZoneKey | null;
+  /** Any zone filter active → the overview marks hide (pills take over). */
+  zonesActive: boolean;
   onSelect: (key: MapZoneKey) => void;
 }) {
   const onSelectRef = useRef(onSelect);
@@ -99,23 +97,17 @@ export function MapZoneLayer({
       map.removeSource(SOURCE_ID);
     }
 
-    if (map.hasImage(ZONE_LABEL_ICON)) {
-      map.removeImage(ZONE_LABEL_ICON);
+    for (const key of MAP_ZONE_KEYS) {
+      const imageId = zoneLabelIconId(key);
+      if (map.hasImage(imageId)) map.removeImage(imageId);
+      const plate = buildZoneLabelIcon(MAP_ZONES[key].label);
+      map.addImage(imageId, plate, { pixelRatio: plate.pixelRatio });
     }
-    const plate = buildZoneLabelIcon();
-    map.addImage(ZONE_LABEL_ICON, plate, {
-      pixelRatio: plate.pixelRatio,
-      content: plate.content,
-      stretchX: plate.stretchX,
-      stretchY: plate.stretchY,
-    });
 
     map.addSource(SOURCE_ID, {
       type: "geojson",
       data: MAP_ZONE_GEOJSON_URL,
     });
-
-    const beforeId = firstSymbolLayerId(map);
 
     map.addLayer(
       {
@@ -128,7 +120,7 @@ export function MapZoneLayer({
           "fill-opacity": 0.01,
         },
       },
-      beforeId,
+      beforeIdFor(map, HIT_LAYER_ID),
     );
 
     map.addLayer(
@@ -142,7 +134,7 @@ export function MapZoneLayer({
           "fill-opacity": 0.88,
         },
       },
-      beforeId,
+      beforeIdFor(map, BUILDING_FILL_ID),
     );
 
     map.addLayer(
@@ -157,7 +149,7 @@ export function MapZoneLayer({
           "line-opacity": 0.95,
         },
       },
-      beforeId,
+      beforeIdFor(map, BUILDING_FILL_LINE_ID),
     );
 
     map.addLayer(
@@ -172,19 +164,11 @@ export function MapZoneLayer({
         },
         paint: {
           "line-color": CHERRY_SOFT,
-          "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            14,
-            10,
-            16,
-            18,
-          ],
+          "line-width": ["interpolate", ["linear"], ["zoom"], 14, 10, 16, 18],
           "line-opacity": 0.95,
         },
       },
-      beforeId,
+      beforeIdFor(map, STREET_LINE_CASEMENT_ID),
     );
 
     map.addLayer(
@@ -199,52 +183,41 @@ export function MapZoneLayer({
         },
         paint: {
           "line-color": CHERRY,
-          "line-width": [
+          "line-width": ["interpolate", ["linear"], ["zoom"], 14, 4, 16, 7],
+        },
+      },
+      beforeIdFor(map, STREET_LINE_CORE_ID),
+    );
+
+    map.addLayer(
+      {
+        id: LABEL_LAYER_ID,
+        type: "symbol",
+        source: SOURCE_ID,
+        filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.label],
+        layout: {
+          "icon-image": ["concat", ZONE_LABEL_ICON_PREFIX, ["get", "zoneKey"]],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          "icon-overlap": "always",
+          "icon-padding": 0,
+          "icon-anchor": "center",
+          "icon-size": [
             "interpolate",
             ["linear"],
             ["zoom"],
             14,
-            4,
+            1,
             16,
-            7,
+            14 / 12,
           ],
+          "symbol-sort-key": ["get", "sort"],
         },
       },
-      beforeId,
+      beforeIdFor(map, LABEL_LAYER_ID),
     );
 
-    map.addLayer({
-      id: LABEL_LAYER_ID,
-      type: "symbol",
-      source: SOURCE_ID,
-      filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.label],
-      layout: {
-        "icon-image": ZONE_LABEL_ICON,
-        "icon-text-fit": "both",
-        "icon-text-fit-padding": [5, 10, 5, 10],
-        "icon-allow-overlap": true,
-        "icon-padding": 0,
-        "icon-anchor": "center",
-        "text-field": ["get", "label"],
-        "text-font": ["Noto Sans Bold"],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          14,
-          12,
-          16,
-          14,
-        ],
-        "text-anchor": "center",
-        "text-allow-overlap": true,
-        "text-padding": 2,
-        "symbol-sort-key": ["get", "sort"],
-      },
-      paint: {
-        "text-color": CHERRY_DEEP,
-      },
-    });
+    liftOverlaysAboveBasemap(map);
 
     const onEnter = () => {
       map.getCanvas().style.cursor = "pointer";
@@ -274,13 +247,17 @@ export function MapZoneLayer({
         if (map.getLayer(id)) map.removeLayer(id);
       }
       if (map.getSource(SOURCE_ID)) map.removeSource(SOURCE_ID);
+      for (const key of MAP_ZONE_KEYS) {
+        const imageId = zoneLabelIconId(key);
+        if (map.hasImage(imageId)) map.removeImage(imageId);
+      }
     };
   }, [map]);
 
   useEffect(() => {
     if (!map || !map.getSource(SOURCE_ID)) return;
-    setOverviewVisible(map, selectedKey === null);
-  }, [map, selectedKey]);
+    setOverviewVisible(map, !zonesActive);
+  }, [map, zonesActive]);
 
   return null;
 }

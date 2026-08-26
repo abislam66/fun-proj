@@ -21,7 +21,6 @@ function ResultsPanel({
   venues,
   filters,
   setFilters,
-  backPath,
   unknownHours,
   selectedId,
   hoveredId,
@@ -31,7 +30,6 @@ function ResultsPanel({
   venues: Venue[];
   filters: VenueFilters;
   setFilters: (filters: VenueFilters) => void;
-  backPath: string;
   unknownHours: number;
   selectedId: string | null;
   hoveredId: string | null;
@@ -65,7 +63,6 @@ function ResultsPanel({
         ) : null}
       </div>
       <VenueList
-        backPath={backPath}
         hoveredId={hoveredId}
         onClear={() => setFilters(EMPTY_VENUE_FILTERS)}
         onHover={onHover}
@@ -89,6 +86,15 @@ export function VenueExplorer({
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [sheetCollapse, setSheetCollapse] = useState(0);
+
+  // List rows hand the stage to the map: select the venue AND (on mobile)
+  // tuck the sheet to peek so the flown-to pin and its popup are visible.
+  // Map-originated selections keep the sheet where it is.
+  function selectFromList(venueId: string | null) {
+    setSelectedId(venueId);
+    if (venueId) setSheetCollapse((count) => count + 1);
+  }
   const query = serializeVenueFilters(filters);
   const backPath = query ? `/?${query}` : "/";
   const visibleVenues = useMemo(
@@ -126,11 +132,10 @@ export function VenueExplorer({
 
   const panel = (
     <ResultsPanel
-      backPath={backPath}
       filters={filters}
       hoveredId={hoveredId}
       onHover={setHoveredId}
-      onSelect={setSelectedId}
+      onSelect={selectFromList}
       selectedId={selectedId}
       setFilters={setFilters}
       unknownHours={unknownHours}
@@ -149,12 +154,22 @@ export function VenueExplorer({
           onClearSelection={() => setSelectedId(null)}
           onHover={setHoveredId}
           onSelect={setSelectedId}
+          onSelectZone={(key) => {
+            setFilters((current) => ({
+              ...current,
+              zones: key ? [key] : [],
+            }));
+            // Zone chosen on the map itself — hand the stage to the map
+            // (the zone flight would otherwise land behind the sheet).
+            if (key) setSheetCollapse((count) => count + 1);
+          }}
           selectedId={selectedId}
+          selectedZones={filters.zones}
           venues={visibleVenues}
         />
       </div>
       <div className="mobile-results">
-        <MobileSheet>{panel}</MobileSheet>
+        <MobileSheet collapseSignal={sheetCollapse}>{panel}</MobileSheet>
       </div>
     </main>
   );

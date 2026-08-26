@@ -20,10 +20,7 @@ export function pointInRing(lng: number, lat: number, ring: LngLat[]): boolean {
   return inside;
 }
 
-export function mapZoneContaining(
-  lng: number,
-  lat: number,
-): MapZoneKey | null {
+export function mapZoneContaining(lng: number, lat: number): MapZoneKey | null {
   for (const key of Object.keys(MAP_ZONES) as MapZoneKey[]) {
     if (pointInRing(lng, lat, [...MAP_ZONES[key].membership])) return key;
   }

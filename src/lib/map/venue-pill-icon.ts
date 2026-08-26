@@ -1,31 +1,40 @@
 /**
- * Canvas-drawn, 9-slice-ready pill+stem icons for the map's symbol
- * layers — generated at runtime so no binary asset is checked in. The
- * cherry venue variants (normal / hover border / selected border +
- * cherry halo ring) and the neutral campus-dining variant share one
- * drawing routine; each is registered once via `map.addImage`, then
- * MapLibre's `icon-text-fit` stretches it per-feature to fit its label,
- * using the `stretchX`/`stretchY` bands below to keep the rounded caps
- * and stem crisp while only the flat mid-sections grow.
+ * Canvas-drawn pill+stem icons for the map's symbol layers — generated at
+ * runtime so no binary asset is checked in.
+ *
+ * Venue pills bake the venue name INTO the sprite (one image per venue ×
+ * state). MapLibre draws every `icon-image` in a symbol layer first, then
+ * every `text-field`, so a stretchable pill plus live text lets one name
+ * bleed through an overlapping pill — baked sprites occlude cleanly
+ * instead (same fix as zone-label-icon.ts).
+ *
+ * The neutral campus-dining variant keeps the label-free 9-slice path:
+ * its three pins never overlap each other, and its text stays a GL
+ * `text-field`.
  */
 
 const SCALE = 3; // raster oversample for crisp rendering at typical zoom
-const PILL_WIDTH = 64;
-const PILL_HEIGHT = 28;
-const STEM_WIDTH = 14;
-const STEM_HEIGHT = 10;
+const PILL_WIDTH = 64; // dining 9-slice base / venue-pill minimum width
+const PILL_HEIGHT = 30;
+const STEM_WIDTH = 12;
+const STEM_HEIGHT = 8;
 // Margin above/beside the pill so the selected halo isn't clipped. No
 // margin below: the stem tip must stay at the bitmap's bottom edge —
 // it is the map coordinate (icon-anchor: bottom).
-const PAD = 4;
+const PAD = 5;
 const HALO_WIDTH = 2.5;
-const WIDTH = PILL_WIDTH + PAD * 2;
 const HEIGHT = PAD + PILL_HEIGHT + STEM_HEIGHT;
 const RADIUS = PILL_HEIGHT / 2;
 
 const VENUE_FILL = "#9D2235"; // --color-cherry
 const VENUE_STROKE = "#ffffff";
 const VENUE_HALO = "rgba(157, 34, 53, 0.28)";
+const VENUE_TEXT = "#ffffff";
+
+// Drawn at the old z18.5 GL text size; the layer's zoom-scaled
+// `icon-size` shrinks the whole sprite at lower zooms.
+const LABEL_FONT_SIZE = 13;
+const LABEL_PAD_X = 12; // matches the old icon-text-fit-padding sides
 
 // Campus-dining info pins: white surface + the campus-building stroke
 // stone, so they read as map furniture — never a tappable cherry venue.
@@ -55,50 +64,58 @@ export type PillIconAsset = {
   stretchY: [number, number][];
 };
 
-export const PILL_ICON_NORMAL = "venue-pill";
-export const PILL_ICON_HOVER = "venue-pill-hover";
-export const PILL_ICON_SELECTED = "venue-pill-selected";
+export type VenuePillIconAsset = {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+  pixelRatio: number;
+};
+
+export type VenuePillState = "normal" | "hover" | "selected";
+
 export const DINING_PILL_ICON = "campus-dining-pill";
 
-// `content`/`stretchX`/`stretchY` are specified in the raw bitmap's own
-// pixel space (i.e. WIDTH*SCALE / HEIGHT*SCALE) — NOT the unscaled design
-// units used above. Defined here in design units (pill offset by PAD),
-// then scaled below.
-const CONTENT_DESIGN: [number, number, number, number] = [
-  18 + PAD,
-  6 + PAD,
-  46 + PAD,
-  22 + PAD,
-];
-const STRETCH_X_DESIGN: [number, number][] = [
-  [16 + PAD, 23 + PAD],
-  [41 + PAD, 48 + PAD],
-];
-const STRETCH_Y_DESIGN: [number, number][] = [[13 + PAD, 15 + PAD]];
+/**
+ * Image id for one venue's baked pill. Includes the name so an admin
+ * rename naturally busts the per-map image cache.
+ */
+export function venuePillIconId(
+  venueId: string,
+  state: VenuePillState,
+  name: string,
+): string {
+  return `venue-pill/${state}/${venueId}/${name}`;
+}
 
-const CONTENT = CONTENT_DESIGN.map((v) => v * SCALE) as [
-  number,
-  number,
-  number,
-  number,
-];
-const STRETCH_X = STRETCH_X_DESIGN.map(
-  ([a, b]) => [a * SCALE, b * SCALE] as [number, number],
-);
-const STRETCH_Y = STRETCH_Y_DESIGN.map(
-  ([a, b]) => [a * SCALE, b * SCALE] as [number, number],
-);
+const VENUE_PILL_STYLES: Record<VenuePillState, PillStyle> = {
+  normal: { fill: VENUE_FILL, stroke: VENUE_STROKE, borderWidth: 2 },
+  hover: { fill: VENUE_FILL, stroke: VENUE_STROKE, borderWidth: 3 },
+  selected: {
+    fill: VENUE_FILL,
+    stroke: VENUE_STROKE,
+    borderWidth: 3,
+    halo: VENUE_HALO,
+  },
+};
 
-function drawPill(style: PillStyle): PillIconAsset {
+// Same body-font approach as zone-label-icon.ts, so pill names match the
+// page's Satoshi instead of the basemap's Noto.
+function labelFont(): string {
+  const family =
+    typeof document === "undefined"
+      ? "sans-serif"
+      : getComputedStyle(document.body).fontFamily || "sans-serif";
+  return `700 ${LABEL_FONT_SIZE}px ${family}`;
+}
+
+/** Paints halo + pill body + stem for a pill `pillWidth` wide (design units). */
+function paintPill(
+  ctx: CanvasRenderingContext2D,
+  pillWidth: number,
+  style: PillStyle,
+) {
   const { fill, stroke, borderWidth, halo, strokeStem } = style;
-  const canvas = document.createElement("canvas");
-  canvas.width = WIDTH * SCALE;
-  canvas.height = HEIGHT * SCALE;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas context unavailable");
-
-  ctx.scale(SCALE, SCALE);
-  ctx.clearRect(0, 0, WIDTH, HEIGHT);
+  const width = pillWidth + PAD * 2;
 
   // Selected-only halo — a soft cherry ring outside the white border,
   // matching DESIGN.md's "thicker white ring" + glow treatment so the
@@ -108,7 +125,7 @@ function drawPill(style: PillStyle): PillIconAsset {
     ctx.roundRect(
       PAD - HALO_WIDTH,
       PAD - HALO_WIDTH,
-      PILL_WIDTH + HALO_WIDTH * 2,
+      pillWidth + HALO_WIDTH * 2,
       PILL_HEIGHT + HALO_WIDTH * 2,
       RADIUS + HALO_WIDTH,
     );
@@ -121,7 +138,7 @@ function drawPill(style: PillStyle): PillIconAsset {
   ctx.roundRect(
     PAD + borderWidth / 2,
     PAD + borderWidth / 2,
-    PILL_WIDTH - borderWidth,
+    pillWidth - borderWidth,
     PILL_HEIGHT - borderWidth,
     RADIUS - borderWidth / 2,
   );
@@ -133,7 +150,7 @@ function drawPill(style: PillStyle): PillIconAsset {
 
   // Stem — solid triangle overlapping 1px into the pill's bottom edge so
   // the border reads as "opening up" around it.
-  const cx = WIDTH / 2;
+  const cx = width / 2;
   ctx.beginPath();
   ctx.moveTo(cx - STEM_WIDTH / 2, PAD + PILL_HEIGHT - 1);
   ctx.lineTo(cx + STEM_WIDTH / 2, PAD + PILL_HEIGHT - 1);
@@ -153,12 +170,97 @@ function drawPill(style: PillStyle): PillIconAsset {
     ctx.strokeStyle = stroke;
     ctx.stroke();
   }
+}
 
-  const imageData = ctx.getImageData(0, 0, WIDTH * SCALE, HEIGHT * SCALE);
+/** One opaque sprite: pill + stem + the venue name, sized to the name. */
+export function buildVenuePillIcon(
+  name: string,
+  state: VenuePillState,
+): VenuePillIconAsset {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+
+  const font = labelFont();
+  ctx.font = font;
+  const textWidth = ctx.measureText(name).width;
+  const pillWidth = Math.max(
+    PILL_WIDTH,
+    Math.ceil(textWidth + LABEL_PAD_X * 2),
+  );
+  const width = pillWidth + PAD * 2;
+
+  canvas.width = width * SCALE;
+  canvas.height = HEIGHT * SCALE;
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  ctx.font = font; // canvas resize resets state
+
+  paintPill(ctx, pillWidth, VENUE_PILL_STYLES[state]);
+
+  ctx.fillStyle = VENUE_TEXT;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(name, width / 2, PAD + PILL_HEIGHT / 2);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   return {
-    width: WIDTH * SCALE,
-    height: HEIGHT * SCALE,
+    width: canvas.width,
+    height: canvas.height,
+    data: imageData.data,
+    pixelRatio: SCALE,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Label-free 9-slice variant (campus dining) — stretched by icon-text-fit.
+// `content`/`stretchX`/`stretchY` are specified in the raw bitmap's own
+// pixel space (i.e. WIDTH*SCALE / HEIGHT*SCALE) — NOT the unscaled design
+// units used above. Defined here in design units (pill offset by PAD),
+// then scaled below.
+
+const NINE_SLICE_WIDTH = PILL_WIDTH + PAD * 2;
+
+const CONTENT_DESIGN: [number, number, number, number] = [
+  16 + PAD,
+  6 + PAD,
+  48 + PAD,
+  24 + PAD,
+];
+const STRETCH_X_DESIGN: [number, number][] = [
+  [16 + PAD, 23 + PAD],
+  [41 + PAD, 48 + PAD],
+];
+const STRETCH_Y_DESIGN: [number, number][] = [[14 + PAD, 16 + PAD]];
+
+const CONTENT = CONTENT_DESIGN.map((v) => v * SCALE) as [
+  number,
+  number,
+  number,
+  number,
+];
+const STRETCH_X = STRETCH_X_DESIGN.map(
+  ([a, b]) => [a * SCALE, b * SCALE] as [number, number],
+);
+const STRETCH_Y = STRETCH_Y_DESIGN.map(
+  ([a, b]) => [a * SCALE, b * SCALE] as [number, number],
+);
+
+function drawPill(style: PillStyle): PillIconAsset {
+  const canvas = document.createElement("canvas");
+  canvas.width = NINE_SLICE_WIDTH * SCALE;
+  canvas.height = HEIGHT * SCALE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas context unavailable");
+
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  paintPill(ctx, PILL_WIDTH, style);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  return {
+    width: canvas.width,
+    height: canvas.height,
     data: imageData.data,
     pixelRatio: SCALE,
     content: CONTENT,
@@ -167,25 +269,18 @@ function drawPill(style: PillStyle): PillIconAsset {
   };
 }
 
-export function buildPillIcons(): {
-  normal: PillIconAsset;
-  hover: PillIconAsset;
-  selected: PillIconAsset;
-} {
-  const venue = { fill: VENUE_FILL, stroke: VENUE_STROKE };
-  return {
-    normal: drawPill({ ...venue, borderWidth: 2 }),
-    hover: drawPill({ ...venue, borderWidth: 3 }),
-    selected: drawPill({ ...venue, borderWidth: 3, halo: VENUE_HALO }),
-  };
-}
+// Dining pins display at 2/3 the venue-pill footprint: same bitmap,
+// registered at a higher pixelRatio. The content/stretch bands are in
+// bitmap pixel space, so they need no adjustment.
+const DINING_PILL_DOWNSCALE = 1.5;
 
 /** Neutral, non-interactive pill for meal-plan dining info pins. */
 export function buildDiningPillIcon(): PillIconAsset {
-  return drawPill({
+  const asset = drawPill({
     fill: DINING_FILL,
     stroke: DINING_STROKE,
     borderWidth: 1.5,
     strokeStem: true,
   });
+  return { ...asset, pixelRatio: asset.pixelRatio * DINING_PILL_DOWNSCALE };
 }

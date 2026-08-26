@@ -1,49 +1,65 @@
 /**
- * Stretchable label plate for map-zone names. Cherry-soft fill + cherry
- * outline, matching `MAP_ZONE_MARK.buildingFill` — not a cuisine pill
- * (no stem, not solid cherry).
+ * Per-zone name plate: opaque light-cherry fill, thin cherry outline, and
+ * the label painted into the same bitmap. MapLibre draws every `icon-image`
+ * in a symbol layer first, then every `text-field` — so a stretchable
+ * plate plus live text lets one name bleed through the next plate.
+ * Baking text into the sprite means overlapping labels occlude.
  */
 
 const SCALE = 3;
-const PLATE_WIDTH = 48;
-const PLATE_HEIGHT = 24;
+const FONT_SIZE = 12;
+const PAD_X = 10;
+const PAD_Y = 5;
 const RADIUS = 6;
-const BORDER = 2;
-const PAD = 2;
-const WIDTH = PLATE_WIDTH + PAD * 2;
-const HEIGHT = PLATE_HEIGHT + PAD * 2;
+const BORDER = 1.5;
 
-const FILL = "#E8D4D8";
+const FILL = "#F3E6E9";
 const STROKE = "#9D2235";
-
-export const ZONE_LABEL_ICON = "map-zone-label-plate";
+const TEXT = "#9D2235";
 
 export type ZoneLabelIconAsset = {
   width: number;
   height: number;
   data: Uint8ClampedArray;
   pixelRatio: number;
-  content: [number, number, number, number];
-  stretchX: [number, number][];
-  stretchY: [number, number][];
 };
 
-export function buildZoneLabelIcon(): ZoneLabelIconAsset {
+export const ZONE_LABEL_ICON_PREFIX = "map-zone-label-";
+
+export function zoneLabelIconId(zoneKey: string): string {
+  return `${ZONE_LABEL_ICON_PREFIX}${zoneKey}`;
+}
+
+function labelFont(): string {
+  const family =
+    typeof document === "undefined"
+      ? "sans-serif"
+      : getComputedStyle(document.body).fontFamily || "sans-serif";
+  return `700 ${FONT_SIZE}px ${family}`;
+}
+
+export function buildZoneLabelIcon(label: string): ZoneLabelIconAsset {
   const canvas = document.createElement("canvas");
-  canvas.width = WIDTH * SCALE;
-  canvas.height = HEIGHT * SCALE;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas context unavailable");
 
-  ctx.scale(SCALE, SCALE);
-  ctx.clearRect(0, 0, WIDTH, HEIGHT);
+  const font = labelFont();
+  ctx.font = font;
+  const textWidth = ctx.measureText(label).width;
+  const plateW = Math.ceil(textWidth + PAD_X * 2 + BORDER);
+  const plateH = Math.ceil(FONT_SIZE + PAD_Y * 2 + BORDER);
+
+  canvas.width = plateW * SCALE;
+  canvas.height = plateH * SCALE;
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  ctx.font = font;
 
   ctx.beginPath();
   ctx.roundRect(
-    PAD + BORDER / 2,
-    PAD + BORDER / 2,
-    PLATE_WIDTH - BORDER,
-    PLATE_HEIGHT - BORDER,
+    BORDER / 2,
+    BORDER / 2,
+    plateW - BORDER,
+    plateH - BORDER,
     RADIUS,
   );
   ctx.fillStyle = FILL;
@@ -52,20 +68,17 @@ export function buildZoneLabelIcon(): ZoneLabelIconAsset {
   ctx.strokeStyle = STROKE;
   ctx.stroke();
 
-  const imageData = ctx.getImageData(0, 0, WIDTH * SCALE, HEIGHT * SCALE);
+  ctx.fillStyle = TEXT;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, plateW / 2, plateH / 2);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   return {
-    width: WIDTH * SCALE,
-    height: HEIGHT * SCALE,
+    width: canvas.width,
+    height: canvas.height,
     data: imageData.data,
     pixelRatio: SCALE,
-    content: [
-      (PAD + 8) * SCALE,
-      (PAD + 5) * SCALE,
-      (PAD + PLATE_WIDTH - 8) * SCALE,
-      (PAD + PLATE_HEIGHT - 5) * SCALE,
-    ],
-    stretchX: [[(PAD + 12) * SCALE, (PAD + PLATE_WIDTH - 12) * SCALE]],
-    stretchY: [[(PAD + 8) * SCALE, (PAD + PLATE_HEIGHT - 8) * SCALE]],
   };
 }

@@ -3,17 +3,13 @@
 import { useEffect } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
+import { beforeIdFor, liftOverlaysAboveBasemap } from "@/lib/map/overlay-order";
+
 const SOURCE_ID = "campus-buildings";
 const FILL_LAYER_ID = "campus-buildings-fill";
 const LINE_LAYER_ID = "campus-buildings-outline";
 const LABEL_LAYER_ID = "campus-buildings-label";
 const GEOJSON_URL = "/maps/campus-buildings.geojson?v=athletics-1";
-
-/** First symbol layer in the active style — insert fills beneath labels/pins. */
-function firstSymbolLayerId(map: MapLibreMap): string | undefined {
-  const layers = map.getStyle().layers ?? [];
-  return layers.find((layer) => layer.type === "symbol")?.id;
-}
 
 /**
  * Curated Temple main-campus footprints over a muted Positron basemap.
@@ -40,8 +36,6 @@ export function CampusBuildingLayer({ map }: { map: MapLibreMap | null }) {
         promoteId: "osmId",
       });
 
-      const beforeId = firstSymbolLayerId(map);
-
       map.addLayer(
         {
           id: FILL_LAYER_ID,
@@ -52,7 +46,7 @@ export function CampusBuildingLayer({ map }: { map: MapLibreMap | null }) {
             "fill-opacity": ["coalesce", ["get", "fillOpacity"], 0.92],
           },
         },
-        beforeId,
+        beforeIdFor(map, FILL_LAYER_ID),
       );
 
       map.addLayer(
@@ -76,53 +70,58 @@ export function CampusBuildingLayer({ map }: { map: MapLibreMap | null }) {
             "line-opacity": 0.95,
           },
         },
-        beforeId,
+        beforeIdFor(map, LINE_LAYER_ID),
       );
 
-      map.addLayer({
-        id: LABEL_LAYER_ID,
-        type: "symbol",
-        source: SOURCE_ID,
-        minzoom: 14.4,
-        layout: {
-          "text-field": ["coalesce", ["get", "label"], ["get", "name"]],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            15.2,
-            10,
-            17,
-            12,
-            18.5,
-            13,
-          ],
-          "text-max-width": 8,
-          "text-line-height": 1.1,
-          "text-padding": 2,
-          "text-allow-overlap": false,
-          "symbol-sort-key": [
-            "match",
-            ["get", "category"],
-            "library",
-            1,
-            "student-life",
-            2,
-            "academic",
-            3,
-            "landmark",
-            4,
-            8,
-          ],
+      map.addLayer(
+        {
+          id: LABEL_LAYER_ID,
+          type: "symbol",
+          source: SOURCE_ID,
+          minzoom: 14.4,
+          layout: {
+            "text-field": ["coalesce", ["get", "label"], ["get", "name"]],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              15.2,
+              10,
+              17,
+              12,
+              18.5,
+              13,
+            ],
+            "text-max-width": 8,
+            "text-line-height": 1.1,
+            "text-padding": 2,
+            "text-allow-overlap": false,
+            "symbol-sort-key": [
+              "match",
+              ["get", "category"],
+              "library",
+              1,
+              "student-life",
+              2,
+              "academic",
+              3,
+              "landmark",
+              4,
+              8,
+            ],
+          },
+          paint: {
+            "text-color": ["coalesce", ["get", "labelColor"], "#3D3A35"],
+            "text-halo-color": "rgba(255,255,255,0.88)",
+            "text-halo-width": 1.25,
+            "text-halo-blur": 0.4,
+          },
         },
-        paint: {
-          "text-color": ["coalesce", ["get", "labelColor"], "#3D3A35"],
-          "text-halo-color": "rgba(255,255,255,0.88)",
-          "text-halo-width": 1.25,
-          "text-halo-blur": 0.4,
-        },
-      });
+        beforeIdFor(map, LABEL_LAYER_ID),
+      );
+
+      liftOverlaysAboveBasemap(map);
     }
 
     if (map.isStyleLoaded()) {

@@ -14,46 +14,46 @@ describe("venue query serialization", () => {
       query: "  rice  ",
       openNow: true,
       cuisines: ["mexican", "halal"] as const,
-      zones: ["twelfth", "norris"] as const,
-      payments: ["card", "cash"] as const,
+      zones: ["student-center", "serc-trucks"] as const,
     };
 
     const query = serializeVenueFilters({
       ...filters,
       cuisines: [...filters.cuisines],
       zones: [...filters.zones],
-      payments: [...filters.payments],
     });
 
     expect(query).toBe(
-      "q=rice&open=1&cuisine=halal&cuisine=mexican&zone=norris&zone=twelfth&payment=card&payment=cash",
+      "q=rice&open=1&cuisine=halal&cuisine=mexican&zone=serc-trucks&zone=student-center",
     );
     expect(parseVenueFilters(new URLSearchParams(query))).toEqual({
       query: "rice",
       openNow: true,
       cuisines: ["halal", "mexican"],
-      zones: ["norris", "twelfth"],
-      payments: ["card", "cash"],
+      zones: ["serc-trucks", "student-center"],
     });
   });
 
   it("ignores unknown query values", () => {
+    // `payment` was a real param until 2026-08-25 — now just another
+    // ignored leftover in old bookmarked URLs.
     expect(
       parseVenueFilters(
-        new URLSearchParams("cuisine=pizza&zone=moon&payment=crypto&open=true"),
+        new URLSearchParams("cuisine=pizza&zone=moon&payment=card&open=true"),
       ),
     ).toEqual(EMPTY_VENUE_FILTERS);
   });
 });
 
 describe("filterVenues", () => {
-  it("combines search, cuisine, zone, and payment filters with AND", () => {
+  it("combines search, cuisine, and zone filters with AND", () => {
+    // Zone filtering is spatial (point-in-polygon against map zones), not
+    // venue.zoneKey: the tacos fixture sits on 12th St inside serc-trucks.
     const results = filterVenues(MOCK_VENUES, {
       query: "tacos",
       openNow: false,
       cuisines: ["mexican"],
-      zones: ["twelfth"],
-      payments: ["cash"],
+      zones: ["serc-trucks"],
     });
 
     expect(results.map((venue) => venue.slug)).toEqual([

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  MAP_ZONE_MARK,
-  mapZoneKeysByMark,
-} from "./map-zones";
+import { MAP_ZONE_MARK, mapZoneKeysByMark } from "./map-zones";
 
 describe("MAP_ZONE_MARK", () => {
   it("puts corridor clusters on streetLine", () => {

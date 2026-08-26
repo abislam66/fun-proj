@@ -42,7 +42,7 @@ Campus overview draws **map zones**, not every venue pin. Two marks, named in `s
 | `MAP_ZONE_MARK.streetLine` | Cherry corridor (casement + core line) | Student Center, W Montgomery, SERC trucks, Tyler trucks |
 | `MAP_ZONE_MARK.buildingFill` | Cherry wash + outline | Vantage & The View (buildings); The Wall (plaza west of Anderson, not Anderson); Richie's Cafe (cafe footprint only, not Facilities); Liacouras Walk (1926–1938 building only, not 1940 Residence Hall) |
 
-Click a zone → fly in → venue pills whose coordinates fall inside that zone. List-filter `zone_key` (`norris` / `montgomery` / `twelfth`) is unrelated. Zone names use a light cherry plate (`#E8D4D8`) with a thin cherry outline — the same family as `buildingFill`, not a white text halo.
+Click a zone → fly in → venue pills whose coordinates fall inside that zone. List-filter `zone_key` (`norris` / `montgomery` / `twelfth`) is unrelated. Zone names use a light cherry plate (`#F3E6E9`) with a thin cherry outline — the same family as `buildingFill`, not a white text halo. Each name is an opaque sprite so overlapping plates cover each other instead of blending.
 
 ## Pins — cuisine only
 
@@ -55,7 +55,7 @@ Cherry **pill + stem**. White label text = short primary cuisine (Halal, Mex, Am
 | Surface | Helps answer |
 |---------|----------------|
 | Pin | What kind of food is here? |
-| Mini-card / list | Name, open status, zone, payment |
+| Mini-card / list | Name, open status, payment (zone line on list rows only — the mini-card never shows address/zone, that's detail-page info) |
 | Detail | Full story |
 
 ### Label source
@@ -82,7 +82,7 @@ At ~40 trucks, HTML Markers with a shared React pill component are fine and make
 
 ### Mini-card
 
-Pin tap → sheet peeks: **name, cuisine tags, open-status badge**. Second tap → `/eat/[slug]`.
+Pin tap → popup anchored above the pill: **name, cuisine tags, open-status badge, price range, → arrow disc** (no "View details" text — the wordless disc is the navigation affordance; sr-only text covers screen readers). The whole card links to `/eat/[slug]`. Price is currently a hardcoded `$12` placeholder (`PLACEHOLDER_PRICE_RANGE` in venue-map.tsx).
 
 ### Motion
 
@@ -101,12 +101,15 @@ Meal-plan dining (Student Center food court, J&H dining hall, Morgan Hall food c
 | Aspect | Value |
 |--------|-------|
 | Data | `src/config/campus-dining.ts` — static markers on footprint centroids (Morgan pin sits between the North/South towers where the dining floor is) |
-| Look | Same pill+stem silhouette; white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text |
+| Look | Same pill+stem silhouette at 2/3 venue-pill scale (same bitmap registered at a higher pixelRatio); white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text; whole layer at 65% `icon-opacity`/`text-opacity` so the static pins visibly recede behind zone marks and venue pills |
 | Behavior | Non-interactive: no hover, no click, no mini-card. Map-background clicks through them clear selection like any other map click |
-| Collision | `icon/text-allow-overlap: false`, layer inserted **after** venue pills in collision order — a truck pill covering a dining pin always wins |
+| Zones | Zoom-gated: layer `minzoom` 16 hides them at the campus overview (zoom 14.6) — they appear only at building-scale zoom. Hidden entirely (`visible` prop) once a zone is selected so venue pills take over |
+| Collision | Placed like zone labels: `icon/text-allow-overlap: true` + `ignore-placement` — always render once past `minzoom` (building labels at the same centroids would otherwise collide them away) |
 | Rendering | `CampusDiningLayer` symbol layer; icon from `buildDiningPillIcon()` in `venue-pill-icon.ts` (shared 9-slice drawing routine) |
 
-Mount order in `VenueMap` is load-bearing: each layer self-inserts ahead of the style’s first symbol layer, so later mounts land earlier and win collisions. `CampusDiningLayer` mounts between `CampusBuildingLayer` and `VenuePillLayer`, giving: venue pills → dining pins → base labels → building labels.
+### Overlay paint order
+
+TuEats overlays always sit **above** the Positron basemap (including OSM road names). Paint order is `src/lib/map/overlay-order.ts`, bottom → top: campus buildings → map zones → dining info pins → venue pills. `liftOverlaysAboveBasemap` re-stacks those layers after each mount so a remount cannot leave a road label covering a pin, plate, or fill.
 
 ## Component mapping
 

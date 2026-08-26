@@ -63,8 +63,10 @@ export const MOCK_VENUES: Venue[] = [
     zoneKey: "twelfth",
     location: "12th Street south of Norris",
     building: "Engineering Building",
+    // On the 12th St centerline, inside the serc-trucks map zone —
+    // venues.test.ts exercises spatial zone filtering with this venue.
     lat: 39.98155,
-    lng: -75.15315,
+    lng: -75.15341,
     acceptsCash: true,
     acceptsCard: false,
     cuisines: ["mexican"],

@@ -17,8 +17,7 @@ export const MAP_ZONE_MARK = {
   buildingFill: "buildingFill",
 } as const;
 
-export type MapZoneMark =
-  (typeof MAP_ZONE_MARK)[keyof typeof MAP_ZONE_MARK];
+export type MapZoneMark = (typeof MAP_ZONE_MARK)[keyof typeof MAP_ZONE_MARK];
 
 /** GeoJSON `role` values in `public/maps/map-zones.geojson`. */
 export const MAP_ZONE_GEOJSON_ROLE = {
@@ -95,8 +94,8 @@ export const MAP_ZONES = {
     padding: 64,
     membership: [
       [-75.15355, 39.98058],
-      [-75.15355, 39.98120],
-      [-75.15316, 39.98120],
+      [-75.15355, 39.9812],
+      [-75.15316, 39.9812],
       [-75.15316, 39.98058],
       [-75.15355, 39.98058],
     ] as LngLat[],
@@ -169,6 +168,11 @@ export const MAP_ZONES = {
 export type MapZoneKey = keyof typeof MAP_ZONES;
 
 export const MAP_ZONE_KEYS = Object.keys(MAP_ZONES) as MapZoneKey[];
+
+/** Filter / search order — follows each zone's `sort` field. */
+export const MAP_ZONE_KEYS_SORTED = [...MAP_ZONE_KEYS].sort(
+  (a, b) => MAP_ZONES[a].sort - MAP_ZONES[b].sort,
+);
 
 export function mapZoneKeysByMark(mark: MapZoneMark): MapZoneKey[] {
   return MAP_ZONE_KEYS.filter((key) => MAP_ZONES[key].mark === mark);

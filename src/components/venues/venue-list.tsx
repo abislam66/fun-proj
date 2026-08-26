@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { EmptyState } from "@/components/ui/primitives";
@@ -12,16 +11,19 @@ import {
   VenueLocation,
 } from "@/components/venues/venue-bits";
 
+/**
+ * Rows select the venue on the map (fly-to + anchored mini-card) — they
+ * do NOT navigate. The mini-card's "View details" is the only door from
+ * the explorer to `/eat/[slug]`; the map stays the primary surface.
+ */
 export function VenueRow({
   venue,
-  backPath,
   selected = false,
   highlighted = false,
   onHover,
   onSelect,
 }: {
   venue: Venue;
-  backPath: string;
   selected?: boolean;
   highlighted?: boolean;
   onHover?: (venueId: string | null) => void;
@@ -36,7 +38,7 @@ export function VenueRow({
 
   return (
     <li ref={rowRef}>
-      <Link
+      <button
         className={[
           "venue-row",
           selected && "venue-row-selected",
@@ -44,14 +46,15 @@ export function VenueRow({
         ]
           .filter(Boolean)
           .join(" ")}
-        href={`/eat/${venue.slug}?from=${encodeURIComponent(backPath)}`}
         onBlur={() => onHover?.(null)}
+        onClick={() => onSelect?.(venue.id)}
         onFocus={() => {
           onHover?.(venue.id);
           onSelect?.(venue.id);
         }}
         onMouseEnter={() => onHover?.(venue.id)}
         onMouseLeave={() => onHover?.(null)}
+        type="button"
       >
         <div className="venue-row-top">
           <div>
@@ -60,9 +63,6 @@ export function VenueRow({
               <VenueLocation venue={venue} />
             </div>
           </div>
-          <span className="row-arrow" aria-hidden="true">
-            ↗
-          </span>
         </div>
         <div className="venue-row-bottom">
           <div className="venue-tags">
@@ -71,14 +71,13 @@ export function VenueRow({
           </div>
           <OpenStatus venue={venue} />
         </div>
-      </Link>
+      </button>
     </li>
   );
 }
 
 export function VenueList({
   venues,
-  backPath,
   onClear,
   selectedId = null,
   hoveredId = null,
@@ -86,7 +85,6 @@ export function VenueList({
   onSelect,
 }: {
   venues: Venue[];
-  backPath: string;
   onClear: () => void;
   selectedId?: string | null;
   hoveredId?: string | null;
@@ -109,7 +107,6 @@ export function VenueList({
     <ul className="venue-list">
       {venues.map((venue) => (
         <VenueRow
-          backPath={backPath}
           highlighted={venue.id === hoveredId}
           key={venue.id}
           onHover={onHover}

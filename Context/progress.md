@@ -7,7 +7,7 @@
 
 ## Current status
 
-- **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. 65 published venues remain after retiring four Student Center meal-plan food-court chains (Saladworks, Zen, Chick-fil-A, BurgerFi) — the white Student Center Food Court info pin stays. Campus MapLibre map (venue-name pills — see 2026-08-20 entry for the DESIGN.md conflict flag — locate, attribution, curated 2D building footprints) is in place, with a 2026-08-20 accessibility/UX pass over the map surface.
+- **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. 65 published venues remain after retiring four Student Center meal-plan food-court chains (Saladworks, Zen, Chick-fil-A, BurgerFi) — the white Student Center Food Court info pin stays. Campus MapLibre map (venue-name pills — see 2026-08-20 entry for the DESIGN.md conflict flag — locate, attribution, curated 2D building footprints) is in place, with a 2026-08-20 accessibility/UX pass over the map surface. Listing pins are single-line cherry pills; TuEats overlays always paint above Positron so OSM road names never cover pins or zone plates.
 - **Map zones are locked to street-line + building fills.** Overview shows `MAP_ZONE_MARK.streetLine` corridors (Student Center, W Montgomery along Klein Law with a gap before 13th, SERC trucks, Tyler trucks on Norris from Tomlinson to just before Tyler’s east edge) and `MAP_ZONE_MARK.buildingFill` washes (Vantage & The View buildings; The Wall plaza immediately west of Anderson Hall — not Anderson itself; Richie's Cafe footprint only, not Facilities; Liacouras Walk 1926–1938 building only, not 1940 Residence Hall). Click a zone to fly in. The rounded-hull A/B and the Streets/Shapes toggle are gone. DESIGN.md and `docs/design/map-and-pins.md` document this. Specs Feature 1 still says every truck appears as a pin — flagged, spec not edited.
 - **Admin auth is email/password**, not OTP/magic-link — the OTP flow never completed a real session end-to-end (see `Context/decisions.md`'s 2026-08-18 entries) and was replaced outright. Authorization is unchanged: `requireAdmin()` still requires a `profiles` row with `role: "admin"`, granted only via direct DB access. `Specs/auth-security.md` now documents this V1 model (anonymous public / password admin(s) / future OTP student accounts) and explicitly allows for more than one admin account — no more spec/implementation mismatch.
 - **Live admin login:** `abislam64@gmail.com` (not `@temple.edu` — admin isn't domain-restricted, see spec). Password was set directly via Supabase Dashboard → Authentication → Users → Add User (password field right in that dialog, "Auto Confirm User" checked) — deliberately bypassing email/SMTP entirely after the custom-SMTP password-recovery path proved unreliable (intermittent `535 "Invalid username"` SMTP auth failures against Resend, one confirmed success sandwiched between many failures — never fully root-caused, see `Context/decisions.md`). The original `tur67594@temple.edu` account was deleted; its orphaned `profiles` row was deleted and replaced with one for the new account's `auth.users.id`.
@@ -19,6 +19,124 @@
   2. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for their account.
   3. Use the real `/admin` to enrich hours/cuisine/zone for remaining published venues and reclassify mis-typed chain entries.
   4. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
+
+---
+
+## 2026-08-25 — Multi-zone filter now shows venue pills on the map
+
+Selecting 2+ zones showed only zone marks, never listings: `selectedMapZone` collapsed the filter to a single zone (null for multiple), and everything zone-related keyed off that. VenueMap now takes `selectedZones: MapZoneKey[]` (VenueMapLoader/explorer pass `filters.zones` directly; `selectedMapZone` deleted from lib/venues). Pills render whenever any zones are active; `flyToZones` fits the union bbox of all selected zones (max of their paddings + the mobile sheet inset); chip shows the zone label or "N zones"; MapZoneLayer takes a `zonesActive` boolean; dining layer hides for any active zones. Zoom-out-to-exit now applies ONLY when exactly one zone is active — a multi-zone fit can legitimately land below `MAP_ZONE_OVERVIEW_MAX_ZOOM` and must not self-clear. Verified: Tyler trucks + Student Center → "2 zones" chip, camera spans both corridors, all 6 pills and rows present, URL carries both `zone=` params.
+
+---
+
+## 2026-08-25 — Drawer options: checkboxes → horizontal cherry toggle pills
+
+The drawer's vertical checkbox list became a wrapping horizontal multi-select: each option is a `button` pill with `aria-pressed`; tap toggles it, selected pills fill solid cherry with white text, unselected stay white with a border (hover shows a cherry border). Same filter state/URL behavior. Verified live: two cuisines selected read as cherry pills, chip badge shows "Cuisine · 2".
+
+---
+
+## 2026-08-25 — Filter menus: floating popover → inline drawer
+
+The Cuisine/Zone `<details>` popovers (fixed/absolute panels floating over the venue list) are gone. `FilterBar` is now controlled: chip buttons with `aria-expanded`/`aria-controls` toggle one shared in-flow drawer under the chip row that pushes results down — animated via the `grid-template-rows: 0fr→1fr` trick (reduced-motion disables it), content kept mounted during collapse so closing animates, and the drawer is `inert` when closed so hidden checkboxes can't take focus. `.filter-menu`/`.filter-popover` CSS and the desktop popover overrides removed. Verified on desktop pane and mobile sheet.
+
+---
+
+## 2026-08-25 — Mini-card redesign: arrow disc + price placeholder
+
+"View details" text replaced with a wordless ↗ arrow in a cherry-soft disc (fills solid cherry on card hover/focus-within; sr-only "View details" retained for screen readers — the whole card is still the link). Added a price-range readout beside it in data mono — hardcoded `$12` (`PLACEHOLDER_PRICE_RANGE` in venue-map.tsx) on every card per user instruction; real price data is a backlog row. DESIGN.md changelog + map-and-pins mini-card section updated.
+
+---
+
+## 2026-08-25 — Mobile zone tap: pills no longer land behind the sheet
+
+Tapping a zone on the phone map looked like "no trucks appear": the zone flight's `fitBounds` centered the zone in the full-height canvas, but the mid-height results sheet covers the bottom ~60%, so the zone and every pill landed behind the drawer and the visible strip showed the empty area north of it. Two-part fix: (1) a zone chosen on the map (VenueMap's `onSelectZone` path — not the filter menu) now bumps `sheetCollapse`, tucking the sheet to peek like list selections do; (2) `flyToZone` pads its bottom by the tucked sheet height below the desktop breakpoint (`MOBILE_SHEET_PEEK_PX` 164, keep in sync with `.mobile-sheet-peek`'s 10.25rem) so the zone centers in the actually-visible strip. Desktop unchanged (inset 0; staged-arrival checks re-verified). Unrelated pre-existing console warning noticed while debugging: MapLibre logs "Expected value to be of type number, but found null" ×3 on zone selection — likely `symbol-sort-key: ["get","sort"]` on zone label/membership features missing `sort`; cosmetic, not chased.
+
+---
+
+## 2026-08-25 — Mini-card staged behind the camera
+
+Selecting from the list at the campus overview used to pop the mini-card instantly while the map was still flying. `VenueMap` now stages it: `poppedVenueId` state gates the card, set only once the camera settles — the gating effect is deliberately declared AFTER the camera effects so a movement they just started registers via `map.isMoving()`, waits for `moveend`, and bails/re-runs while the host-zone selection round-trips through the parent. Zone-less venues also gained a real approach: the selection effect now eases to street zoom (`VENUE_STREET_ZOOM` 16) instead of only recentering when off-screen. No movement (e.g. pill click at street zoom) → instant pop, unchanged. Verified on desktop: card count is 0 mid-flight and 1 on arrival for both a zone venue (Korea House) and a zone-less one (7-Eleven).
+
+---
+
+## 2026-08-25 — List rows drive the map (no direct detail navigation)
+
+`VenueRow` swapped from `<Link href=/eat/…>` to a button: clicking selects the venue, the map flies to it (auto-selecting its host zone), and the anchored mini-card opens — "View details" on the card is now the only explorer path to the detail page. On mobile, a list selection also tucks the sheet to peek (`collapseSignal` prop on MobileSheet) so the map + popup are visible. Zone-less venues now render a single pill when selected, so the popup always sits on a pin. `backPath` plumbing dropped from VenueList/VenueRow/ResultsPanel (mini-card still carries it); the ↗ row arrow removed; rows got button CSS resets + cherry focus ring. Verified live on desktop (search "korea" → row click → Tyler-trucks fly-in + popup, URL stays `/`) and mobile (search → tap → sheet at peek, popup below-flipped at the top edge). No spec conflict (Feature 2 ACs don't require row→detail).
+
+---
+
+## 2026-08-25 — Tucked mobile sheet is inert until expanded
+
+At the peek snap the sheet content is now `inert` (React 19 prop) + `overflow: hidden`: no scrolling, tapping, or keyboard focus until the user expands the drawer. A tap anywhere on the tucked sheet body expands to mid — inert content retargets clicks to the section. Guard worth knowing: clicks originating from the drag handle are excluded in `onSectionClick`, because a drag down to peek still synthesizes a click (pointer capture keeps its target on the handle) which otherwise bounced the sheet straight back open — caught by the Playwright check. Verified at 390px: drag-to-peek sticks, wheel at peek doesn't scroll, tap expands without hitting venue links, scroll works again at mid.
+
+---
+
+## 2026-08-25 — Mobile map controls ride above the sheet as a row
+
+On phones the zoom/reset/locate column sat behind the bottom sheet (only "+" peeked out). Below the desktop breakpoint the controls are now a horizontal row anchored just above the sheet: base position clears the peek snap (10.25rem), and `[data-sheet="mid"/"full"]` selectors (MobileSheet already mirrors its snap onto `<html>`) move it above the mid height, with a transition matching the sheet's. Desktop unchanged (vertical column above attribution — `flex-direction: column` added to the ≥64rem override since the base is now row). Verified at 390px in both peek and mid snaps and at 1400px.
+
+---
+
+## 2026-08-25 — "Accepts card" filter removed
+
+Removed the payment filter end to end: the chip in `FilterBar`, and `VenueFilters.payments` with its parse/serialize/filter logic and the `?payment=` URL param (old bookmarked URLs just ignore it). Venue `acceptsCash`/`acceptsCard` data and the "Cash Only" tag are untouched. Conflicts with `Specs/features.md:45` (payment listed among Feature 1 filters) — flagged in `Context/decisions.md`, spec not edited. Tests updated.
+
+---
+
+## 2026-08-25 — Venue pills occlude instead of bleeding
+
+Overlapping venue pills let the lower pill's name paint across the upper pill (MapLibre draws a symbol layer's icons, then all its text — the same defect the zone labels hit). Venue pills now follow the zone-label fix: `buildVenuePillIcon` bakes the name into one opaque sprite per venue × state (Satoshi bold like zone plates, replacing GL Noto), registered lazily per state and cache-busted by name; the layer is icon-only with an `icon-size` zoom ramp (10/13 → 1 over z14–18.5) reproducing the old text-size scaling around the stem tip. Verified in-browser: selected "Vegan Tree" cleanly covers "Korea House" in the formerly-bleeding cluster. Shared `paintPill` painter keeps the dining 9-slice variant unchanged.
+
+---
+
+## 2026-08-25 — Mini-card drops the location line
+
+The map popup showed a zone/building line only for venues that had that data (e.g. "Montgomery Avenue · Near 1256 W Montgomery Ave", wrapping to two lines) and nothing for the rest — inconsistent card heights and clutter. Removed `VenueLocation` from the mini-card: it is now always name + cuisine/payment tags + open status + View details. Address information lives on the detail page; list rows still show their zone line (not part of this ask). DESIGN.md changelog + `docs/design/map-and-pins.md` decision-split table updated.
+
+---
+
+## 2026-08-25 — Frontend-only photo display on venue detail pages
+
+Per the user's explicit frontend-only constraint, detail pages can now show photos with zero backend: files committed under `public/photos/<slug>/` and registered per-slug in `src/config/venue-photos.ts` (`VenuePhoto` = src + required alt). `VenuePhotoGallery` (server component, `next/image`) renders a horizontal snap-scroll strip of 4:3 `radius-lg` frames between the hero and "Good to know"; venues with no photos render nothing at all. The registry ships empty — drop files in `public/photos/<slug>/`, add entries, done. (Follow-up same day: three labeled placeholder images were added under `public/photos/_placeholders/` and registered on `7-eleven` at the user's request so they can preview the strip — marked TEMP in the config, to be removed when real photos land.) DESIGN.md content order + photo treatment documented; backend upload path recorded as a deliberate non-goal in `Context/decisions.md` with a backlog row for the eventual storage/upload project.
+
+---
+
+## 2026-08-25 — "View details not navigating" diagnosed: stale dev servers, not code
+
+The mini-card's View details link appeared dead, but instrumented Playwright runs showed the click reaching the Link and Next initiating navigation — the target route simply never responded. Root cause: the dev servers on ports 3000 and 3001 had been running ~8 hours, predating the day's edits; the 3000 server was wedged (even static `/about` hung for 45s+, only the already-compiled `/` still served) and hydration-mismatched on the renamed Zone filter chip (its server bundle still said "Area"). A fresh `pnpm dev` served `/`, `/eat/[slug]`, and `/about` instantly, and the card click navigated end-to-end. No code changes; fix is restarting the dev server. Side observation for later: selecting a zoneless venue (e.g. 7-Eleven) from the list at campus overview shows the mini-card floating with no pill beneath it, since pills only render inside a selected zone.
+
+`VenueLocation` (shared by the map mini-card and list rows) no longer prints "Near campus" when a venue has no `zoneKey` — everything in the product is near campus, so the fallback carried no information. It now shows the zone label and/or "Near {building}" when present, and renders nothing otherwise. Note: venues assigned the `other` zone still show its curated label "Elsewhere near campus" from `config/zones.ts` — that's a deliberate zone name, not the fallback.
+
+---
+
+## 2026-08-25 — Map controls to bottom-right; mini-card anchored to the pin
+
+The zoom/reset/locate column moved from the map's top-right to the bottom-right, stacked above the attribution line (DESIGN.md desktop-layout line updated). The venue mini-card no longer sits in a fixed corner: a new `.map-mini-card-anchor` wrapper is positioned imperatively at the selected pin's projected screen point (updated on every map `move`/`resize`), centering the card above the pill with horizontal clamping at map edges and a below-the-pin flip when the pin is near the top edge. The whole card was already a link to `/eat/[slug]` — unchanged. Framer-motion note: the anchor animates opacity only (its CSS transform does the positioning); the y-slide lives on the inner wrap, and the anchor ref only overwrites on non-null so AnimatePresence's late exit-unmount can't clobber the entering card's ref.
+
+---
+
+## 2026-08-25 — Dining info pins dimmed, shrunk, and zoom-gated
+
+The three meal-plan dining pins (Student Center Food Court, J&H Dining Hall, Morgan Hall Food Court) are static and unclickable, and at full pill size they dominated the campus overview. `CampusDiningLayer` now renders them at 65% `icon-opacity`/`text-opacity`, at 2/3 the venue-pill footprint (`buildDiningPillIcon` registers the same bitmap at 1.5× pixelRatio; text 9–11px, tighter fit padding), and behind a `minzoom: 16` gate so they no longer show at the campus overview (zoom 14.6) — only once the user zooms to building scale. The hide-on-zone-selection behavior is unchanged. DESIGN.md and `docs/design/map-and-pins.md` updated to match.
+
+---
+
+## 2026-08-25 — Zone flow finished: dining pins as overview peers, styled All zones button
+
+Completed the zone UX another session started. Dining info pins now place like zone labels (`allow-overlap` + `ignore-placement`) so they always show at the campus overview as white static peers of the zone marks — building labels at the same centroids were colliding them away — and the whole layer still hides when a zone is selected. Styled the previously-unstyled `.map-zone-chrome` / `.map-all-zones` (button was invisible; now a surface control beside the campus chip). Fixed a strict-index type error in `selectedMapZone`, and updated `venues.test.ts` + the tacos fixture (moved onto the 12th St centerline) for the map-zone spatial filter. Zone tap → sidebar shows only that zone's venues; All zones → full list; Zone menu in the filter bar — all verified end-to-end with Playwright screenshots. Typecheck, lint, format, and all 56 unit tests pass.
+
+Venue listing pins are single-line (width-only `icon-text-fit`, more padding, slightly larger type). All TuEats map overlays paint above Positron, so OSM road names never sit on pins, zone plates, or building fills (`src/lib/map/overlay-order.ts`).
+
+---
+
+## 2026-08-25 — Lighter zone name plates
+
+Zone labels moved off `#E8D4D8` / cherry-deep type to `#F3E6E9` fill, cherry (`#9D2235`) type, and a 1.5px outline. Still darker than `#F8ECEF`, which disappeared on white streets.
+
+---
+
+## 2026-08-25 — Zone labels occlude instead of blending
+
+Zone names are opaque sprites (plate + type in one bitmap). MapLibre’s icon-then-text pass was letting overlapping names bleed through each other.
 
 ---
 

@@ -7,6 +7,48 @@
 
 ---
 
+## 2026-08-25 — List rows select on the map; they never navigate
+
+`VenueRow` is a button, not a link (user call: "our UI is very map-heavy, we need to be consistent with that"). Clicking a row selects the venue — map flies to it and the anchored mini-card opens; on mobile the results sheet tucks to peek (via `collapseSignal` on `MobileSheet`) so the map is actually visible. The mini-card's "View details" is the ONLY explorer path to `/eat/[slug]`. A selected venue outside every map zone renders its own single pill (`pinVenues` fallback in venue-map.tsx) so the popup never floats bare. Don't "restore" row links; no spec conflict — Feature 2's ACs don't require row navigation, and Feature 1's mini-card→detail AC still holds.
+
+---
+
+## 2026-08-25 — Payment filter removed (user call; spec conflict flagged)
+
+The "Accepts card" chip — and the whole `payments` field of `VenueFilters` (parse/serialize/filter, `?payment=` param) — was removed at the user's request. The model supported cash+card but the UI only ever exposed card, and most seeded venues have `acceptsCard: null`, so the filter mostly emptied the list. **This diverges from `Specs/features.md:45`**, which lists payment among Feature 1's combinable filters — flagged here, spec not edited (per `Specs/conventions.md`). Venue payment DATA stays: `acceptsCash`/`acceptsCard` still render as the "Cash Only" tag and on detail/admin. Old `?payment=` URLs now parse as unknown params and are ignored.
+
+---
+
+## 2026-08-25 — Venue pill names are baked sprites, not text-fields
+
+Same root cause and fix as the zone labels below: MapLibre paints a symbol layer's icons first, then all its text, so overlapping pills let a lower pill's name bleed across the pill above it. `buildVenuePillIcon` now bakes the name into one opaque sprite per venue × state (normal/hover/selected), registered lazily and cache-busted by name; the layer is icon-only with an `icon-size` zoom ramp reproducing the old text scaling. Don't reintroduce a `text-field` on this layer — overlap + live text always bleeds.
+
+---
+
+## 2026-08-25 — Venue photos are frontend-only static content, no backend
+
+Detail-page photos ship with **no backend at all** — the user's explicit call ("we won't touch backend logic or infrastructure, frontend only"). No DB column, no Supabase Storage bucket, no upload server action, no service-role key; nothing in `Specs/` changed. Instead, image files are committed under `public/photos/<slug>/` and registered per-slug in `src/config/venue-photos.ts`; `VenuePhotoGallery` renders a strip when entries exist and nothing otherwise. Don't "fix" the missing upload path — when photos should come from admins instead of repo commits, that's the spec-change project in `Context/backlog.md`.
+
+---
+
+## 2026-08-25 — Map overlays always cover OSM labels
+
+Positron road names (and other basemap symbols) paint _under_ every TuEats overlay. Inserting our symbol layers ahead of the style’s first label put pins _under_ “West Montgomery Avenue”. Stack lives in `overlay-order.ts`; `liftOverlaysAboveBasemap` keeps it on remount.
+
+---
+
+## 2026-08-25 — Listing pins stay one line
+
+Venue-name pills use `icon-text-fit: width` and a wide `text-max-width` so names like “Nanu's Hot Chicken” stay on one line instead of growing into a taller stadium. DESIGN.md still specifies cuisine labels on pins; implementation continues to show venue names (flagged 2026-08-20).
+
+---
+
+## 2026-08-25 — Zone name plates are opaque sprites
+
+MapLibre draws every symbol `icon-image` in a layer, then every `text-field`. A stretchable plate plus live type let “Student Center” bleed through “W Montgomery”. Zone names are now baked into opaque sprites so the top plate fully covers the one under it.
+
+---
+
 ## 2026-08-25 — Liacouras Walk is buildingFill, not 1940 Residence Hall
 
 `liacouras-walk` uses `MAP_ZONE_MARK.buildingFill` on OSM 1926–1938 N. Liacouras Walk — the building labeled “Liacouras Walk” south of 1940 Residence Hall. The path, 1940, and 1810 Liacouras stay unfilled.

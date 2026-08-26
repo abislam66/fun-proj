@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
 import { CAMPUS_DINING_MARKERS } from "@/config/campus-dining";
+import { beforeIdFor, liftOverlaysAboveBasemap } from "@/lib/map/overlay-order";
 import {
   buildDiningPillIcon,
   DINING_PILL_ICON,
@@ -12,10 +13,15 @@ import {
 const SOURCE_ID = "campus-dining";
 export const CAMPUS_DINING_LAYER_ID = "campus-dining-symbol";
 
-function firstSymbolLayerId(map: MapLibreMap): string | undefined {
-  const layers = map.getStyle().layers ?? [];
-  return layers.find((layer) => layer.type === "symbol")?.id;
-}
+// These pins are static and unclickable, so the whole layer is dimmed —
+// it must read as background furniture next to full-opacity zone marks
+// and cherry venue pills, not as another interactive layer.
+const DINING_PIN_OPACITY = 0.65;
+
+// Hidden at the campus overview (DEFAULT_VIEWPORT.zoom is 14.6): the pins
+// only appear once the user has zoomed well past it, where individual
+// buildings are the subject.
+const DINING_PIN_MINZOOM = 16;
 
 const FEATURE_COLLECTION = {
   type: "FeatureCollection" as const,
@@ -35,12 +41,14 @@ const FEATURE_COLLECTION = {
  * venue pill — no cherry, no hover, no click, no mini-card — it only names
  * what the building holds, since meal-plan dining is out of scope.
  *
- * Mounted between CampusBuildingLayer and VenuePillLayer (venue-map.tsx),
- * and inserted ahead of the base style's symbol layers, so the collision
- * order ends up: venue pills → dining pins → base labels → building
- * labels. Unlike venue pills these do NOT allow overlap: when a truck
- * pill covers a dining pin, the dining pin hides — info pins never
- * compete with decision info.
+ * Mounted under VenuePillLayer (venue-map.tsx). All TuEats overlays sit
+ * above Positron road names. Zoom-gated (`minzoom`): hidden at the campus
+ * overview, appearing only once the user zooms in to building scale.
+ * Placement matches the zone label plates (overlap allowed, placement
+ * ignored) — without this, the campus building labels at the same
+ * centroids place first and collide them away. They never compete with
+ * decision info anyway: once a zone is selected the whole layer is hidden
+ * (`visible`), and venue pills paint above them.
  */
 export function CampusDiningLayer({
   map,
@@ -74,42 +82,46 @@ export function CampusDiningLayer({
         id: CAMPUS_DINING_LAYER_ID,
         type: "symbol",
         source: SOURCE_ID,
+        minzoom: DINING_PIN_MINZOOM,
         layout: {
           "icon-image": DINING_PILL_ICON,
-          "icon-text-fit": "both",
-          "icon-text-fit-padding": [1, 3, 1, 3],
+          "icon-text-fit": "width",
+          "icon-text-fit-padding": [3, 8, 3, 8],
           "icon-padding": 0,
           "icon-anchor": "bottom",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
           visibility: "none",
           "text-field": ["get", "label"],
           // Regular weight where venue pills are bold — quieter on purpose.
           "text-font": ["Noto Sans Regular"],
-          // Same zoom curve as venue pills so the two pill families scale
-          // together instead of swapping visual dominance mid-zoom.
           "text-size": [
             "interpolate",
             ["linear"],
             ["zoom"],
-            14,
-            7,
-            15.5,
-            8.5,
+            16,
+            9,
             17,
-            10.5,
+            10,
             18.5,
-            13,
+            11,
           ],
-          "text-max-width": 7,
+          "text-max-width": 32,
           "text-line-height": 1.1,
           "text-padding": 1,
           "text-anchor": "bottom",
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
         },
         paint: {
+          "icon-opacity": DINING_PIN_OPACITY,
+          "text-opacity": DINING_PIN_OPACITY,
           "text-color": "#57534E",
         },
       },
-      firstSymbolLayerId(map),
+      beforeIdFor(map, CAMPUS_DINING_LAYER_ID),
     );
+    liftOverlaysAboveBasemap(map);
 
     return () => {
       if (!map.getStyle()) return;
