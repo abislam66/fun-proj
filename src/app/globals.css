@@ -418,6 +418,13 @@ button {
   outline: none;
 }
 
+/* The canvas is keyboard-operable (arrows pan, +/- zoom) — keep a visible
+   focus ring for keyboard users while suppressing the mouse-click outline. */
+.venue-map .maplibregl-canvas:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: -3px;
+}
+
 .venue-map-loading,
 .venue-map-fallback {
   position: absolute;
@@ -446,18 +453,33 @@ button {
 
 .map-controls {
   position: absolute;
-  top: var(--spacing-md);
   right: var(--spacing-md);
+  /* Mobile-first: a horizontal row riding above the results sheet's peek
+     snap (10.25rem) — the fixed sheet overlays the map pane, and a
+     column tucked behind it loses half its buttons. */
+  bottom: calc(10.25rem + var(--spacing-md));
   z-index: 4;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: var(--spacing-xs);
+  transition: bottom var(--duration-medium) var(--ease-move);
+}
+
+/* Follow the sheet upward when it snaps to mid (MobileSheet mirrors its
+   snap onto <html data-sheet>; heights must match .mobile-sheet-mid). At
+   "full" the sheet covers the map anyway. Scoped below the desktop
+   breakpoint so these can't out-specificity the desktop rule. */
+@media (max-width: 63.9375rem) {
+  [data-sheet="mid"] .map-controls,
+  [data-sheet="full"] .map-controls {
+    bottom: calc(min(57dvh, 34rem) + var(--spacing-md));
+  }
 }
 
 .map-control-button {
   display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem; /* 44px minimum touch target */
+  height: 2.75rem;
   place-items: center;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -505,6 +527,28 @@ button {
   box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
 }
 
+.locate-wrap {
+  position: relative;
+}
+
+.locate-notice {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.5rem);
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: 13rem;
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 4px 14px rgba(28, 25, 23, 0.12);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-small);
+  line-height: 1.35;
+}
+
 .locate-dot {
   width: 14px;
   height: 14px;
@@ -514,11 +558,18 @@ button {
   box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.22);
 }
 
-.map-campus-chip {
+.map-zone-chrome {
   position: absolute;
   top: var(--spacing-md);
   left: var(--spacing-md);
   z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  pointer-events: none;
+}
+
+.map-campus-chip {
   padding: 0.35rem 0.6rem;
   border: 1px solid rgba(231, 229, 228, 0.9);
   border-radius: var(--radius-sm);
@@ -529,6 +580,34 @@ button {
   letter-spacing: 0.02em;
   backdrop-filter: blur(6px);
   pointer-events: none;
+}
+
+.map-all-zones {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body), sans-serif;
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1.35;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06);
+  pointer-events: auto;
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    border-color var(--duration-micro) var(--ease-move);
+}
+
+.map-all-zones:hover:not(:disabled) {
+  border-color: var(--color-cherry);
+  background: var(--color-cherry-soft);
+  color: var(--color-cherry-deep);
+}
+
+.map-all-zones:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .map-attribution {
@@ -554,82 +633,30 @@ button {
   text-underline-offset: 2px;
 }
 
-.venue-pin {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  filter: drop-shadow(0 1.5px 2px rgba(28, 25, 23, 0.28));
+.map-mini-card-anchor {
+  position: absolute;
+  /* left/top are written by venue-map.tsx from the selected pin's
+     projected point; parked offscreen until the first placement so there
+     is no corner flash. */
+  top: -9999px;
+  left: -9999px;
+  z-index: 5;
+  /* Card bottom sits a pill's height plus a gap above the pin coordinate
+     — the 3.25rem must match MINI_CARD_PIN_CLEARANCE in venue-map.tsx. */
+  transform: translate(-50%, calc(-100% - 3.25rem));
 }
 
-.venue-pin:focus-visible {
-  outline: none;
-}
-
-.venue-pin:focus-visible .cuisine-pill {
-  box-shadow: 0 0 0 3px rgba(157, 34, 53, 0.35);
-}
-
-.cuisine-pill {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform-origin: bottom center;
-  will-change: transform;
-}
-
-.cuisine-pill-label {
-  display: inline-flex;
-  min-width: 2.75rem;
-  min-height: 1.75rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.65rem;
-  border: 2px solid #fff;
-  border-radius: 9999px;
-  background: var(--color-cherry);
-  color: #fff;
-  font-family: var(--font-body), sans-serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.cuisine-pill-stem {
-  width: 0;
-  height: 0;
-  margin-top: -1px;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 10px solid var(--color-cherry);
-}
-
-.cuisine-pill-highlighted .cuisine-pill-label {
-  border-width: 2.5px;
-}
-
-.cuisine-pill-selected .cuisine-pill-label {
-  border-width: 3px;
-  box-shadow: 0 0 0 2px rgba(157, 34, 53, 0.2);
+/* Pin too close to the top edge — open beneath the pin instead. */
+.map-mini-card-anchor-below {
+  transform: translate(-50%, 0.75rem);
 }
 
 .map-mini-card-wrap {
-  position: absolute;
-  top: 4.5rem;
-  left: var(--spacing-md);
-  right: var(--spacing-md);
-  z-index: 5;
-  max-width: 22rem;
-  margin-inline: auto;
+  width: min(20rem, calc(100vw - 2rem));
 }
 
 .map-mini-card {
-  display: grid;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
+  position: relative;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.96);
@@ -642,11 +669,27 @@ button {
   transform: translateY(-1px);
 }
 
-.map-mini-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+.map-mini-card:focus-within {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.map-mini-card-link {
+  display: grid;
   gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The card shows a :focus-within ring instead. */
+.map-mini-card-link:focus-visible {
+  outline: none;
+}
+
+.map-mini-card-top {
+  padding-right: 2.25rem; /* clear the absolute close button */
 }
 
 .map-mini-card-top h3 {
@@ -657,9 +700,77 @@ button {
   letter-spacing: -0.02em;
 }
 
-.map-mini-card-top span {
+.map-mini-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.map-mini-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: auto;
+}
+
+/* Price reads like a data readout (DESIGN.md: data = mono). */
+.map-mini-card-price {
+  color: var(--color-ink);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+/* Wordless "this goes somewhere" affordance — the whole card is the
+   link; a hover on the card fills the disc. */
+.map-mini-card-go {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-cherry-soft);
+  color: var(--color-cherry);
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    color var(--duration-micro) var(--ease-move);
+}
+
+.map-mini-card:hover .map-mini-card-go,
+.map-mini-card:focus-within .map-mini-card-go {
+  background: var(--color-cherry);
+  color: #ffffff;
+}
+
+.map-mini-card-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 1;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
   color: var(--color-ink-muted);
-  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    color var(--duration-micro) var(--ease-move);
+}
+
+.map-mini-card-close:hover {
+  background: var(--color-cherry-soft);
+  color: var(--color-ink);
+}
+
+.map-mini-card-close:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
 }
 
 .desktop-results {
@@ -686,7 +797,15 @@ button {
 }
 
 .mobile-sheet-peek {
-  height: 9.5rem;
+  height: 10.25rem;
+  /* Tucked in: the whole sheet reads as one "expand me" control. */
+  cursor: pointer;
+}
+
+/* Content is also `inert` at peek (mobile-sheet.tsx) — no scrolling or
+   taps until the sheet is expanded. */
+.mobile-sheet-peek .sheet-content {
+  overflow: hidden;
 }
 
 .mobile-sheet-mid {
@@ -700,7 +819,7 @@ button {
 .sheet-handle {
   display: grid;
   width: 100%;
-  min-height: 2rem;
+  min-height: 2.75rem; /* 44px touch target for the drag handle */
   place-items: center;
   border: 0;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
@@ -717,7 +836,7 @@ button {
 }
 
 .sheet-content {
-  height: calc(100% - 2rem);
+  height: calc(100% - 2.75rem);
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -780,53 +899,74 @@ button {
   display: none;
 }
 
-.filter-menu {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.filter-menu summary {
-  list-style: none;
-}
-
-.filter-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.filter-popover {
-  position: fixed;
-  z-index: 40;
-  right: var(--spacing-md);
-  left: var(--spacing-md);
+/* Menu options open as an in-flow drawer under the chip row — the panel
+   grows and pushes results down; nothing floats over the list. The
+   0fr→1fr grid-row transition animates to the content's own height. */
+.filter-drawer {
   display: grid;
-  gap: 0.25rem;
-  max-height: 16rem;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-short) var(--ease-move);
+}
+
+.filter-drawer-open {
+  grid-template-rows: 1fr;
+}
+
+.filter-drawer-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
   margin-top: var(--spacing-sm);
   padding: var(--spacing-sm);
-  overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: 0 12px 28px rgba(28, 25, 23, 0.12);
-}
-
-.filter-popover label {
-  display: flex;
-  min-height: 2.5rem;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: 0 var(--spacing-sm);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-small);
-  cursor: pointer;
-}
-
-.filter-popover label:hover {
   background: var(--color-surface-raised);
 }
 
-.filter-popover input {
-  accent-color: var(--color-cherry);
+/* Tap-to-toggle option pill; solid cherry = selected. */
+.filter-option {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body), sans-serif;
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    border-color var(--duration-micro) var(--ease-move),
+    color var(--duration-micro) var(--ease-move);
+}
+
+.filter-option:hover {
+  border-color: var(--color-cherry);
+  color: var(--color-cherry-deep);
+}
+
+.filter-option:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.filter-option-active,
+.filter-option-active:hover {
+  border-color: var(--color-cherry);
+  background: var(--color-cherry);
+  color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-drawer {
+    transition: none;
+  }
 }
 
 .results-summary {
@@ -860,11 +1000,23 @@ button {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Rows are buttons (select-on-map), not links — reset button chrome. */
 .venue-row {
   display: block;
+  width: 100%;
   padding: var(--spacing-md);
+  border: 0;
   background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: background var(--duration-short) var(--ease-move);
+}
+
+.venue-row:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: -2px;
 }
 
 .venue-row:hover,
@@ -894,11 +1046,6 @@ button {
   font-family: var(--font-display), sans-serif;
   font-size: 1.08rem;
   line-height: 1.25;
-}
-
-.row-arrow {
-  color: var(--color-ink-muted);
-  font-family: var(--font-data), monospace;
 }
 
 .venue-meta {
@@ -1082,6 +1229,40 @@ button {
   gap: var(--spacing-sm);
 }
 
+/* Photo strip: same bordered-block rhythm as .detail-section, but no
+   heading — the images sit directly under the hero. */
+.detail-photos {
+  padding: var(--spacing-xl) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.photo-strip {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.photo-frame {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(70vw, 20rem);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+  scroll-snap-align: start;
+}
+
+.photo-image {
+  object-fit: cover;
+}
+
 .detail-section {
   padding: var(--spacing-xl) 0;
   border-bottom: 1px solid var(--color-border);
@@ -1263,21 +1444,15 @@ button {
 }
 
 @media (min-width: 64rem) {
-  .map-mini-card-wrap {
-    top: auto;
-    right: var(--spacing-xl);
-    bottom: var(--spacing-xl);
-    left: auto;
-    width: min(22rem, calc(100% - 5rem));
-    margin-inline: 0;
-  }
-
+  /* No sheet on desktop: back to a vertical column in the corner,
+     stacked above the attribution line. */
   .map-controls {
-    top: var(--spacing-xl);
+    flex-direction: column;
     right: var(--spacing-xl);
+    bottom: calc(var(--spacing-xl) + 2.25rem);
   }
 
-  .map-campus-chip {
+  .map-zone-chrome {
     top: var(--spacing-xl);
     left: var(--spacing-xl);
   }
@@ -1356,21 +1531,6 @@ button {
   .results-summary {
     padding-right: var(--spacing-xl);
     padding-left: var(--spacing-xl);
-  }
-
-  /* Chips fit the list pane; visible overflow lets absolute menus escape the row. */
-  .filter-scroll {
-    overflow: visible;
-  }
-
-  .filter-popover {
-    position: absolute;
-    top: calc(100% + var(--spacing-sm));
-    right: auto;
-    left: 0;
-    width: 17rem;
-    margin-top: 0;
-    z-index: 50;
   }
 
   .detail-page,

@@ -7,6 +7,7 @@ import {
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
+import { VenuePhotoGallery } from "@/components/venues/venue-photo-gallery";
 import { ZONES } from "@/config/zones";
 import { WEEKDAY_KEYS, type VenueHours } from "@/lib/hours";
 import type { Venue } from "@/lib/venues";
@@ -102,6 +103,8 @@ export function VenueDetail({
             <OpenStatus venue={venue} />
           </div>
         </header>
+
+        <VenuePhotoGallery slug={venue.slug} venueName={venue.name} />
 
         <section className="detail-section">
           <h2>Good to know</h2>

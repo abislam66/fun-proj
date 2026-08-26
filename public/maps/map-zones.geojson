@@ -1,0 +1,521 @@
+{
+  "type": "FeatureCollection",
+  "name": "tueats-map-zones",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "student-center-membership",
+      "properties": {
+        "zoneKey": "student-center",
+        "role": "membership",
+        "label": "Student Center"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1555, 39.97868],
+            [-75.1555, 39.98038],
+            [-75.15438, 39.98038],
+            [-75.15438, 39.97986],
+            [-75.15536, 39.97986],
+            [-75.15536, 39.97868],
+            [-75.1555, 39.97868]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w-montgomery-membership",
+      "properties": {
+        "zoneKey": "w-montgomery",
+        "role": "membership",
+        "label": "W Montgomery"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1575, 39.98008],
+            [-75.1575, 39.98038],
+            [-75.1562, 39.98022],
+            [-75.1562, 39.97992],
+            [-75.1575, 39.98008]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "vantage-view-membership",
+      "properties": {
+        "zoneKey": "vantage-view",
+        "role": "membership",
+        "label": "Vantage & The View"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.15418, 39.97808],
+            [-75.15418, 39.97974],
+            [-75.15232, 39.97974],
+            [-75.15232, 39.97808],
+            [-75.15418, 39.97808]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "the-wall-membership",
+      "properties": {
+        "zoneKey": "the-wall",
+        "role": "membership",
+        "label": "The Wall"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.15355, 39.98058],
+            [-75.15355, 39.9812],
+            [-75.15316, 39.9812],
+            [-75.15316, 39.98058],
+            [-75.15355, 39.98058]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "serc-trucks-membership",
+      "properties": {
+        "zoneKey": "serc-trucks",
+        "role": "membership",
+        "label": "SERC trucks"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.15408, 39.9813],
+            [-75.15408, 39.98274],
+            [-75.15316, 39.98274],
+            [-75.15316, 39.9813],
+            [-75.15408, 39.9813]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "tyler-trucks-membership",
+      "properties": {
+        "zoneKey": "tyler-trucks",
+        "role": "membership",
+        "label": "Tyler trucks"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1555, 39.98288],
+            [-75.1555, 39.9832],
+            [-75.15334, 39.98294],
+            [-75.15334, 39.98276],
+            [-75.1555, 39.98288]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "richies-cafe-membership",
+      "properties": {
+        "zoneKey": "richies-cafe",
+        "role": "membership",
+        "label": "Richie's Cafe"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.15155, 39.98043],
+            [-75.15155, 39.9808],
+            [-75.15122, 39.9808],
+            [-75.15122, 39.98043],
+            [-75.15155, 39.98043]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "liacouras-walk-membership",
+      "properties": {
+        "zoneKey": "liacouras-walk",
+        "role": "membership",
+        "label": "Liacouras Walk"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.15616, 39.98216],
+            [-75.15616, 39.982635],
+            [-75.15585, 39.982635],
+            [-75.15585, 39.98216],
+            [-75.15616, 39.98216]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "student-center-street",
+      "properties": {
+        "zoneKey": "student-center",
+        "role": "street-line",
+        "label": "Student Center"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.1556586, 39.9787],
+          [-75.1556186, 39.9788842],
+          [-75.1555917, 39.9790083],
+          [-75.155399, 39.9798953],
+          [-75.1553878, 39.9799471],
+          [-75.1553206, 39.9799383],
+          [-75.1546263, 39.9798514],
+          [-75.1545661, 39.979843],
+          [-75.15444, 39.9798263]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w-montgomery-street",
+      "properties": {
+        "zoneKey": "w-montgomery",
+        "role": "street-line",
+        "label": "W Montgomery"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.157384, 39.980205],
+          [-75.156778, 39.98012],
+          [-75.156265, 39.980054]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "the-wall-building-fill",
+      "properties": {
+        "zoneKey": "the-wall",
+        "role": "building-fill",
+        "label": "The Wall"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.153306, 39.98065],
+            [-75.153511, 39.98066],
+            [-75.153418, 39.981142],
+            [-75.153205, 39.981135],
+            [-75.153306, 39.98065]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "richies-cafe-building-fill",
+      "properties": {
+        "zoneKey": "richies-cafe",
+        "role": "building-fill",
+        "label": "Richie's Cafe"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1514517, 39.980751],
+            [-75.1515112, 39.9804824],
+            [-75.1513264, 39.9804584],
+            [-75.1512682, 39.9807265],
+            [-75.1514517, 39.980751]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "liacouras-walk-building-fill",
+      "properties": {
+        "zoneKey": "liacouras-walk",
+        "role": "building-fill",
+        "label": "Liacouras Walk"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1561235, 39.982199],
+            [-75.1559357, 39.9821785],
+            [-75.1558512, 39.9826142],
+            [-75.1558891, 39.9826183],
+            [-75.1558908, 39.9826085],
+            [-75.1559506, 39.9826149],
+            [-75.1559545, 39.9826153],
+            [-75.1559541, 39.9826207],
+            [-75.1560629, 39.9826339],
+            [-75.1561063, 39.9824],
+            [-75.1561257, 39.9824017],
+            [-75.1561311, 39.9823661],
+            [-75.1561138, 39.9823648],
+            [-75.1561249, 39.982298],
+            [-75.1561457, 39.9822997],
+            [-75.1561523, 39.9822644],
+            [-75.1561094, 39.98226],
+            [-75.1561235, 39.982199]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "serc-trucks-street",
+      "properties": {
+        "zoneKey": "serc-trucks",
+        "role": "street-line",
+        "label": "SERC trucks"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.1534572, 39.98136],
+          [-75.1531688, 39.98268]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "tyler-trucks-street",
+      "properties": {
+        "zoneKey": "tyler-trucks",
+        "role": "street-line",
+        "label": "Tyler trucks"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.1554402, 39.9830229],
+          [-75.1552755, 39.9829995],
+          [-75.1550617, 39.9829718],
+          [-75.1548118, 39.9829406],
+          [-75.154736, 39.982931],
+          [-75.154662, 39.9829213],
+          [-75.1542726, 39.9828704],
+          [-75.1539115, 39.9828231],
+          [-75.153791, 39.9828073],
+          [-75.1534, 39.982756]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "vantage-view-street-view",
+      "properties": {
+        "zoneKey": "vantage-view",
+        "role": "building-fill",
+        "label": "Vantage & The View"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1537049, 39.9796477],
+            [-75.153771, 39.9795161],
+            [-75.1537088, 39.9794996],
+            [-75.1536738, 39.9794439],
+            [-75.153698, 39.9793845],
+            [-75.1531984, 39.9792556],
+            [-75.1531505, 39.9793518],
+            [-75.1528686, 39.9792727],
+            [-75.1528367, 39.9792638],
+            [-75.152848, 39.9791837],
+            [-75.1527004, 39.9791681],
+            [-75.1526756, 39.9792842],
+            [-75.152406, 39.9792498],
+            [-75.1523964, 39.9793183],
+            [-75.1523739, 39.9794784],
+            [-75.1529331, 39.9795457],
+            [-75.1529388, 39.9795464],
+            [-75.1529653, 39.9794503],
+            [-75.1537049, 39.9796477]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "vantage-view-street-vantage",
+      "properties": {
+        "zoneKey": "vantage-view",
+        "role": "building-fill",
+        "label": "Vantage & The View"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1535401, 39.979021],
+            [-75.1536167, 39.9788691],
+            [-75.1536691, 39.978885],
+            [-75.1538033, 39.9786159],
+            [-75.1538365, 39.9786266],
+            [-75.1539869, 39.9783512],
+            [-75.1535663, 39.9782228],
+            [-75.1535486, 39.9782562],
+            [-75.153514, 39.978326],
+            [-75.1533717, 39.9785893],
+            [-75.1532493, 39.9788039],
+            [-75.1531401, 39.9787694],
+            [-75.1529211, 39.9787001],
+            [-75.1528132, 39.9786652],
+            [-75.1528996, 39.9782481],
+            [-75.1529263, 39.9781475],
+            [-75.1527254, 39.97812],
+            [-75.15257, 39.9787984],
+            [-75.1527128, 39.9788635],
+            [-75.1527287, 39.9788017],
+            [-75.1528755, 39.9788496],
+            [-75.1530658, 39.9789064],
+            [-75.1532335, 39.9789548],
+            [-75.1534389, 39.979012],
+            [-75.1534472, 39.9789952],
+            [-75.1535401, 39.979021]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "student-center-label",
+      "properties": {
+        "zoneKey": "student-center",
+        "role": "label",
+        "label": "Student Center",
+        "sort": 1
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.1554, 39.97998]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w-montgomery-label",
+      "properties": {
+        "zoneKey": "w-montgomery",
+        "role": "label",
+        "label": "W Montgomery",
+        "sort": 5
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.15682, 39.98022]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "vantage-view-label",
+      "properties": {
+        "zoneKey": "vantage-view",
+        "role": "label",
+        "label": "Vantage & The View",
+        "sort": 2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.15325, 39.97888]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "the-wall-label",
+      "properties": {
+        "zoneKey": "the-wall",
+        "role": "label",
+        "label": "The Wall",
+        "sort": 3
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.15336, 39.9809]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "serc-trucks-label",
+      "properties": {
+        "zoneKey": "serc-trucks",
+        "role": "label",
+        "label": "SERC trucks",
+        "sort": 4
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.15332, 39.98205]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "tyler-trucks-label",
+      "properties": {
+        "zoneKey": "tyler-trucks",
+        "role": "label",
+        "label": "Tyler trucks",
+        "sort": 6
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.1542, 39.983]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "richies-cafe-label",
+      "properties": {
+        "zoneKey": "richies-cafe",
+        "role": "label",
+        "label": "Richie's Cafe",
+        "sort": 7
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.15139, 39.98061]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "liacouras-walk-label",
+      "properties": {
+        "zoneKey": "liacouras-walk",
+        "role": "label",
+        "label": "Liacouras Walk",
+        "sort": 8
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.156, 39.9824]
+      }
+    }
+  ]
+}

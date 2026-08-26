@@ -8,25 +8,15 @@ import type {
 } from "maplibre-gl";
 
 import {
-  buildPillIcons,
-  PILL_ICON_NORMAL,
-  PILL_ICON_SELECTED,
+  buildVenuePillIcon,
+  venuePillIconId,
+  type VenuePillState,
 } from "@/lib/map/venue-pill-icon";
+import { beforeIdFor, liftOverlaysAboveBasemap } from "@/lib/map/overlay-order";
 import type { Venue } from "@/lib/venues";
 
 const SOURCE_ID = "venue-pills";
 export const VENUE_PILL_LAYER_ID = "venue-pills-symbol";
-
-/**
- * MapLibre resolves label collisions in layer order — earlier layers win
- * ties. Venue pins are the primary decision info, so this layer must be
- * inserted ahead of the base style's own labels and the campus building
- * labels (campus-building-layer.tsx), not appended after them.
- */
-function firstSymbolLayerId(map: MapLibreMap): string | undefined {
-  const layers = map.getStyle().layers ?? [];
-  return layers.find((layer) => layer.type === "symbol")?.id;
-}
 
 /**
  * With overlap allowed, several pills can share a pixel. MapLibre's own
@@ -53,12 +43,22 @@ type VenuePillProps = {
   iconId: string;
 };
 
+function pillState(
+  venue: Venue,
+  selectedId: string | null,
+  hoveredId: string | null,
+): VenuePillState {
+  if (venue.id === selectedId) return "selected";
+  if (venue.id === hoveredId) return "hover";
+  return "normal";
+}
+
 function toFeatureCollection(
   venues: Venue[],
   selectedId: string | null,
   hoveredId: string | null,
 ) {
-  // With icon/text-allow-overlap true, symbol-sort-key controls visual
+  // With icon-allow-overlap true, symbol-sort-key controls visual
   // stacking directly: a *higher* sort key wins the overlap (opposite of
   // the placement-priority meaning it has when overlap is disallowed).
   // Base order is stable per-render (index); hover bumps a pill above the
@@ -68,18 +68,18 @@ function toFeatureCollection(
   return {
     type: "FeatureCollection" as const,
     features: venues.map((venue, index) => {
-      const emphasized = venue.id === selectedId || venue.id === hoveredId;
+      const state = pillState(venue, selectedId, hoveredId);
       const priority =
-        venue.id === selectedId
+        state === "selected"
           ? base * 2 + index
-          : venue.id === hoveredId
+          : state === "hover"
             ? base + index
             : index;
       const properties: VenuePillProps = {
         id: venue.id,
         name: venue.name,
         priority,
-        iconId: emphasized ? PILL_ICON_SELECTED : PILL_ICON_NORMAL,
+        iconId: venuePillIconId(venue.id, state, venue.name),
       };
       return {
         type: "Feature" as const,
@@ -94,14 +94,17 @@ function toFeatureCollection(
 }
 
 /**
- * Venue markers as a single native MapLibre symbol layer: a 9-slice pill+
- * stem icon (venue-pill-icon.ts) with the venue name fit inside it via
- * icon-text-fit. Both icon and text allow overlap, so every venue renders
- * every pill on every frame — no GL collision detection deciding which
- * pills survive as you pan/zoom, which previously made pills appear and
- * disappear unpredictably in dense clusters. `symbol-sort-key` (see
+ * Venue markers as a single native MapLibre symbol layer. Each pill is an
+ * opaque sprite with the venue name BAKED IN (venue-pill-icon.ts), one
+ * image per venue × state, registered lazily as states are needed —
+ * MapLibre paints a layer's icons first and its text-fields second, so a
+ * live text-field would bleed a lower pill's name across the pill above
+ * it (see Context/decisions.md, zone labels). Overlap is allowed, so
+ * every venue renders every frame — no GL collision detection deciding
+ * which pills survive as you pan/zoom. `symbol-sort-key` (see
  * `toFeatureCollection`) controls which pill draws on top when several
- * overlap: selected beats hovered beats default insertion order.
+ * overlap: selected beats hovered beats default insertion order, and the
+ * winner fully occludes what's beneath it.
  */
 export function VenuePillLayer({
   map,
@@ -136,26 +139,6 @@ export function VenuePillLayer({
     // event already fired (see VenueMap), so the style is guaranteed ready
     // here — no gating on isStyleLoaded()/"load" needed (see venue-map.tsx
     // history: that gate silently dead-ends for late-mounted layers).
-    if (!map.hasImage(PILL_ICON_NORMAL) || !map.hasImage(PILL_ICON_SELECTED)) {
-      const icons = buildPillIcons();
-      if (!map.hasImage(PILL_ICON_NORMAL)) {
-        map.addImage(PILL_ICON_NORMAL, icons.normal, {
-          pixelRatio: icons.normal.pixelRatio,
-          content: icons.normal.content,
-          stretchX: icons.normal.stretchX,
-          stretchY: icons.normal.stretchY,
-        });
-      }
-      if (!map.hasImage(PILL_ICON_SELECTED)) {
-        map.addImage(PILL_ICON_SELECTED, icons.selected, {
-          pixelRatio: icons.selected.pixelRatio,
-          content: icons.selected.content,
-          stretchX: icons.selected.stretchX,
-          stretchY: icons.selected.stretchY,
-        });
-      }
-    }
-
     map.addSource(SOURCE_ID, {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
@@ -168,54 +151,31 @@ export function VenuePillLayer({
         source: SOURCE_ID,
         layout: {
           "icon-image": ["get", "iconId"],
-          "icon-text-fit": "both",
-          // Tightened from [2,6,2,6] — less dead space around the text
-          // keeps each pill visually compact now that pills can overlap
-          // freely (no collision system to shrink the footprint for).
-          "icon-text-fit-padding": [1, 3, 1, 3],
           "icon-padding": 0,
           "icon-anchor": "bottom",
-          // Overlap is allowed rather than left to GL collision detection:
-          // dense clusters render every pill every time instead of some
-          // winning the collision test and others vanishing as you pan/zoom.
           "icon-allow-overlap": true,
-          "icon-optional": false,
-          "text-field": ["get", "name"],
-          "text-font": ["Noto Sans Bold"],
-          // Smaller at campus-wide zoom, growing toward the previous fixed
-          // size as you zoom in — native GL interpolation, not custom
-          // logic. Selected/hovered emphasis comes from the thicker-border
-          // icon variant (iconId) rather than a bigger text-size here —
-          // nesting per-feature branching around a zoom expression like
-          // this one hit a MapLibre GL validation edge case (see commit
-          // history).
-          "text-size": [
+          // Sprites are drawn at the old z18.5 text size; this reproduces
+          // the former text-size zoom ramp, scaling the whole pill about
+          // its stem tip.
+          "icon-size": [
             "interpolate",
             ["linear"],
             ["zoom"],
             14,
-            6,
+            10 / 13,
             15.5,
-            7,
+            11 / 13,
             17,
-            10,
+            12 / 13,
             18.5,
-            13,
+            1,
           ],
-          "text-max-width": 7,
-          "text-line-height": 1.1,
-          "text-padding": 1,
-          "text-anchor": "bottom",
-          "text-allow-overlap": true,
-          "text-optional": false,
           "symbol-sort-key": ["get", "priority"],
         },
-        paint: {
-          "text-color": "#ffffff",
-        },
       },
-      firstSymbolLayerId(map),
+      beforeIdFor(map, VENUE_PILL_LAYER_ID),
     );
+    liftOverlaysAboveBasemap(map);
 
     map.on("mouseenter", VENUE_PILL_LAYER_ID, () => {
       map.getCanvas().style.cursor = "pointer";
@@ -245,6 +205,18 @@ export function VenuePillLayer({
 
   useEffect(() => {
     if (!map || !map.getSource(SOURCE_ID)) return;
+    // Register each venue's sprite for the state it is about to render in
+    // (normal for everything, hover/selected on demand). Already-built
+    // sprites stay cached on the map instance across zone switches; ids
+    // embed the venue name, so a rename simply mints a fresh image.
+    for (const venue of venues) {
+      const state = pillState(venue, selectedId, hoveredId);
+      const iconId = venuePillIconId(venue.id, state, venue.name);
+      if (!map.hasImage(iconId)) {
+        const asset = buildVenuePillIcon(venue.name, state);
+        map.addImage(iconId, asset, { pixelRatio: asset.pixelRatio });
+      }
+    }
     const source = map.getSource(SOURCE_ID) as GeoJSONSource;
     source.setData(toFeatureCollection(venues, selectedId, hoveredId));
   }, [map, venues, selectedId, hoveredId]);

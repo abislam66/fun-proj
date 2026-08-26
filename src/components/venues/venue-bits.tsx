@@ -37,12 +37,14 @@ export function PaymentTag({ card }: { card: boolean | null }) {
 }
 
 export function VenueLocation({ venue }: { venue: Venue }) {
-  const zone = venue.zoneKey ? ZONES[venue.zoneKey].label : "Near campus";
+  // No zone → no filler: every venue is near campus, so saying "Near
+  // campus" carries no information.
+  const parts = [
+    venue.zoneKey ? ZONES[venue.zoneKey].label : null,
+    venue.building ? `Near ${venue.building}` : null,
+  ].filter(Boolean);
 
-  return (
-    <span className="venue-location">
-      {zone}
-      {venue.building ? ` · Near ${venue.building}` : ""}
-    </span>
-  );
+  if (parts.length === 0) return null;
+
+  return <span className="venue-location">{parts.join(" · ")}</span>;
 }

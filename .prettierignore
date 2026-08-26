@@ -1,4 +1,5 @@
 .next
+.pnpm-store
 coverage
 node_modules
 playwright-report
