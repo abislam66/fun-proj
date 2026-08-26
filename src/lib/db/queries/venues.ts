@@ -45,7 +45,13 @@ export function toVenue(row: PublicVenue): Venue {
       CUISINE_KEYS.includes(value as (typeof CUISINE_KEYS)[number]),
     ),
     hours: row.hours,
-    lastVerifiedAt: row.lastVerifiedAt?.toISOString().slice(0, 10) ?? null,
+    // getPublishedVenues/getVenueBySlug run through unstable_cache, whose
+    // disk-backed store round-trips through JSON — a Date survives a cold
+    // read but comes back as a plain ISO string on a cache hit, so this
+    // must accept either rather than assume row.lastVerifiedAt is a Date.
+    lastVerifiedAt: row.lastVerifiedAt
+      ? new Date(row.lastVerifiedAt).toISOString().slice(0, 10)
+      : null,
   };
 }
 

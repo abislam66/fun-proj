@@ -7,6 +7,37 @@
 
 ---
 
+## 2026-08-26 — Fixed a latent `unstable_cache` + Date bug in `toVenue()`
+
+Found while manually testing after this session's `.next` cache clear
+(the clear itself was to fix an unrelated stale-webpack-chunk error) —
+the homepage threw `row.lastVerifiedAt?.toISOString is not a function`
+on some requests but not others.
+
+**Root cause:** `getPublishedVenues`/`getVenueBySlug`
+(`lib/db/queries/venues.ts`) are wrapped in `unstable_cache`, whose
+disk-backed store (`.next/cache`) round-trips values through JSON. A
+`Date` survives untouched on a cache miss (fresh from postgres-js), but
+comes back as a plain ISO string on a cache hit — `toVenue()` assumed
+`row.lastVerifiedAt` was always a `Date` and called `.toISOString()`
+unconditionally, which only exists on the former. Pre-existing bug, not
+introduced by this session's work; it just hadn't been hit before because
+nothing had cleared/exercised the disk cache mid-session until now.
+
+**Fix:** `new Date(row.lastVerifiedAt).toISOString()` instead of
+`row.lastVerifiedAt.toISOString()` — accepts either a `Date` or an
+already-stringified date, since `new Date(x)` is a no-op-equivalent for
+both. This is the only call site affected: admin reads
+(`getVenueById`/`listAllVenuesAdmin` in the same file, feeding
+`admin-venue-form.ts`) are never wrapped in `unstable_cache`, so they
+always get real `Date` objects and were never at risk.
+
+**Verified:** hit `/` twice against a freshly-cleared cache (first =
+cache miss, second = cache hit) — both return 200 with no error markers
+in the body. Lint/78 tests/typecheck all still pass.
+
+---
+
 ## 2026-08-26 — Venue photos extended to a real multi-photo gallery (up to 10)
 
 The single-admin-photo model (one `source: "admin"` row per venue,
