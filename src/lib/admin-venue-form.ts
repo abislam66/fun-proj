@@ -31,6 +31,8 @@ export interface VenueDraft {
   floor: string;
   acceptsCash: PaymentTriState;
   acceptsCard: PaymentTriState;
+  isHalal: boolean;
+  isVeganFriendly: boolean;
   cuisines: CuisineKey[];
   hoursKnown: boolean;
   hours: VenueHours;
@@ -56,6 +58,8 @@ export const EMPTY_VENUE_DRAFT: VenueDraft = {
   floor: "",
   acceptsCash: "unknown",
   acceptsCard: "unknown",
+  isHalal: false,
+  isVeganFriendly: false,
   cuisines: [],
   hoursKnown: false,
   hours: {},
@@ -91,6 +95,8 @@ export function toDraft(row: VenueRow): VenueDraft {
     floor: row.floor ?? "",
     acceptsCash: paymentToTriState(row.acceptsCash),
     acceptsCard: paymentToTriState(row.acceptsCard),
+    isHalal: row.isHalal,
+    isVeganFriendly: row.isVeganFriendly,
     cuisines: row.cuisines as CuisineKey[],
     hoursKnown: Object.keys(hours).length > 0,
     hours,
@@ -112,6 +118,8 @@ export function fromDraft(draft: VenueDraft): Record<string, unknown> {
     floor: draft.floor.trim() || null,
     acceptsCash: triStateToPayment(draft.acceptsCash),
     acceptsCard: triStateToPayment(draft.acceptsCard),
+    isHalal: draft.isHalal,
+    isVeganFriendly: draft.isVeganFriendly,
     cuisines: draft.cuisines,
     hours: draft.hoursKnown ? draft.hours : null,
   };

@@ -74,7 +74,19 @@ describe("mapZoneContaining", () => {
     expect(mapZoneContaining(-75.1564, 39.98285)).toBeNull();
   });
 
-  it("returns null for a point on Broad far from the map zones", () => {
-    expect(mapZoneContaining(-75.1575, 39.981)).toBeNull();
+  it("returns null for a point clear of every map zone", () => {
+    expect(mapZoneContaining(-75.148, 39.975)).toBeNull();
+  });
+
+  it("places a real N Broad St point (Wendy's, corrected coords) in broad-st", () => {
+    expect(mapZoneContaining(-75.1571629, 39.9798944)).toBe("broad-st");
+  });
+
+  it("leaves the Klein Law/Student Center gap out of broad-st", () => {
+    expect(mapZoneContaining(-75.1557, 39.97998)).toBeNull();
+  });
+
+  it("places a real Cecil B. Moore Ave point (Fancy Halal Grill) in cecil-b-moore", () => {
+    expect(mapZoneContaining(-75.1627803, 39.9794942)).toBe("cecil-b-moore");
   });
 });

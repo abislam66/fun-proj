@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { ReportProblemForm } from "@/components/venues/report-problem-form";
 import {
   CuisineTags,
+  HalalTag,
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
@@ -99,6 +100,7 @@ export function VenueDetail({
             <div className="detail-tags">
               <CuisineTags cuisines={venue.cuisines} />
               <PaymentTag card={venue.acceptsCard} />
+              <HalalTag isHalal={venue.isHalal} />
             </div>
             <OpenStatus venue={venue} />
           </div>

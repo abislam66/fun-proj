@@ -1086,6 +1086,11 @@ button {
   color: var(--color-warning);
 }
 
+.halal-tag {
+  background: var(--color-open-soft);
+  color: var(--color-open);
+}
+
 .unknown-value {
   color: var(--color-ink-muted);
   font-size: var(--text-small);

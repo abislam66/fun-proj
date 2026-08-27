@@ -76,6 +76,10 @@ export const venues = pgTable(
     /** null = unknown (unknown ≠ no) */
     acceptsCash: boolean("accepts_cash"),
     acceptsCard: boolean("accepts_card"),
+    /** Admin-set only — never auto-inferred. Default false, not unknown. */
+    isHalal: boolean("is_halal").notNull().default(false),
+    /** True only when there's reliable evidence of a real vegan food option. Admin-set/researched, not inferred from cuisine tags. */
+    isVeganFriendly: boolean("is_vegan_friendly").notNull().default(false),
     cuisines: text("cuisines")
       .array()
       .notNull()

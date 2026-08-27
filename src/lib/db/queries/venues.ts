@@ -41,6 +41,8 @@ export function toVenue(row: PublicVenue): Venue {
     lng: row.lng,
     acceptsCash: row.acceptsCash,
     acceptsCard: row.acceptsCard,
+    isHalal: row.isHalal,
+    isVeganFriendly: row.isVeganFriendly,
     cuisines: row.cuisines.filter((value): value is Venue["cuisines"][number] =>
       CUISINE_KEYS.includes(value as (typeof CUISINE_KEYS)[number]),
     ),

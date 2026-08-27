@@ -19,6 +19,7 @@ import {
 } from "@/components/map/venue-pill-layer";
 import {
   CuisineTags,
+  HalalTag,
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
@@ -514,6 +515,7 @@ export function VenueMap({
                   <div className="venue-tags">
                     <CuisineTags cuisines={poppedVenue.cuisines} />
                     <PaymentTag card={poppedVenue.acceptsCard} />
+                    <HalalTag isHalal={poppedVenue.isHalal} />
                   </div>
                   <div className="map-mini-card-footer">
                     <OpenStatus venue={poppedVenue} />

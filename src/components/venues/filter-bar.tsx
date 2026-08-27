@@ -73,6 +73,18 @@ export function FilterBar({
         >
           Open now
         </Chip>
+        <Chip
+          active={filters.isHalal}
+          onClick={() => update("isHalal", !filters.isHalal)}
+        >
+          Halal
+        </Chip>
+        <Chip
+          active={filters.isVeganFriendly}
+          onClick={() => update("isVeganFriendly", !filters.isVeganFriendly)}
+        >
+          Vegan Friendly
+        </Chip>
         <button
           aria-controls={drawerId}
           aria-expanded={openMenu === "cuisine"}

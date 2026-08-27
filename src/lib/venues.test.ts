@@ -85,6 +85,8 @@ describe("venue query serialization", () => {
     const filters = {
       query: "  rice  ",
       openNow: true,
+      isHalal: false,
+      isVeganFriendly: false,
       cuisines: ["mexican", "halal"] as const,
       zones: ["student-center", "serc-trucks"] as const,
     };
@@ -101,6 +103,8 @@ describe("venue query serialization", () => {
     expect(parseVenueFilters(new URLSearchParams(query))).toEqual({
       query: "rice",
       openNow: true,
+      isHalal: false,
+      isVeganFriendly: false,
       cuisines: ["halal", "mexican"],
       zones: ["serc-trucks", "student-center"],
     });
@@ -124,6 +128,8 @@ describe("filterVenues", () => {
     const results = filterVenues(MOCK_VENUES, {
       query: "tacos",
       openNow: false,
+      isHalal: false,
+      isVeganFriendly: false,
       cuisines: ["mexican"],
       zones: ["serc-trucks"],
     });

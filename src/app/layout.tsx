@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@fontsource-variable/jetbrains-mono";
@@ -63,6 +64,7 @@ export default function RootLayout({
       <body className={`${cabinetGrotesk.variable} ${satoshi.variable}`}>
         <RecoveryRedirect />
         {children}
+        <Analytics />
       </body>
     </html>
   );

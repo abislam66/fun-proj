@@ -55,6 +55,8 @@ export const venueInputSchema = z
     floor: z.string().trim().max(40).nullable().optional(),
     acceptsCash: z.boolean().nullable().optional(),
     acceptsCard: z.boolean().nullable().optional(),
+    isHalal: z.boolean().default(false),
+    isVeganFriendly: z.boolean().default(false),
     cuisines: z.array(z.enum(CUISINE_KEYS)).max(8).default([]),
     hours: venueHoursSchema.optional(),
   })

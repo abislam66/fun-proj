@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/primitives";
 import type { Venue } from "@/lib/venues";
 import {
   CuisineTags,
+  HalalTag,
   OpenStatus,
   PaymentTag,
   VenueLocation,
@@ -68,6 +69,7 @@ export function VenueRow({
           <div className="venue-tags">
             <CuisineTags cuisines={venue.cuisines} />
             <PaymentTag card={venue.acceptsCard} />
+            <HalalTag isHalal={venue.isHalal} />
           </div>
           <OpenStatus venue={venue} />
         </div>

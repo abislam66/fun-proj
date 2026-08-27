@@ -57,6 +57,13 @@
       "when": 1787717338155,
       "tag": "0007_milky_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787873174227,
+      "tag": "0008_dark_daredevil",
+      "breakpoints": true
     }
   ]
 }

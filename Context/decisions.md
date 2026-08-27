@@ -7,6 +7,16 @@
 
 ---
 
+## 2026-08-27 — Evidence bar for `is_vegan_friendly`, and how the Broad St zone conflict was actually resolved
+
+**`is_vegan_friendly`'s bar, applied literally:** a venue only qualifies with a specific, named, standing menu item that's plant-based — not a drink, not a side by itself, not "could be made vegan on request." This ruled out several venues that had *some* signal: Champ's Diner had one source claiming vegan options and a Yelp reviewer directly denying it — conflicting evidence, left false rather than picking a side. Maple Star has vegetarian udon, confirmed, but vegetarian isn't vegan (broth/egg risk) and nothing confirmed it was actually vegan — left false. Mexican Grill Stand has a standing "veggies" taco/burrito filling, but nothing confirmed it ships without cheese/crema by default — the difference between "a real menu path" (counts, like Saladworks'/QDOBA's build-your-own vegan bowls, which do count) and "an ingredient that could theoretically anchor a request" (doesn't count) was the deciding line throughout.
+
+**How the Broad St zone was widened without breaking the co-founder's deliberate gaps:** the naive fix (just enlarge the polygon to cover Wendy's/Panera's stored coordinates) would have swallowed the intentional notch between Klein Law and the Student Center zone and the intentional exclusion of the 1940 Residence Hall from Liacouras Walk — both real, tested design decisions from the original 8-zone build. The actual fix had two parts: (1) Wendy's/Panera's own coordinates were bad estimates from the 2026-08-26 batch-add (guessed too close to the campus core) — corrected via linear interpolation between two *real* geocoded points on the same street (Chick-fil-A Morgan Hall at 1601, McDonald's at 2109), which placed them meaningfully further from the conflict zone than originally guessed; (2) the zone polygon itself became a stepped/flag shape (full width north of Diamond St, narrow south of it) rather than a uniform rectangle, because Broad St and the campus core genuinely run close together south of Diamond. Before writing any DB update, every one of the 92 live venues was checked old-8-zones vs. new-10-zones (not "does the new zone's bounding box overlap" — an actual point-in-polygon comparison) to catch any real regression before it happened, not after.
+
+**Why Mexican Grill Stand's "already had hours" surprised me mid-task:** it had been miscategorized as missing during an earlier scan of this same session — a bookkeeping slip on my end, not a data issue. The apply script's own "only write if currently null/empty" guard caught it and skipped the write, which is exactly why that guard exists.
+
+---
+
 ## 2026-08-26 — Fixed a latent `unstable_cache` + Date bug in `toVenue()`
 
 Found while manually testing after this session's `.next` cache clear

@@ -191,16 +191,18 @@ export const MAP_ZONES = {
     key: "broad-st",
     label: "N Broad St",
     description:
-      "N Broad Street north of the Cecil B. Moore intersection — approximate corridor, not hand-traced like the other zones. Deliberately starts north of ~Diamond St: Broad St runs close enough to the campus core below that point to overlap the deliberate gaps other zones carve out (e.g. between Klein Law and Student Center), so this zone only covers the stretch far enough north to stay clear of those.",
+      "N Broad Street from roughly Cecil B. Moore north to Susquehanna — approximate corridor (interpolated between two real geocoded points, Morgan Hall at 1601 and the McDonald's at 2109), not hand-traced like the other zones. Narrower south of Diamond St (~39.984) because Broad runs close enough to the campus core there to threaten the deliberate gaps other zones carve out (e.g. between Klein Law and Student Center, and west of the 1940 Residence Hall); wider north of that where there's no such conflict.",
     sort: 10,
     mark: MAP_ZONE_MARK.streetLine,
     padding: 64,
     membership: [
-      [-75.1568, 39.984],
-      [-75.1568, 39.988],
+      [-75.158, 39.9784],
+      [-75.158, 39.988],
       [-75.1548, 39.988],
       [-75.1548, 39.984],
       [-75.1568, 39.984],
+      [-75.1568, 39.9784],
+      [-75.158, 39.9784],
     ] as LngLat[],
   },
 } as const;

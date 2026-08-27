@@ -536,6 +536,31 @@ function VenueEditorForm({
                 <span className="admin-field-error">{errors.cuisines}</span>
               ) : null}
             </fieldset>
+            <fieldset className="admin-fieldset">
+              <legend>Dietary</legend>
+              <div className="admin-check-grid">
+                <label>
+                  <input
+                    checked={draft.isHalal}
+                    onChange={(event) =>
+                      setField("isHalal", event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  Halal
+                </label>
+                <label>
+                  <input
+                    checked={draft.isVeganFriendly}
+                    onChange={(event) =>
+                      setField("isVeganFriendly", event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  Vegan Friendly
+                </label>
+              </div>
+            </fieldset>
           </EditorSection>
 
           <EditorSection

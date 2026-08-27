@@ -36,6 +36,11 @@ export function PaymentTag({ card }: { card: boolean | null }) {
   return <span className="cuisine-tag cash-only-tag">Cash Only</span>;
 }
 
+export function HalalTag({ isHalal }: { isHalal: boolean }) {
+  if (!isHalal) return null;
+  return <span className="cuisine-tag halal-tag">Halal</span>;
+}
+
 export function VenueLocation({ venue }: { venue: Venue }) {
   // No zone → no filler: every venue is near campus, so saying "Near
   // campus" carries no information.

@@ -78,6 +78,8 @@ export async function upsertVenue(
         floor: input.floor ?? null,
         acceptsCash: input.acceptsCash ?? null,
         acceptsCard: input.acceptsCard ?? null,
+        isHalal: input.isHalal,
+        isVeganFriendly: input.isVeganFriendly,
         cuisines: input.cuisines,
         hours: input.hours === undefined ? existing.hours : input.hours,
       });
@@ -102,6 +104,8 @@ export async function upsertVenue(
       floor: input.floor ?? null,
       acceptsCash: input.acceptsCash ?? null,
       acceptsCard: input.acceptsCard ?? null,
+      isHalal: input.isHalal,
+      isVeganFriendly: input.isVeganFriendly,
       cuisines: input.cuisines,
       hours: input.hours ?? null,
     });
