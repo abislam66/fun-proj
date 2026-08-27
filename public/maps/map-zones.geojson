@@ -516,6 +516,112 @@
         "type": "Point",
         "coordinates": [-75.156, 39.9824]
       }
+    },
+    {
+      "type": "Feature",
+      "id": "cecil-b-moore-membership",
+      "properties": {
+        "zoneKey": "cecil-b-moore",
+        "role": "membership",
+        "label": "Cecil B. Moore Ave"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1638, 39.9782],
+            [-75.1638, 39.98],
+            [-75.158, 39.98],
+            [-75.158, 39.9782],
+            [-75.1638, 39.9782]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cecil-b-moore-street",
+      "properties": {
+        "zoneKey": "cecil-b-moore",
+        "role": "street-line",
+        "label": "Cecil B. Moore Ave"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.1633, 39.9793],
+          [-75.162, 39.9792],
+          [-75.16, 39.9789],
+          [-75.1585, 39.9787]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cecil-b-moore-label",
+      "properties": {
+        "zoneKey": "cecil-b-moore",
+        "role": "label",
+        "label": "Cecil B. Moore Ave",
+        "sort": 9
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.1605, 39.9791]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "broad-st-membership",
+      "properties": {
+        "zoneKey": "broad-st",
+        "role": "membership",
+        "label": "N Broad St"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1568, 39.984],
+            [-75.1568, 39.988],
+            [-75.1548, 39.988],
+            [-75.1548, 39.984],
+            [-75.1568, 39.984]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "broad-st-street",
+      "properties": {
+        "zoneKey": "broad-st",
+        "role": "street-line",
+        "label": "N Broad St"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.156, 39.9843],
+          [-75.156, 39.9852],
+          [-75.1559, 39.9864],
+          [-75.1559, 39.9877]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "broad-st-label",
+      "properties": {
+        "zoneKey": "broad-st",
+        "role": "label",
+        "label": "N Broad St",
+        "sort": 10
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.1559, 39.986]
+      }
     }
   ]
 }

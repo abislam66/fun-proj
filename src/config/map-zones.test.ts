@@ -9,6 +9,8 @@ describe("MAP_ZONE_MARK", () => {
       "w-montgomery",
       "serc-trucks",
       "tyler-trucks",
+      "cecil-b-moore",
+      "broad-st",
     ]);
   });
 

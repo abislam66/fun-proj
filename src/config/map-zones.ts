@@ -6,11 +6,17 @@
  *
  * Two marks, used together on the campus overview:
  * - `MAP_ZONE_MARK.streetLine` — cherry corridor (Student Center, W Montgomery,
- *   SERC trucks, Tyler trucks)
+ *   SERC trucks, Tyler trucks, Cecil B. Moore Ave, N Broad St)
  * - `MAP_ZONE_MARK.buildingFill` — cherry wash (Vantage & The View buildings;
  *   The Wall plaza west of Anderson Hall — not Anderson itself;
  *   Richie's Cafe — that footprint only, not Facilities;
  *   Liacouras Walk — 1926–1938 building only, not 1940 Residence Hall)
+ *
+ * Cecil B. Moore Ave and N Broad St (added 2026-08-27) are approximate
+ * straight-line corridors, not hand-traced like the original 8 — added
+ * once enough real venues clustered along those streets to be worth their
+ * own filter chip, with a known lower-precision street-line/label overlay
+ * in map-zones.geojson (see that file's *-street features for these two).
  */
 
 /** How a map zone is drawn at campus overview. */
@@ -163,6 +169,38 @@ export const MAP_ZONES = {
       [-75.15585, 39.982635],
       [-75.15585, 39.98216],
       [-75.15616, 39.98216],
+    ] as LngLat[],
+  },
+  "cecil-b-moore": {
+    key: "cecil-b-moore",
+    label: "Cecil B. Moore Ave",
+    description:
+      "Cecil B. Moore Avenue between roughly 17th and 14th — approximate corridor, not hand-traced like the other zones.",
+    sort: 9,
+    mark: MAP_ZONE_MARK.streetLine,
+    padding: 64,
+    membership: [
+      [-75.1638, 39.9782],
+      [-75.1638, 39.98],
+      [-75.158, 39.98],
+      [-75.158, 39.9782],
+      [-75.1638, 39.9782],
+    ] as LngLat[],
+  },
+  "broad-st": {
+    key: "broad-st",
+    label: "N Broad St",
+    description:
+      "N Broad Street north of the Cecil B. Moore intersection — approximate corridor, not hand-traced like the other zones. Deliberately starts north of ~Diamond St: Broad St runs close enough to the campus core below that point to overlap the deliberate gaps other zones carve out (e.g. between Klein Law and Student Center), so this zone only covers the stretch far enough north to stay clear of those.",
+    sort: 10,
+    mark: MAP_ZONE_MARK.streetLine,
+    padding: 64,
+    membership: [
+      [-75.1568, 39.984],
+      [-75.1568, 39.988],
+      [-75.1548, 39.988],
+      [-75.1548, 39.984],
+      [-75.1568, 39.984],
     ] as LngLat[],
   },
 } as const;
