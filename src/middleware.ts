@@ -2,8 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Soft UX guard for /admin — NOT the security boundary.
- * Server actions always re-check via requireAdmin().
+ * Runs on every page (not just /admin) because Supabase's SSR client can
+ * only persist a refreshed access token from a request that can set
+ * cookies — a Server Component can't (see the setAll comment in
+ * src/lib/auth.ts). Without this running site-wide, a Google-signed-in
+ * member's session would silently stop working on public pages after the
+ * ~1h access token expires, even with a valid 30-day refresh token.
+ *
+ * The /admin redirect below is still just a soft UX guard, not the security
+ * boundary — server actions always re-check via requireAdmin().
  */
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -58,5 +65,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // Excludes static assets, images, fonts, and the OAuth callback itself
+  // (which establishes its own session and doesn't need a pre-existing one).
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|fonts/|auth/callback).*)",
+  ],
 };

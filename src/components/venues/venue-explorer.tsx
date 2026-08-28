@@ -77,9 +77,11 @@ function ResultsPanel({
 export function VenueExplorer({
   venues,
   initialQuery,
+  user,
 }: {
   venues: Venue[];
   initialQuery: string;
+  user: { displayName: string } | null;
 }) {
   const [filters, setFilters] = useState(() =>
     parseVenueFilters(new URLSearchParams(initialQuery)),
@@ -145,7 +147,7 @@ export function VenueExplorer({
 
   return (
     <main className="explorer">
-      <SiteHeader />
+      <SiteHeader user={user} />
       <div className="desktop-results">{panel}</div>
       <div className="explorer-map">
         <VenueMapLoader

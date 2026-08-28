@@ -22,3 +22,8 @@ export {
   type VenuePhoto,
   type AdminVenuePhoto,
 } from "./venue-photos";
+export {
+  getProfileById,
+  listDisplayNames,
+  insertMemberProfile,
+} from "./profiles";

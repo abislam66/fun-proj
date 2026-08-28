@@ -166,8 +166,9 @@ export function SignInForm() {
         )}
 
         <p className="signin-footnote">
-          Browsing TuEats never requires an account. This sign-in is for admin
-          venue management only.
+          This is for admin venue management only &mdash; it&rsquo;s separate
+          from the Google sign-in regular visitors use to view a place&rsquo;s
+          page.
         </p>
       </section>
     </main>

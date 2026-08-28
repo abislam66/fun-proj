@@ -58,6 +58,11 @@ export async function signOutAdmin(): Promise<ActionResult> {
   }
 }
 
+/** Regular-user (Google) sign-out — same underlying call as signOutAdmin, named for its own call site. */
+export async function signOutUser(): Promise<ActionResult> {
+  return signOutAdmin();
+}
+
 /**
  * Self-service "forgot password" — sends a Supabase recovery email pointed
  * at /admin/reset-password. Supabase itself never reveals whether the

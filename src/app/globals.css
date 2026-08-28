@@ -1181,6 +1181,43 @@ button {
   padding: var(--spacing-xl) 0 var(--spacing-3xl);
 }
 
+.sign-in-gate {
+  width: min(100%, 28rem);
+  margin: var(--spacing-3xl) auto 0;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  text-align: center;
+}
+
+.sign-in-gate h1 {
+  margin: 0 0 var(--spacing-sm);
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.sign-in-gate p {
+  margin: 0 0 var(--spacing-lg);
+  color: var(--color-ink-secondary);
+}
+
+.account-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.account-name {
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+
+.account-sign-out {
+  font-size: inherit;
+}
+
 .back-link {
   display: inline-flex;
   margin-bottom: var(--spacing-xl);

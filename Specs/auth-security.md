@@ -9,36 +9,44 @@
 
 ## User Model & Scale
 
-> **V1 note:** V1 ships with no student/member accounts at all — only anonymous
-> public browsing plus a single admin. The `member` role, ratings, reviews, and
-> venue proposals below describe a **planned post-V1 phase**, not the current
-> implementation. Don't build member-facing auth against this table until that
-> phase is explicitly scoped. See `Context/decisions.md` (2026-08-18 entries)
-> for why V1 shipped this way.
+> **2026-08-28 update:** V1 originally shipped with no student/member accounts
+> at all. A `member` role now exists for real, created automatically on first
+> Google sign-in (see Identity Strategy below) — but it's intentionally
+> minimal: a profile row and nothing else. Ratings, reviews, venue proposals,
+> and everything else the `member` row was originally speced for below are
+> **still a planned post-V1 phase**, not implemented. See
+> `Context/decisions.md` (2026-08-28) for why login-walling and Google OAuth,
+> both previously ruled out below, were reversed, and (2026-08-18 entries)
+> for why V1 originally shipped admin-only.
 
 | Question | Decision |
 |----------|----------|
-| Expected number of users | Hundreds of active accounts during a semester; low-thousands ceiling. Anonymous readers are the majority of traffic. |
+| Expected number of users | Hundreds of active accounts during a semester; low-thousands ceiling. Anonymous readers are still the majority of map/list traffic — the account requirement only sits in front of individual venue pages. |
 | Growth expectation | Bounded by campus population — no viral growth expected or designed for. Free tiers hold at 10× the target. |
-| User model | **V1 (current):** anonymous public + admin(s) — no fixed cap on how many people hold the admin role, each provisioned individually. **Post-V1 (planned):** adds a verified-campus `member` role. Identity for a future member = verified `@temple.edu` email (held by Supabase Auth) + unique public display name (held in `profiles`). |
+| User model | Anonymous public (map/list/search) + `member` (any Google-authenticated visitor, created automatically) + `admin`(s) (no fixed cap, each provisioned individually via direct DB access). Identity for a member = a Google account (held by Supabase Auth) + an auto-generated unique display name (held in `profiles`); nothing about ratings/reviews/proposals is implemented yet — see the 2026-08-28 note above. |
 | Do users belong to groups? | No. No orgs, teams, or groups — just the role enum. |
-| Anonymous / guest access? | Yes, first-class: **all reads are anonymous-accessible** (a non-goal forbids login-walling), and anonymous users may submit venue problem reports (IP-hash rate-limited, honeypot-protected). |
+| Anonymous / guest access? | The map, search, filters, and venue names/cards are anonymous-accessible by design. Opening an individual venue's detail page (`/eat/[slug]`) requires a signed-in session — a deliberate reversal of the original "no login-walling" non-goal, made 2026-08-28 (see `Context/decisions.md`). The problem-report form still lives on that page and is still identity-agnostic (IP-hash rate-limited, honeypot-protected, no `requireUser()` check) — it just now only ever gets reached by someone who has already signed in, since the page around it is gated. |
 
 ---
 
 ## Identity Strategy
 
-V1 has exactly one identity provider path — **admin only**. There is no public
-signup of any kind in V1.
+Two independent identity provider paths exist, never conflated: **admin**
+(email + password, self-provisioned by nobody but the maintainer) and
+**member** (Google OAuth, self-service, open to anyone with a Google
+account). A successful sign-in on either path proves identity only —
+`profiles.role` is the only source of authorization, and nothing about the
+member path can ever produce an `admin` role (see Authorization & Roles).
 
 | Setting | Decision |
 |---------|----------|
-| Approach | **Delegate identity to Supabase Auth.** We never store or verify credentials ourselves. |
-| Why this approach | A solo nights-and-weekends project should not own password storage or verification-email plumbing. Supabase Auth is already in the stack (one vendor), free at this scale, and SSR/cookie-ready for Next.js. |
-| Identity provider(s) — **admin (V1)** | Supabase Auth, **email + password**. Each admin account is provisioned individually, directly in the Supabase dashboard by the maintainer — there is no in-app signup or admin self-registration, for the first admin or any added later. No social logins — Google/Apple sign-in is never used anywhere in this project. |
-| Identity provider(s) — **member (post-V1, not implemented)** | Planned: Supabase Auth email OTP (code / magic link) to the campus address, gating a verified-student `member` role for ratings/reviews. Explicitly deferred — see `Context/backlog.md`. Do not implement until that phase is scoped. |
+| Approach | **Delegate identity to Supabase Auth.** We never store or verify credentials ourselves, for either path. |
+| Why this approach | A solo nights-and-weekends project should not own password storage, verification-email plumbing, or an OAuth handshake. Supabase Auth is already in the stack (one vendor), free at this scale, and SSR/cookie-ready for Next.js. |
+| Identity provider — **admin** | Supabase Auth, **email + password**. Each admin account is provisioned individually, directly in the Supabase dashboard by the maintainer — there is no in-app signup or admin self-registration, for the first admin or any added later. |
+| Identity provider — **member** | Supabase Auth, **Google OAuth**, self-service — anyone with a Google account can create one by signing in. No `@temple.edu` restriction (a plain consumer Google account works). First sign-in auto-creates a `profiles` row (`role: "member"`, an auto-generated unique display name — see `src/lib/member-profile.ts`) via `/auth/callback`, the one route handler in the app (see Authentication Method below for why OAuth needs it). |
 | Why admin uses a password, not OTP | V1 originally used OTP/magic-link for admin too. It never completed a session in practice: Supabase's PKCE flow requires the *same browser* that requested the link to also click it, which silently breaks when the email is opened on a different device, and is separately vulnerable to corporate link-scanners (e.g. Office 365 Safe Links) pre-fetching and consuming the single-use code. A single, low-volume admin account doesn't need passwordless — password auth removes both failure modes entirely. |
-| Fallback / alternative | None beyond the password-recovery flow below. If a future member-facing OTP flow proves too much friction, revisit as a spec change — never as a quick fix. |
+| Why member uses Google OAuth, not email OTP | Reversed 2026-08-28 from the original OTP-gated `@temple.edu` plan — see `Context/decisions.md`. Google sign-in is one click, has no cross-device link-click failure mode, and doesn't depend on Supabase's SMTP pipeline (which had its own reliability problems for the admin OTP flow it replaced, `Context/decisions.md` 2026-08-18). The tradeoff: it's no longer verified-student-only, since any Google account works. |
+| Fallback / alternative | Admin: none beyond the password-recovery flow below. Member: none — Google is the only provider; don't add another (Apple, email OTP, etc.) without a deliberate decision, not as an incremental "why not both." |
 
 ---
 
@@ -46,11 +54,41 @@ signup of any kind in V1.
 
 | Setting | Value |
 |---------|-------|
-| Method | Admin: email + password via `supabase.auth.signInWithPassword()`. No other authentication method exists in V1. |
-| Why this method | Proven, well-understood, no cross-device or link-scanner failure modes (see above). The admin role is a separate, second check — see Authorization & Roles. |
-| Token storage (client) | HTTP-only, `Secure`, `SameSite=Lax` cookies via `@supabase/ssr`. **Never** localStorage/sessionStorage. |
-| Token lifetime | Supabase defaults: ~1 h access JWT + rotating refresh token (~30 d sliding session). |
-| Token verification (server) | `supabase.auth.getUser()` on every protected request (server-side verification against the Auth server — never a bare client-side JWT decode). Wrapped in `lib/auth.ts` as `getUser()` / `requireUser()` / `requireAdmin()`. |
+| Method | Admin: email + password via `supabase.auth.signInWithPassword()`. Member: Google OAuth via `supabase.auth.signInWithOAuth({ provider: "google" })`, redirect-based. |
+| Why these methods | Password: proven, well-understood, no cross-device or link-scanner failure modes. OAuth: one click, no password to manage, no email deliverability dependency. Neither implies authorization on its own — the admin/member role is a separate, second check in both cases, see Authorization & Roles. |
+| Token storage (client) | HTTP-only, `Secure`, `SameSite=Lax` cookies via `@supabase/ssr`, for both paths. **Never** localStorage/sessionStorage. |
+| Token lifetime | Supabase defaults: ~1 h access JWT + rotating refresh token (~30 d sliding session), for both paths. |
+| Token verification (server) | `supabase.auth.getUser()` on every protected request (server-side verification against the Auth server — never a bare client-side JWT decode). Wrapped in `lib/auth.ts` as `getUser()` / `requireUser()` / `requireAdmin()`. `getUser()` is now called from every public page (not just `/admin`) to render the sign-in gate on `/eat/[slug]` and the account control in the header. |
+
+### The OAuth callback route — the one deliberate route handler
+
+Google's redirect-based flow has no server-action equivalent: Supabase's
+hosted callback exchanges the code with Google, then redirects the browser to
+our own `redirectTo` URL with a `?code=` param that a **server** must
+exchange for a session (`exchangeCodeForSession`) before it can set the
+session cookies — a Server Component can't do this (see the `setAll` comment
+in `src/lib/auth.ts`), so it has to be a route handler:
+`src/app/auth/callback/route.ts`. This is the one exception to "no custom
+route handlers" elsewhere in this project — admin's password flow and
+password recovery both still avoid one entirely.
+
+The callback also carries a `next` query param — the exact path the user was
+on when they hit the sign-in gate (e.g. `/eat/richies-cafe`) — so a
+successful sign-in returns them there instead of the homepage. `next` is
+validated server-side against the same "must start with `/`, must not start
+with `//`" rule already used for the venue detail page's `back` link
+(`query.from` in `src/app/(public)/eat/[slug]/page.tsx`), which rejects
+protocol-relative URLs and is the app's standard defense against an
+open-redirect via this param.
+
+On first sign-in, the callback also calls `ensureMemberProfile()`
+(`src/lib/member-profile.ts`), which inserts a `profiles` row with
+`role: "member"` and an auto-generated display name (from the Google
+account's name, falling back to the email's local part, then a generic
+default, with `uniqueSlug()`-style numeric-suffix collision handling — see
+`pickDisplayName()`). This is the **only** code path that creates a
+`profiles` row outside of the maintainer's direct DB access for admins, and
+it can never set `role: "admin"` — the insert is hardcoded to `"member"`.
 
 **Authentication and authorization are separate, always.** A successful
 `signInAdmin()` proves *who* someone is (a real Supabase user) and nothing
@@ -108,35 +146,51 @@ from `signInWithPassword`/`updateUser`.
 
 | Role | Permissions |
 |------|-------------|
-| Anonymous | Read everything public (map, list, venues). Submit venue problem reports (rate-limited by salted IP hash). Nothing else. |
-| Admin (V1's only privileged role) | Venue CRUD (draft/publish/retire/verify), Google snapshot capture, resolve problem reports. |
-| Member (**post-V1, not implemented**) | Planned: everything anonymous can do, plus create/edit/delete **own** rating & review (one per venue), submit venue proposals, report reviews, manage own account. Do not build against this row until the phase is scoped. |
+| Anonymous | Read the map, list, search, filters, and venue cards/names. Cannot open an individual venue's detail page. Nothing else. |
+| Member (any Google-authenticated visitor) | Everything anonymous can do, plus open venue detail pages (`/eat/[slug]`) and submit venue problem reports from them. That's it today — create/edit/delete **own** rating & review, venue proposals, report reviews, and account management are all still **planned, not implemented** (unchanged from the original post-V1 scope; only the identity mechanism and the detail-page gate are new). |
+| Admin (the only privileged role) | Venue CRUD (draft/publish/retire/verify), Google snapshot capture, resolve problem reports. |
 
-- **Enforcement point:** the top of every server action — `requireAdmin()` before any logic runs. Route middleware guards `/admin` for UX only; it is **not** the security boundary (server actions re-check, always).
+- **Enforcement point:** the top of every server action — `requireAdmin()` before any logic runs. Route middleware guards `/admin` for UX only; it is **not** the security boundary (server actions re-check, always). The `/eat/[slug]` sign-in gate is enforced in the page component itself (`getUser()` before any venue data renders) — server-side, not a client click-handler, so a shared/bookmarked/directly-typed URL is gated exactly the same as a click from the homepage.
 - **Default posture:** deny by default. Deny-all RLS on every table neutralizes the PostgREST surface; a new server action starts from "who may call this?" not "who shouldn't?".
-- **Role escalation:** `role = admin` is set only by direct database access by the maintainer. No app surface — UI, action, or API — can grant or change roles. Signing in (including via password recovery) never grants it.
-- **Ownership checks:** N/A in V1 (no member-owned content exists yet). Applies once the member phase ships — mutations on ratings/reviews must filter by `user_id = session user` in the query itself, not just an if-check before it.
+- **Role escalation:** `role = admin` is set only by direct database access by the maintainer. No app surface — UI, action, or API — can grant or change roles. Signing in via any method (Google OAuth, password, or password recovery) never grants it. `ensureMemberProfile()` (the only auto-provisioning code path in the app) is hardcoded to `role: "member"` — there is no code path from a Google account to `admin`, regardless of the account's email domain or name.
+- **Ownership checks:** N/A still — no member-owned content exists yet (a `profiles` row and a session, nothing else). Applies once ratings/reviews/proposals actually ship — mutations must filter by `user_id = session user` in the query itself, not just an if-check before it.
 
 ---
 
 ## User Lifecycle & Management
 
-V1 has no public signup — every account is an admin account, and each one is
-provisioned individually by the maintainer. There's no fixed cap on how many
-admin accounts exist; each is bootstrapped the same way.
+Admin accounts and member accounts have entirely separate lifecycles.
+
+**Admin** — no public signup; every admin account is provisioned individually
+by the maintainer. There's no fixed cap on how many admin accounts exist;
+each is bootstrapped the same way.
 
 | Stage | Decision |
 |-------|----------|
 | Account creation | Each admin account is created directly in the Supabase dashboard by the maintainer, not through the app. Its `profiles` row (`role: "admin"`) is likewise inserted only via direct DB access, one at a time, per person. |
 | Password reset | Self-service via `/admin/sign-in` → "Forgot password?", or maintainer-triggered from the Supabase dashboard. See the Password recovery subsection above. |
 | Account recovery | Same as password reset — recovery *is* the password-reset flow, per account. |
-| Profile updates | Not exposed in V1 — no UI to change the admin's own email or display name. |
-| Deactivation / deletion | Manual, dashboard-only (delete the Supabase Auth user and/or the `profiles` row). No self-service deletion exists because there's no member-facing account system yet. |
+| Profile updates | Not exposed — no UI to change the admin's own email or display name. |
+| Deactivation / deletion | Manual, dashboard-only (delete the Supabase Auth user and/or the `profiles` row). |
 | Who administers users | The admin(s) (project maintainer, plus any trusted co-maintainer granted the role), via the Supabase dashboard. Role changes only via direct DB. |
 
-*(The member lifecycle — signup, onboarding, profile changes, self-service
-deletion — is planned for the post-V1 phase and intentionally not detailed
-here until that phase is scoped.)*
+**Member** — fully self-service; anyone with a Google account can create one
+by hitting the sign-in gate on any venue page. Everything below is genuinely
+minimal on purpose — ratings, reviews, and proposals aren't built yet, so
+there's no owned content to manage.
+
+| Stage | Decision |
+|-------|----------|
+| Account creation | Automatic on first Google sign-in — `ensureMemberProfile()` inserts a `profiles` row (`role: "member"`, auto-generated display name) the moment `/auth/callback` sees a new `auth.users.id`. No admin involvement, no approval step. |
+| Password reset | N/A — Google owns the credential; TuEats never sees or stores one. |
+| Account recovery | Whatever Google's own account-recovery flow offers — outside this app entirely. |
+| Profile updates | Not exposed — no UI to change the auto-generated display name yet. Revisit once display names are user-facing beyond the header (i.e. once reviews ship). |
+| Deactivation / deletion | Manual, dashboard-only today (delete the Supabase Auth user and/or the `profiles` row) — no self-service deletion UI exists yet. The `/about` disclosure promises a contact route for deletion requests; that's the mechanism until self-service ships. |
+| Who administers users | The admin(s), via the Supabase dashboard — same as admin accounts. |
+
+*(Ratings, reviews, venue proposals, and self-service profile/account
+management are still planned for a later phase and intentionally not detailed
+further here until that phase is scoped.)*
 
 ---
 
@@ -144,7 +198,7 @@ here until that phase is scoped.)*
 
 | Data | Classification | Protection |
 |------|---------------|------------|
-| Campus email | PII — the only real PII in the system | Lives **only** in Supabase `auth.users`. Never copied into app tables, never in any query result, page payload, or log line. |
+| Account email (admin's, or a member's Google email) | PII — the only real PII in the system | Lives **only** in Supabase `auth.users`. Never copied into app tables (`ensureMemberProfile()` only ever writes `id`, `displayName`, `role` — never the Google account's email), never in any query result, page payload, or log line. |
 | Display name | Public by design | The only identity ever rendered or serialized. |
 | User geolocation ("locate me" on the map) | Sensitive | **Never leaves the browser.** Used client-side by MapLibre only; no endpoint receives it, nothing stores it. |
 | IP addresses (anonymous reports) | PII | Never stored raw — salted hash (`IP_HASH_SALT`) for rate limiting only. |
@@ -204,9 +258,10 @@ here until that phase is scoped.)*
 
 The `/about` page must plainly disclose:
 
-- What we collect: campus email (verification only, never displayed), chosen display name, and the content you post; salted IP hashes for anonymous reports (no raw IPs).
+- What we collect: your Google account's name and email (identity only, email never displayed or stored outside Supabase Auth), an auto-generated display name, and the content you post; salted IP hashes for anonymous reports (no raw IPs).
+- Signing in: browsing (map/search/filters) never requires an account; opening an individual venue's page does, via Google sign-in.
 - What is public: display name, ratings, reviews — permanently attached to venue pages unless you delete/anonymize them.
-- Cookies: authentication session only. No advertising trackers, no third-party analytics in v1 (if privacy-friendly analytics are ever added, this disclosure updates first).
+- Cookies: authentication session only. Vercel Web Analytics (added 2026-08-27) is privacy-friendly/cookieless page-view counting — no advertising trackers, no third-party ad analytics.
 - Your location: the map's "locate me" runs entirely in your browser; TuEats servers never receive it.
 - Google ratings shown are manual point-in-time snapshots with their capture date displayed.
 - TuEats is not affiliated with Temple University.
@@ -243,7 +298,9 @@ The `/about` page must plainly disclose:
 - Never read or write data through `supabase-js` — data access is Drizzle, server-side, period. (`supabase-js` is for auth flows only.)
 - Never store a raw IP address, and never send the user's geolocation to the server.
 - Never render user content as HTML (`dangerouslySetInnerHTML` is banned).
-- Never expose a user's email in any table, payload, page, or log — it lives in `auth.users` alone.
-- Never add a social login — no social login is used anywhere in this project.
-- Never let a successful sign-in (including password recovery) imply admin access — `requireAdmin()`'s `profiles.role = "admin"` check is the only source of authorization, always.
-- Never log or persist a password, recovery token, or `token_hash`/`access_token` beyond what's needed to complete a single recovery request in the browser.
+- Never expose a user's email in any table, payload, page, or log — it lives in `auth.users` alone, whether it's an admin's or a Google-authenticated member's.
+- Never add a social login provider beyond Google for members (no Apple, Facebook, etc.) without a deliberate spec change — and never add one for admin at all, which stays password-only.
+- Never let a successful sign-in (Google OAuth, password, or password recovery) imply admin access — `requireAdmin()`'s `profiles.role = "admin"` check is the only source of authorization, always. `ensureMemberProfile()` is hardcoded to `role: "member"`; there is no path from any Google account to `admin`.
+- Never add a route handler for anything other than the OAuth callback (`src/app/auth/callback/route.ts`) — every other mutation is still a server action; the callback is a deliberate, narrow exception because OAuth's redirect handshake has no server-action equivalent.
+- Never pass an unvalidated `next`/redirect param to `NextResponse.redirect` — always check it starts with `/` and not `//` first (open-redirect prevention), the same rule already applied to the venue detail page's `from`/back-link param.
+- Never log or persist a password, recovery token, OAuth `code`, or `token_hash`/`access_token` beyond what's needed to complete a single sign-in or recovery request.

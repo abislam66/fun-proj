@@ -1,4 +1,5 @@
 import { VenueExplorer } from "@/components/venues/venue-explorer";
+import { getUser } from "@/lib/auth";
 import { getPublishedVenues, toVenue } from "@/lib/db/queries";
 
 type PageProps = {
@@ -13,8 +14,18 @@ export default async function HomePage({ searchParams }: PageProps) {
     else if (value !== undefined) params.set(key, value);
   });
 
-  const publishedRows = await getPublishedVenues();
+  const [publishedRows, session] = await Promise.all([
+    getPublishedVenues(),
+    getUser(),
+  ]);
   const venues = publishedRows.map(toVenue);
+  const user = session ? { displayName: session.profile.displayName } : null;
 
-  return <VenueExplorer initialQuery={params.toString()} venues={venues} />;
+  return (
+    <VenueExplorer
+      initialQuery={params.toString()}
+      user={user}
+      venues={venues}
+    />
+  );
 }

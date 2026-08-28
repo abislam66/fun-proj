@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
+import { SignInGate } from "@/components/venues/sign-in-gate";
 import { VenueDetail } from "@/components/venues/venue-detail";
+import { getUser } from "@/lib/auth";
 import { getVenueBySlug, toVenue } from "@/lib/db/queries";
+import { safeInternalPath } from "@/lib/safe-path";
 import type { Venue } from "@/lib/venues";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +26,14 @@ export default async function VenueDetailPage({
     notFound();
   }
 
-  const venue: Venue = toVenue(row);
-  const backPath =
-    query.from?.startsWith("/") && !query.from.startsWith("//")
-      ? query.from
-      : "/";
+  const session = await getUser();
+  if (!session) {
+    return <SignInGate next={`/eat/${slug}`} venueName={row.name} />;
+  }
 
-  return <VenueDetail backPath={backPath} venue={venue} />;
+  const venue: Venue = toVenue(row);
+  const backPath = safeInternalPath(query.from);
+  const user = { displayName: session.profile.displayName };
+
+  return <VenueDetail backPath={backPath} user={user} venue={venue} />;
 }

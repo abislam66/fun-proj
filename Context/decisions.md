@@ -7,6 +7,64 @@
 
 ---
 
+## 2026-08-28 — Reversed two explicit auth rules to add member Google sign-in + a login-wall on venue pages
+
+`Specs/auth-security.md` said, in three separate places (the anonymous-access
+non-goal, the Identity Strategy table, and the "What Claude Code Should Never
+Do" list), that login-walling was a non-goal and that social login would
+never be added. The site owner explicitly asked for both anyway — Google
+sign-in via Supabase Auth, required to open `/eat/[slug]` but not to browse
+the map/list/search — and, when I flagged the conflict, chose to override the
+specs rather than scale the request down. `Specs/auth-security.md` and
+`CLAUDE.md` were updated in the same session to match what actually shipped,
+rather than leaving them describing a rule the code now violates.
+
+**What actually changed, concretely:**
+- A `member` role is now real (it previously existed only as an unused enum
+  value): any Google account can create one by hitting the sign-in gate on a
+  venue page. It grants nothing beyond "can view venue detail pages" —
+  ratings/reviews/proposals are still unbuilt.
+- `/eat/[slug]` checks `getUser()` server-side, in the page component itself,
+  before rendering any venue data — not a client-side click intercept. A
+  shared or bookmarked link is gated exactly the same as a homepage click.
+- One route handler now exists, `src/app/auth/callback/route.ts` — OAuth's
+  redirect-based code exchange genuinely has no server-action equivalent
+  (a Server Component can't set cookies, so the exchange can't happen from
+  one; see the `setAll` comment in `src/lib/auth.ts`). This is the same
+  category of thing the 2026-08-18 admin cutover deliberately deleted
+  (`/auth/callback` for OTP) — reintroduced here for a different auth method,
+  not a regression of that decision.
+- `ensureMemberProfile()` (`src/lib/member-profile.ts`) is the only code path
+  that auto-creates a `profiles` row without the maintainer's direct DB
+  access, and it's hardcoded to `role: "member"` — there's no way for a
+  Google account, regardless of its email or name, to become `admin`.
+  `pickDisplayName()` mirrors `uniqueSlug()`'s collision-suffix pattern
+  (`base`, `base2`, `base3`, ...) since display names have no separator
+  convention of their own.
+- The middleware's session-refresh logic previously only ran on
+  `/admin/:path*`. Left that way, a member's session would have silently
+  stopped refreshing on public pages after the ~1h access-token TTL, even
+  with a valid 30-day refresh token — the `setAll` cookie-write path only
+  works from middleware or a route handler, never a Server Component. Widened
+  the matcher to run on every route except static assets and the callback
+  route itself.
+- Also fixed, while in `/about`: Vercel Analytics (added 2026-08-27) had
+  never actually gotten the disclosure update `auth-security.md` itself
+  requires happen "first" — added now, alongside the new Google sign-in
+  disclosure, rather than leaving that gap in place.
+
+**Why this is a real reversal, not a clarification:** the original rules were
+deliberate, not oversights — "browsing never requires login" and "no social
+login" were both stated more than once, including in a dedicated "never do
+this" list clearly written to stop exactly this from happening later. This
+entry exists so a future session doesn't read the old, now-superseded
+reasoning in `Context/backlog.md`'s "OTP-friction auth fallback" note (which
+describes a *different*, still-hypothetical scenario — a campus-domain-
+restricted Google OAuth supplementing member OTP, not replacing it as the
+only method) and assume this shipped quietly or by accident.
+
+---
+
 ## 2026-08-27 — Evidence bar for `is_vegan_friendly`, and how the Broad St zone conflict was actually resolved
 
 **`is_vegan_friendly`'s bar, applied literally:** a venue only qualifies with a specific, named, standing menu item that's plant-based — not a drink, not a side by itself, not "could be made vegan on request." This ruled out several venues that had *some* signal: Champ's Diner had one source claiming vegan options and a Yelp reviewer directly denying it — conflicting evidence, left false rather than picking a side. Maple Star has vegetarian udon, confirmed, but vegetarian isn't vegan (broth/egg risk) and nothing confirmed it was actually vegan — left false. Mexican Grill Stand has a standing "veggies" taco/burrito filling, but nothing confirmed it ships without cheese/crema by default — the difference between "a real menu path" (counts, like Saladworks'/QDOBA's build-your-own vegan bowls, which do count) and "an ingredient that could theoretically anchor a request" (doesn't count) was the deciding line throughout.

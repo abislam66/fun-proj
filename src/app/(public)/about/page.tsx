@@ -1,11 +1,15 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import { getUser } from "@/lib/auth";
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const session = await getUser();
+  const user = session ? { displayName: session.profile.displayName } : null;
+
   return (
     <div className="public-page">
-      <SiteHeader />
+      <SiteHeader user={user} />
       <main className="about-page">
         <p className="eyebrow">About the guide</p>
         <h1>Campus food, without the guesswork.</h1>
@@ -29,6 +33,25 @@ export default function AboutPage() {
             Listings are curated and periodically checked. Hours are always a
             guide, not a promise. If something looks wrong, use the report link
             on the venue page so it can be checked.
+          </p>
+        </section>
+        <section>
+          <h2>Signing in</h2>
+          <p>
+            Browsing the map, search, and filters never requires an account.
+            Opening a specific place&rsquo;s full page does, using Google
+            sign-in through Supabase. We only ever see your name and email from
+            Google to create your account &mdash; your email is never shown to
+            anyone or stored outside of authentication, and your Google password
+            is never seen by TuEats at all.
+          </p>
+        </section>
+        <section>
+          <h2>Cookies &amp; analytics</h2>
+          <p>
+            We use a cookie only to keep you signed in. Vercel Web Analytics
+            counts page views without cookies or ad tracking &mdash; there are
+            no advertising trackers on TuEats.
           </p>
         </section>
         <aside className="about-note">

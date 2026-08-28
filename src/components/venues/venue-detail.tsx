@@ -62,9 +62,11 @@ function HoursTable({ hours }: { hours: VenueHours | null }) {
 export function VenueDetail({
   venue,
   backPath,
+  user,
 }: {
   venue: Venue;
   backPath: string;
+  user: { displayName: string } | null;
 }) {
   const verified = venue.lastVerifiedAt
     ? new Intl.DateTimeFormat("en-US", {
@@ -78,7 +80,7 @@ export function VenueDetail({
 
   return (
     <div className="public-page">
-      <SiteHeader />
+      <SiteHeader user={user} />
       <main className="detail-page">
         <Link className="back-link" href={backPath}>
           ← Back to explore
