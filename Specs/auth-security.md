@@ -75,11 +75,17 @@ password recovery both still avoid one entirely.
 The callback also carries a `next` query param — the exact path the user was
 on when they hit the sign-in gate (e.g. `/eat/richies-cafe`) — so a
 successful sign-in returns them there instead of the homepage. `next` is
-validated server-side against the same "must start with `/`, must not start
-with `//`" rule already used for the venue detail page's `back` link
-(`query.from` in `src/app/(public)/eat/[slug]/page.tsx`), which rejects
-protocol-relative URLs and is the app's standard defense against an
-open-redirect via this param.
+validated server-side by `safeInternalPath()` (`src/lib/safe-path.ts`), also
+used for the venue detail page's `back` link (`query.from` in
+`src/app/(public)/eat/[slug]/page.tsx`). An earlier version of this check
+only tested that the string started with `/` and didn't start with `//` —
+that's insufficient: `URL` parsing (and every browser) normalizes values like
+`/\evil.com` or a leading tab before a host past that check, collapsing them
+into a protocol-relative `//evil.com` that resolves off-site. `safeInternalPath()`
+instead parses the value against a fixed placeholder origin with the `URL`
+constructor and checks the **resulting** origin, catching any input that
+resolves off-site regardless of how it's spelled — this is the app's standard
+defense against an open-redirect via this param.
 
 On first sign-in, the callback also calls `ensureMemberProfile()`
 (`src/lib/member-profile.ts`), which inserts a `profiles` row with
@@ -302,5 +308,5 @@ The `/about` page must plainly disclose:
 - Never add a social login provider beyond Google for members (no Apple, Facebook, etc.) without a deliberate spec change — and never add one for admin at all, which stays password-only.
 - Never let a successful sign-in (Google OAuth, password, or password recovery) imply admin access — `requireAdmin()`'s `profiles.role = "admin"` check is the only source of authorization, always. `ensureMemberProfile()` is hardcoded to `role: "member"`; there is no path from any Google account to `admin`.
 - Never add a route handler for anything other than the OAuth callback (`src/app/auth/callback/route.ts`) — every other mutation is still a server action; the callback is a deliberate, narrow exception because OAuth's redirect handshake has no server-action equivalent.
-- Never pass an unvalidated `next`/redirect param to `NextResponse.redirect` — always check it starts with `/` and not `//` first (open-redirect prevention), the same rule already applied to the venue detail page's `from`/back-link param.
+- Never pass an unvalidated `next`/redirect param to `NextResponse.redirect` (or a `<Link href>`) — always run it through `safeInternalPath()` (`src/lib/safe-path.ts`) first. A plain string prefix check (`starts with "/", not "//"`) is not enough — it still lets through values like `/\evil.com` that `URL` parsing collapses into a protocol-relative, off-site redirect.
 - Never log or persist a password, recovery token, OAuth `code`, or `token_hash`/`access_token` beyond what's needed to complete a single sign-in or recovery request.
