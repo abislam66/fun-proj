@@ -773,6 +773,105 @@ button {
   outline-offset: 2px;
 }
 
+/* Cluster badge popover — several venues sharing a screen pixel. Anchored
+   at the click point (venue-pill-layer.tsx writes left/top directly, same
+   technique as the mini-card); parked offscreen until first placed. */
+.map-cluster-card-anchor {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  z-index: 6;
+  transform: translate(-50%, calc(-100% - 0.75rem));
+}
+
+.map-cluster-card-anchor-below {
+  transform: translate(-50%, 0.75rem);
+}
+
+.map-cluster-card {
+  width: min(16rem, calc(100vw - 2rem));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 28px rgba(28, 25, 23, 0.12);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.map-cluster-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.map-cluster-card-close {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    color var(--duration-micro) var(--ease-move);
+}
+
+.map-cluster-card-close:hover {
+  background: var(--color-cherry-soft);
+  color: var(--color-ink);
+}
+
+.map-cluster-card-close:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.map-cluster-card-list {
+  max-height: min(15rem, 50vh);
+  overflow-y: auto;
+}
+
+.map-cluster-card-row {
+  display: block;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body), sans-serif;
+  font-size: var(--text-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-move);
+}
+
+.map-cluster-card-list li:last-child .map-cluster-card-row {
+  border-bottom: 0;
+}
+
+.map-cluster-card-row:hover {
+  background: var(--color-cherry-soft);
+}
+
+.map-cluster-card-row:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: -2px;
+  background: var(--color-cherry-soft);
+}
+
 .desktop-results {
   display: none;
 }

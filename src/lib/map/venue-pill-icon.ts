@@ -87,6 +87,29 @@ export function venuePillIconId(
   return `venue-pill/${state}/${venueId}/${name}`;
 }
 
+/**
+ * Image id for a cluster badge — several venues occupying (near-)identical
+ * screen space, shown as one "N spots" pill instead of silently stacking.
+ * Keyed only by count + state: the label text depends on nothing else, so
+ * clusters of the same size reuse one baked sprite regardless of which
+ * venues happen to be in them.
+ */
+export function clusterPillIconId(count: number, state: VenuePillState): string {
+  return `cluster-pill/${state}/${count}`;
+}
+
+export function clusterPillLabel(count: number): string {
+  return `${count} spots`;
+}
+
+/** Same baked-pill treatment as a venue, labeled with a spot count. */
+export function buildClusterPillIcon(
+  count: number,
+  state: VenuePillState,
+): VenuePillIconAsset {
+  return buildVenuePillIcon(clusterPillLabel(count), state);
+}
+
 const VENUE_PILL_STYLES: Record<VenuePillState, PillStyle> = {
   normal: { fill: VENUE_FILL, stroke: VENUE_STROKE, borderWidth: 2 },
   hover: { fill: VENUE_FILL, stroke: VENUE_STROKE, borderWidth: 3 },
