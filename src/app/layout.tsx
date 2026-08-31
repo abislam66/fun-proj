@@ -1,48 +1,44 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "@fontsource-variable/jetbrains-mono";
+import {
+  Audiowide,
+  Monoton,
+  Rajdhani,
+  Share_Tech_Mono,
+} from "next/font/google";
 import "./globals.css";
 
 import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
 
-const cabinetGrotesk = localFont({
-  src: [
-    {
-      path: "../../public/fonts/cabinet-grotesk-700.woff2",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/cabinet-grotesk-800.woff2",
-      weight: "800",
-      style: "normal",
-    },
-  ],
+// GTA6-retro redesign (branch: gta6-redesign) — neon-sign type system.
+// Phase alpha's Cabinet Grotesk/Satoshi/JetBrains Mono live on `main`;
+// see Context memory "phase-alpha-checkpoint" for the fallback plan.
+const monoton = Monoton({
+  weight: "400",
+  subsets: ["latin"],
   display: "swap",
-  variable: "--font-cabinet-grotesk",
+  variable: "--font-monoton",
 });
 
-const satoshi = localFont({
-  src: [
-    {
-      path: "../../public/fonts/satoshi-400.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/satoshi-500.woff2",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/satoshi-700.woff2",
-      weight: "700",
-      style: "normal",
-    },
-  ],
+const audiowide = Audiowide({
+  weight: "400",
+  subsets: ["latin"],
   display: "swap",
-  variable: "--font-satoshi",
+  variable: "--font-audiowide",
+});
+
+const rajdhani = Rajdhani({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-rajdhani",
+});
+
+const shareTechMono = Share_Tech_Mono({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-share-tech-mono",
 });
 
 export const metadata: Metadata = {
@@ -63,8 +59,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${cabinetGrotesk.variable} ${satoshi.variable}`}>
+    <html
+      className={`${monoton.variable} ${audiowide.variable} ${rajdhani.variable} ${shareTechMono.variable}`}
+      lang="en"
+    >
+      <body>
         <RecoveryRedirect />
         {children}
         <Analytics />

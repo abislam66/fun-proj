@@ -1,10 +1,17 @@
 @import "tailwindcss";
 
 :root {
+  /* GTA6-retro redesign (branch: gta6-redesign) — the user asked to keep
+     TuEats' actual cherry-red-and-white identity; retro comes from type
+     (Monoton/Audiowide/Rajdhani/Share Tech Mono), chrome/glow treatment,
+     and the dark "marquee" header signature below, NOT a palette swap.
+     Phase alpha (this same palette) is tagged `phase-alpha` on `main` —
+     see Context memory "phase-alpha-checkpoint" for the fallback plan. */
   --color-cherry: #9d2235;
   --color-cherry-hover: #b52a3f;
   --color-cherry-deep: #6e1826;
   --color-cherry-soft: #f8ecef;
+  --color-marquee: #171310;
   --color-canvas: #f5f5f4;
   --color-surface: #ffffff;
   --color-surface-raised: #fafaf9;
@@ -22,9 +29,10 @@
   --color-map-land: #eeeeea;
   --color-map-water: #d9e2e8;
 
-  --font-display: var(--font-cabinet-grotesk);
-  --font-body: var(--font-satoshi);
-  --font-data: "JetBrains Mono Variable";
+  --font-display: var(--font-audiowide);
+  --font-signature: var(--font-monoton);
+  --font-body: var(--font-rajdhani);
+  --font-data: var(--font-share-tech-mono);
 
   --text-display: 2rem;
   --text-display--line-height: 2.5rem;
@@ -71,6 +79,7 @@
   --color-cherry-hover: #b52a3f;
   --color-cherry-deep: #6e1826;
   --color-cherry-soft: #f8ecef;
+  --color-marquee: #171310;
   --color-canvas: #f5f5f4;
   --color-surface: #ffffff;
   --color-surface-raised: #fafaf9;
@@ -88,10 +97,11 @@
   --color-map-land: #eeeeea;
   --color-map-water: #d9e2e8;
 
-  --font-display: var(--font-cabinet-grotesk);
-  --font-body: var(--font-satoshi);
-  --font-data: "JetBrains Mono Variable";
-  --font-mono: "JetBrains Mono Variable";
+  --font-display: var(--font-audiowide);
+  --font-signature: var(--font-monoton);
+  --font-body: var(--font-rajdhani);
+  --font-data: var(--font-share-tech-mono);
+  --font-mono: var(--font-share-tech-mono);
 
   --text-display: 2rem;
   --text-display--line-height: 2.5rem;
@@ -232,6 +242,11 @@ button {
   border: 0;
 }
 
+/* The one deliberately bold moment (frontend-design skill: "spend your
+   boldness in one place") — a dark marquee bar with the wordmark lit up
+   like a neon sign, while every other surface stays the plain cherry/
+   white theme. Cherry red stays the only accent hue; retro comes from
+   the black ground + glow + Monoton, not a palette change. */
 .site-header {
   position: relative;
   z-index: 30;
@@ -240,17 +255,20 @@ button {
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  background: var(--color-marquee);
+  border-bottom: 3px solid var(--color-cherry);
+  box-shadow: 0 2px 24px rgba(157, 34, 53, 0.45);
 }
 
 .site-header nav {
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);
-  color: var(--color-ink-secondary);
+  color: #d9cfc8;
   font-size: var(--text-small);
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .site-header nav a {
@@ -259,30 +277,42 @@ button {
 }
 
 .site-header nav a:hover {
-  color: var(--color-cherry);
-  border-color: var(--color-cherry);
+  color: var(--color-cherry-hover);
+  border-color: var(--color-cherry-hover);
+}
+
+.site-header .account-name {
+  color: #a89a92;
 }
 
 .wordmark {
   position: relative;
   display: inline-flex;
   align-items: baseline;
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.55rem;
-  font-weight: 800;
-  letter-spacing: -0.045em;
+  font-family: var(--font-signature), var(--font-display), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: #f5ece6;
 }
 
 .wordmark-accent {
-  color: var(--color-cherry);
+  color: var(--color-cherry-hover);
+  text-shadow:
+    0 0 6px rgba(213, 63, 90, 0.9),
+    0 0 16px rgba(213, 63, 90, 0.7),
+    0 0 32px rgba(213, 63, 90, 0.45);
 }
 
 .wordmark-dot {
-  width: 0.32rem;
-  height: 0.32rem;
-  margin-left: 0.2rem;
+  width: 0.34rem;
+  height: 0.34rem;
+  margin-left: 0.3rem;
   border-radius: 50%;
-  background: var(--color-cherry);
+  background: var(--color-cherry-hover);
+  box-shadow:
+    0 0 6px rgba(213, 63, 90, 0.95),
+    0 0 14px rgba(213, 63, 90, 0.7);
 }
 
 .button {
@@ -660,7 +690,9 @@ button {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 28px rgba(28, 25, 23, 0.12);
+  box-shadow:
+    0 10px 28px rgba(28, 25, 23, 0.12),
+    0 0 18px rgba(157, 34, 53, 0.1);
   backdrop-filter: blur(8px);
   transition: transform var(--duration-short) var(--ease-move);
 }
@@ -793,7 +825,9 @@ button {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 28px rgba(28, 25, 23, 0.12);
+  box-shadow:
+    0 10px 28px rgba(28, 25, 23, 0.12),
+    0 0 18px rgba(157, 34, 53, 0.1);
   backdrop-filter: blur(8px);
   overflow: hidden;
 }
