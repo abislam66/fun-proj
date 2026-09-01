@@ -45,6 +45,21 @@ export const MAP_ZONE_CLICK_LAYER_IDS = [
 const CHERRY = "#9D2235";
 const CHERRY_SOFT = "#F8ECEF";
 
+/** One color per zone (retro-HUD redesign) instead of every zone sharing cherry. */
+const ZONE_FILL_MATCH = [
+  "match",
+  ["get", "zoneKey"],
+  ...MAP_ZONE_KEYS.flatMap((key) => [key, MAP_ZONES[key].color]),
+  CHERRY,
+] as unknown as string;
+
+const ZONE_SOFT_MATCH = [
+  "match",
+  ["get", "zoneKey"],
+  ...MAP_ZONE_KEYS.flatMap((key) => [key, MAP_ZONES[key].soft]),
+  CHERRY_SOFT,
+] as unknown as string;
+
 function zoneKeyFromFeatures(
   features: MapGeoJSONFeature[] | undefined,
 ): MapZoneKey | null {
@@ -74,18 +89,26 @@ function setOverviewVisible(map: MapLibreMap, overview: boolean) {
 export function MapZoneLayer({
   map,
   zonesActive,
+  zoneCounts,
   onSelect,
 }: {
   map: MapLibreMap | null;
   /** Any zone filter active → the overview marks hide (pills take over). */
   zonesActive: boolean;
+  /** Live "N spots" count per zone, baked into each badge (see venue-map.tsx). */
+  zoneCounts: Record<MapZoneKey, number>;
   onSelect: (key: MapZoneKey) => void;
 }) {
   const onSelectRef = useRef(onSelect);
+  const zoneCountsRef = useRef(zoneCounts);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+
+  useEffect(() => {
+    zoneCountsRef.current = zoneCounts;
+  }, [zoneCounts]);
 
   useEffect(() => {
     if (!map) return;
@@ -100,7 +123,13 @@ export function MapZoneLayer({
     for (const key of MAP_ZONE_KEYS) {
       const imageId = zoneLabelIconId(key);
       if (map.hasImage(imageId)) map.removeImage(imageId);
-      const plate = buildZoneLabelIcon(MAP_ZONES[key].label);
+      const zone = MAP_ZONES[key];
+      const plate = buildZoneLabelIcon(
+        zone.label,
+        zoneCountsRef.current[key] ?? 0,
+        zone.color,
+        zone.icon,
+      );
       map.addImage(imageId, plate, { pixelRatio: plate.pixelRatio });
     }
 
@@ -130,7 +159,7 @@ export function MapZoneLayer({
         source: SOURCE_ID,
         filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.buildingFill],
         paint: {
-          "fill-color": CHERRY_SOFT,
+          "fill-color": ZONE_SOFT_MATCH,
           "fill-opacity": 0.88,
         },
       },
@@ -144,7 +173,7 @@ export function MapZoneLayer({
         source: SOURCE_ID,
         filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.buildingFill],
         paint: {
-          "line-color": CHERRY,
+          "line-color": ZONE_FILL_MATCH,
           "line-width": 1.6,
           "line-opacity": 0.95,
         },
@@ -163,7 +192,7 @@ export function MapZoneLayer({
           "line-join": "round",
         },
         paint: {
-          "line-color": CHERRY_SOFT,
+          "line-color": ZONE_SOFT_MATCH,
           "line-width": ["interpolate", ["linear"], ["zoom"], 14, 10, 16, 18],
           "line-opacity": 0.95,
         },
@@ -182,7 +211,7 @@ export function MapZoneLayer({
           "line-join": "round",
         },
         paint: {
-          "line-color": CHERRY,
+          "line-color": ZONE_FILL_MATCH,
           "line-width": ["interpolate", ["linear"], ["zoom"], 14, 4, 16, 7],
         },
       },
@@ -201,13 +230,13 @@ export function MapZoneLayer({
           "icon-ignore-placement": true,
           "icon-overlap": "always",
           "icon-padding": 0,
-          "icon-anchor": "center",
+          "icon-anchor": "bottom",
           "icon-size": [
             "interpolate",
             ["linear"],
             ["zoom"],
             14,
-            1,
+            0.92,
             16,
             14 / 12,
           ],
@@ -253,6 +282,25 @@ export function MapZoneLayer({
       }
     };
   }, [map]);
+
+  // Re-bake each zone's badge whenever the live spot count changes (filter
+  // changes, publish/retire, etc.) — same image id, updated bitmap, so the
+  // symbol layer above never needs to be touched.
+  useEffect(() => {
+    if (!map) return;
+    for (const key of MAP_ZONE_KEYS) {
+      const imageId = zoneLabelIconId(key);
+      if (!map.hasImage(imageId)) continue;
+      const zone = MAP_ZONES[key];
+      const plate = buildZoneLabelIcon(
+        zone.label,
+        zoneCounts[key] ?? 0,
+        zone.color,
+        zone.icon,
+      );
+      map.updateImage(imageId, plate);
+    }
+  }, [map, zoneCounts]);
 
   useEffect(() => {
     if (!map || !map.getSource(SOURCE_ID)) return;

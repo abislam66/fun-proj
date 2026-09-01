@@ -588,54 +588,72 @@ button {
   box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.22);
 }
 
-.map-zone-chrome {
+/* Retro-HUD map header — a game-map-style status bar instead of the old
+   corner pill: campus/zone breadcrumb, a live LAT/LON readout of the map
+   center, and (once a zone is active) a reset button. Dark like the site
+   header's marquee, so the two read as one family. */
+.map-hud-bar {
   position: absolute;
-  top: var(--spacing-md);
-  left: var(--spacing-md);
+  top: 0;
+  right: 0;
+  left: 0;
   z-index: 3;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  pointer-events: none;
-}
-
-.map-campus-chip {
-  padding: 0.35rem 0.6rem;
-  border: 1px solid rgba(231, 229, 228, 0.9);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--color-ink-secondary);
+  gap: var(--spacing-md);
+  padding: 0.5rem var(--spacing-md);
+  background: var(--color-marquee);
+  border-bottom: 2px solid var(--color-cherry);
+  color: #f0e6e1;
   font-family: var(--font-data), monospace;
   font-size: var(--text-micro);
-  letter-spacing: 0.02em;
-  backdrop-filter: blur(6px);
+  letter-spacing: 0.03em;
   pointer-events: none;
 }
 
-.map-all-zones {
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-family: var(--font-body), sans-serif;
-  font-size: var(--text-small);
-  font-weight: 600;
-  line-height: 1.35;
-  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06);
+.map-hud-location {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.map-hud-coords {
+  display: none;
+  margin-left: auto;
+  color: var(--color-cherry-hover);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 26rem) {
+  .map-hud-coords {
+    display: inline;
+  }
+}
+
+.map-hud-reset {
+  flex-shrink: 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--color-cherry);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #f0e6e1;
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
   pointer-events: auto;
-  transition:
-    background var(--duration-micro) var(--ease-move),
-    border-color var(--duration-micro) var(--ease-move);
+  transition: background var(--duration-micro) var(--ease-move);
 }
 
-.map-all-zones:hover:not(:disabled) {
-  border-color: var(--color-cherry);
-  background: var(--color-cherry-soft);
-  color: var(--color-cherry-deep);
+.map-hud-reset:hover:not(:disabled) {
+  background: var(--color-cherry);
 }
 
-.map-all-zones:disabled {
+.map-hud-reset:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -838,11 +856,12 @@ button {
   justify-content: space-between;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+  background: var(--color-cherry);
   font-family: var(--font-data), monospace;
   font-size: var(--text-small);
-  font-weight: 600;
-  color: var(--color-ink-muted);
-  border-bottom: 1px solid var(--color-border);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #ffffff;
 }
 
 .map-cluster-card-close {
@@ -854,20 +873,17 @@ button {
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-ink-muted);
+  color: #ffffff;
   cursor: pointer;
-  transition:
-    background var(--duration-micro) var(--ease-move),
-    color var(--duration-micro) var(--ease-move);
+  transition: background var(--duration-micro) var(--ease-move);
 }
 
 .map-cluster-card-close:hover {
-  background: var(--color-cherry-soft);
-  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .map-cluster-card-close:focus-visible {
-  outline: 2px solid var(--color-cherry);
+  outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -877,7 +893,9 @@ button {
 }
 
 .map-cluster-card-row {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
   width: 100%;
   min-height: 2.75rem;
   padding: var(--spacing-sm) var(--spacing-md);
@@ -890,6 +908,33 @@ button {
   text-align: left;
   cursor: pointer;
   transition: background var(--duration-micro) var(--ease-move);
+}
+
+.map-cluster-card-swatch {
+  width: 0.6rem;
+  height: 0.6rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+}
+
+.map-cluster-card-row-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.map-cluster-card-row-name {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.map-cluster-card-row-cuisine {
+  color: var(--color-ink-muted);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
 }
 
 .map-cluster-card-list li:last-child .map-cluster-card-row {
@@ -1628,9 +1673,8 @@ button {
     bottom: calc(var(--spacing-xl) + 2.25rem);
   }
 
-  .map-zone-chrome {
-    top: var(--spacing-xl);
-    left: var(--spacing-xl);
+  .map-hud-bar {
+    padding: 0.6rem var(--spacing-xl);
   }
 
   .map-attribution {

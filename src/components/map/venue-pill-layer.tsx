@@ -15,7 +15,15 @@ import {
   type VenuePillState,
 } from "@/lib/map/venue-pill-icon";
 import { beforeIdFor, liftOverlaysAboveBasemap } from "@/lib/map/overlay-order";
+import { CUISINES } from "@/config/cuisines";
+import { MAP_ZONES, type MapZoneKey } from "@/config/map-zones";
 import type { Venue } from "@/lib/venues";
+
+/** Cluster-card swatch color — the members' shared zone hue, cherry if unzoned. */
+function clusterSwatchColor(venue: Venue): string {
+  const zone = venue.mapZone as MapZoneKey | null;
+  return zone && zone in MAP_ZONES ? MAP_ZONES[zone].color : "#9D2235";
+}
 
 const SOURCE_ID = "venue-pills";
 export const VENUE_PILL_LAYER_ID = "venue-pills-symbol";
@@ -477,7 +485,7 @@ export function VenuePillLayer({
     <div className="map-cluster-card-anchor" ref={clusterAnchorRef}>
       <div className="map-cluster-card">
         <div className="map-cluster-card-header">
-          <span>{openCluster.venues.length} places here</span>
+          <span>{openCluster.venues.length} SPOTS HERE!</span>
           <button
             aria-label="Close"
             className="map-cluster-card-close"
@@ -510,7 +518,21 @@ export function VenuePillLayer({
                 }}
                 type="button"
               >
-                {venue.name}
+                <span
+                  aria-hidden="true"
+                  className="map-cluster-card-swatch"
+                  style={{ background: clusterSwatchColor(venue) }}
+                />
+                <span className="map-cluster-card-row-text">
+                  <span className="map-cluster-card-row-name">
+                    {venue.name}
+                  </span>
+                  {venue.cuisines[0] ? (
+                    <span className="map-cluster-card-row-cuisine">
+                      {CUISINES[venue.cuisines[0]].label}
+                    </span>
+                  ) : null}
+                </span>
               </button>
             </li>
           ))}

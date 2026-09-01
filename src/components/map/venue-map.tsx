@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
 import { CampusBuildingLayer } from "@/components/map/campus-building-layer";
@@ -24,6 +24,7 @@ import {
   PaymentTag,
 } from "@/components/venues/venue-bits";
 import {
+  MAP_ZONE_KEYS,
   MAP_ZONES,
   MAP_ZONE_OVERVIEW_MAX_ZOOM,
   mapZoneBounds,
@@ -106,6 +107,38 @@ export function VenueMap({
   const pinVenues = zonesActive ? venues : selectedVenue ? [selectedVenue] : [];
   const poppedVenue =
     selectedVenue && poppedVenueId === selectedVenue.id ? selectedVenue : null;
+
+  // Live "SPOTS" counts baked into each zone badge (retro-HUD redesign) —
+  // recomputed whenever the filtered venue set changes, not just on mount.
+  const zoneCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      MAP_ZONE_KEYS.map((key) => [key, 0]),
+    ) as Record<MapZoneKey, number>;
+    for (const venue of venues) {
+      const key = mapZoneContaining(venue.lng, venue.lat);
+      if (key) counts[key] += 1;
+    }
+    return counts;
+  }, [venues]);
+
+  // HUD coordinate readout — the map center, live as the camera moves.
+  const [hudCenter, setHudCenter] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!map) return;
+    function updateCenter() {
+      if (!map) return;
+      const c = map.getCenter();
+      setHudCenter({ lat: c.lat, lng: c.lng });
+    }
+    updateCenter();
+    map.on("move", updateCenter);
+    return () => {
+      map.off("move", updateCenter);
+    };
+  }, [map]);
 
   useEffect(() => {
     onClearSelectionRef.current = onClearSelection;
@@ -439,17 +472,22 @@ export function VenueMap({
         <LocateControl map={map} />
       </div>
 
-      <div className="map-zone-chrome">
-        <div className="map-campus-chip">
+      <div className="map-hud-bar">
+        <span className="map-hud-location">
           {selectedZones.length === 1
-            ? MAP_ZONES[selectedZones[0]!].label
+            ? MAP_ZONES[selectedZones[0]!].label.toUpperCase()
             : zonesActive
-              ? `${selectedZones.length} zones`
-              : "Temple Main Campus"}
-        </div>
+              ? `${selectedZones.length} ZONES`
+              : "TEMPLE UNIVERSITY // PHILADELPHIA, PA"}
+        </span>
+        <span className="map-hud-coords">
+          {hudCenter
+            ? `LAT: ${hudCenter.lat.toFixed(4)} N   LON: ${Math.abs(hudCenter.lng).toFixed(4)} W`
+            : ""}
+        </span>
         {zonesActive ? (
           <button
-            className="map-all-zones"
+            className="map-hud-reset"
             disabled={!ready}
             onClick={resetView}
             type="button"
@@ -463,7 +501,12 @@ export function VenueMap({
 
       <CampusBuildingLayer map={map} />
 
-      <MapZoneLayer map={map} onSelect={selectZone} zonesActive={zonesActive} />
+      <MapZoneLayer
+        map={map}
+        onSelect={selectZone}
+        zoneCounts={zoneCounts}
+        zonesActive={zonesActive}
+      />
 
       {/* Overlay stack (overlay-order.ts) paints above Positron, so road
           names never cover buildings, zones, or pins. Dining mounts before
