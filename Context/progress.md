@@ -22,9 +22,11 @@
 - **Vercel Web Analytics added as of 2026-08-27** — `@vercel/analytics`'s `<Analytics />` in the root layout (`src/app/layout.tsx`), covering the whole app including `/admin`. No prior analytics existed (checked first). Needs a real Vercel deploy to start reporting — nothing shows in the dashboard until then.
 - **Production domain is `tueats.co` as of 2026-08-27** — `NEXT_PUBLIC_SITE_URL` and Supabase's Site URL/redirect allow-list point at it; `metadataBase` set accordingly. `tueats.vercel.app` still resolves to the same deployment (not removed).
 - **Member accounts + a login-wall on venue pages, as of 2026-08-28.** A real reversal of two previously-explicit rules in `Specs/auth-security.md` ("no login-walling," "no social login") — the site owner asked for it directly, I flagged the conflict, they chose to override the specs, so the specs (and `CLAUDE.md`) were updated to match rather than left describing a rule the code now breaks. Google OAuth via Supabase Auth, self-service, any Google account (no `@temple.edu` gate) — auto-creates a `profiles` row (`role: "member"`, never `admin`) on first sign-in through the one route handler in the app, `src/app/auth/callback/route.ts`. `/eat/[slug]` requires a session, checked server-side in the page component; the map/list/search stay fully anonymous. Full rationale and what changed: `Context/decisions.md` 2026-08-28.
+- **Member ratings/reviews + photo queue as of 2026-09-01 (TUE-12).** Signed-in members can leave a 1–5 star rating with optional review text (one row per user per venue) and submit gallery photos that stay pending until an admin approves them. Public strip still shows published photos only. Storage is still Vercel Blob; no Supabase Storage. Venue proposals and Google snapshots are still out of this slice. Forms cannot be used in production until Google OAuth dashboard config is finished (same blocker as 2026-08-28).
 - **Not yet done: the manual Google Cloud + Supabase dashboard configuration this depends on.** Code is implemented, typechecked, linted, tested (86/86), and builds clean, but Google sign-in will not actually work until the site owner: (1) creates a Google Cloud OAuth Client ID and configures the consent screen, (2) enables the Google provider in Supabase (Authentication → Providers) with that Client ID/Secret, and (3) adds `https://tueats.co/auth/callback` and `http://localhost:3000/auth/callback` to Supabase's redirect allow-list. See the conversation record for the exact steps. Not pushed/deployed pending that + the site owner's review.
 - **Next up:**
-  1. Complete the Google Cloud + Supabase manual configuration above, then do a real end-to-end sign-in test (not just local verification) before pushing.
+  1. Run migration `0009_motionless_shocker.sql` (`pnpm db:migrate` with `DIRECT_DATABASE_URL`) on the live DB **before** deploying this branch — `getPublishedVenues` now reads `ratings`, so the homepage will error until the table exists.
+  2. Complete the Google Cloud + Supabase manual configuration above, then do a real end-to-end sign-in test (not just local verification) before pushing.
   2. Retire **Vegan Tree** via `/admin` — reconfirmed 2026-08-27 as CLOSED per Yelp (this was already flagged 2026-08-21; still not acted on).
   3. Resolve **Pretzel Dough**'s identity — still unconfirmed after a second research pass 2026-08-27; the nearest name match found (Philly Pretzel Factory) is a different brand, not a confirmed match.
   4. Manually set `is_halal` for venues where it applies — deliberately never auto-set (see 2026-08-27 decisions entry).
@@ -35,6 +37,16 @@
   9. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   10. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
   11. Manually verify, through a real authenticated browser session: the multi-photo admin UI, the map-zone picker/dropdown/warning UI, the photo-upload flow, and the new Halal/Vegan Friendly checkboxes — all verified at the data/logic layer this session or earlier, never through a real `/admin` click-through.
+
+---
+
+## 2026-09-01 — TUE-12 member ratings/reviews and moderated gallery photos
+
+Pulled Feature 9–10 forward: `ratings` table (stars required, review text optional, one per user per venue), `requireMember()`, `submitRating`/`deleteRating`, student aggregate on detail + list rows, composer + review list on `/eat/[slug]`. Member photo submissions reuse Vercel Blob + `venue_photos` with `source: member` / `status: pending|published|rejected`; admin dashboard gained a photo queue (approve blocked at 10 published). Migration `0009_motionless_shocker.sql` is additive — not auto-applied; run `pnpm db:migrate` against the live DB before this ships.
+
+**Not in this slice:** venue proposals, Google snapshots, public report-a-review queue, `/account` page, menu CMS.
+
+**Not verified in a browser:** Google OAuth is still unconfigured, so the member forms cannot be clicked through end-to-end until that dashboard work lands. Logic is covered by unit tests.
 
 ---
 

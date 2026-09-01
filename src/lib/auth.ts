@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 
-import { assertIsAdmin } from "@/lib/auth-guards";
+import { assertIsAdmin, assertIsMember } from "@/lib/auth-guards";
 import { db } from "@/lib/db";
 import { profiles, type ProfileRow } from "@/lib/db/schema";
 
@@ -73,5 +73,12 @@ export async function getUser(): Promise<SessionUser | null> {
 export async function requireAdmin(): Promise<SessionUser> {
   const session = await getUser();
   assertIsAdmin(session?.profile);
+  return session!;
+}
+
+/** Signed-in profile that is not struck — members and admins. */
+export async function requireMember(): Promise<SessionUser> {
+  const session = await getUser();
+  assertIsMember(session?.profile);
   return session!;
 }

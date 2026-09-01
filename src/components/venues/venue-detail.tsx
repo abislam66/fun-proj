@@ -1,6 +1,12 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import {
+  VenueReviews,
+  type OwnRating,
+  type PublicReview,
+} from "@/components/reviews/venue-reviews";
+import { AddVenuePhotoForm } from "@/components/venues/add-venue-photo-form";
 import { ReportProblemForm } from "@/components/venues/report-problem-form";
 import {
   CuisineTags,
@@ -63,10 +69,18 @@ export function VenueDetail({
   venue,
   backPath,
   user,
+  reviews,
+  ownRating,
+  userId,
+  isAdmin,
 }: {
   venue: Venue;
   backPath: string;
   user: { displayName: string } | null;
+  reviews: PublicReview[];
+  ownRating: OwnRating | null;
+  userId: string;
+  isAdmin: boolean;
 }) {
   const verified = venue.lastVerifiedAt
     ? new Intl.DateTimeFormat("en-US", {
@@ -77,6 +91,7 @@ export function VenueDetail({
       }).format(new Date(`${venue.lastVerifiedAt}T12:00:00Z`))
     : null;
   const location = venueLocationText(venue);
+  const canWrite = venue.status !== "retired";
 
   return (
     <div className="public-page">
@@ -109,6 +124,22 @@ export function VenueDetail({
         </header>
 
         <VenuePhotoGallery slug={venue.slug} venueName={venue.name} />
+
+        {canWrite ? (
+          <div className="add-photo-slot">
+            <AddVenuePhotoForm venueId={venue.id} />
+          </div>
+        ) : null}
+
+        <VenueReviews
+          canWrite={canWrite}
+          isAdmin={isAdmin}
+          ownRating={ownRating}
+          reviews={reviews}
+          summary={venue.studentRating}
+          userId={userId}
+          venueId={venue.id}
+        />
 
         {venue.description ? (
           <section className="detail-section">

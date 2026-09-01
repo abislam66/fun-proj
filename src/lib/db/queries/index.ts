@@ -17,13 +17,32 @@ export {
   getVenuePhotosForAdmin,
   getVenuePhotoById,
   insertVenuePhoto,
+  insertMemberVenuePhoto,
+  countPublishedVenuePhotos,
+  listPendingVenuePhotos,
+  publishMemberVenuePhoto,
+  rejectMemberVenuePhoto,
   deleteVenuePhotoById,
   setVenuePhotoOrder,
+  assertMemberPhotoAllowed,
   type VenuePhoto,
   type AdminVenuePhoto,
+  type PendingVenuePhoto,
 } from "./venue-photos";
 export {
   getProfileById,
   listDisplayNames,
   insertMemberProfile,
 } from "./profiles";
+export {
+  getRatingAggregatesByVenueIds,
+  getVenueRatingAggregate,
+  listVenueReviews,
+  getUserRatingForVenue,
+  assertRatingUpsertAllowed,
+  upsertRating,
+  deleteOwnRating,
+  getRatingById,
+  removeRating,
+  type VenueReview,
+} from "./ratings";

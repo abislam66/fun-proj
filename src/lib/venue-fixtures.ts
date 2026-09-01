@@ -29,6 +29,7 @@ export const MOCK_VENUES: Venue[] = [
     cuisines: ["american"],
     hours: weekdayLunch,
     lastVerifiedAt: "2026-07-12",
+    studentRating: null,
   },
   {
     id: "venue-compass-kitchen",
@@ -56,6 +57,7 @@ export const MOCK_VENUES: Venue[] = [
       thu: [{ open: "11:00", close: "19:00" }],
     },
     lastVerifiedAt: "2026-07-08",
+    studentRating: null,
   },
   {
     id: "venue-twelfth-tacos",
@@ -78,6 +80,7 @@ export const MOCK_VENUES: Venue[] = [
     cuisines: ["mexican"],
     hours: weekdayLunch,
     lastVerifiedAt: "2026-06-29",
+    studentRating: null,
   },
   {
     id: "venue-island-bowl",
@@ -98,6 +101,7 @@ export const MOCK_VENUES: Venue[] = [
     cuisines: ["caribbean"],
     hours: null,
     lastVerifiedAt: null,
+    studentRating: null,
   },
   {
     id: "venue-campus-wok",
@@ -118,6 +122,7 @@ export const MOCK_VENUES: Venue[] = [
     cuisines: ["chinese"],
     hours: weekdayLunch,
     lastVerifiedAt: "2026-07-03",
+    studentRating: null,
   },
   {
     id: "venue-fruit-line",
@@ -138,6 +143,7 @@ export const MOCK_VENUES: Venue[] = [
     cuisines: ["fruit"],
     hours: null,
     lastVerifiedAt: "2026-05-21",
+    studentRating: null,
   },
   {
     id: "venue-old-lunch-counter",
@@ -157,6 +163,7 @@ export const MOCK_VENUES: Venue[] = [
     cuisines: ["american"],
     hours: null,
     lastVerifiedAt: "2026-03-14",
+    studentRating: null,
   },
 ];
 

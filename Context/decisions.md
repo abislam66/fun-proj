@@ -7,6 +7,36 @@
 
 ---
 
+## 2026-09-01 — Member ratings/reviews plus a member photo *queue*, not a menu CMS
+
+TUE-12 asked for user-generated reviews and menu pictures. Specs already defined
+reviews as Feature 9–10 (one `ratings` row per user per venue; stars required,
+`review_text` optional ≤ 1000). Specs also rejected a per-venue menu CMS
+(`features.md` out of scope) and parked “menu photos” on the backlog.
+
+**What we shipped instead of a menu CMS:** members can submit a JPEG/PNG/WebP
+into the existing `venue_photos` gallery. Those rows are `source: member`,
+`status: pending`, and stay off the public strip until an admin approves them.
+Approve is blocked at the published cap (`MAX_VENUE_PHOTOS` = 10); pending
+submissions do not consume that cap, so a full gallery does not silently drop
+student photos. Reject deletes the Vercel Blob and marks the row `rejected`.
+Admin uploads remain auto-published.
+
+**Why not attach photos to the review row:** the site owner chose
+community-maintaining the venue gallery (with moderation) over review-attached
+food shots. The review itself stays text + stars.
+
+**Why this pulls Phase 2 forward:** milestone ① is still incomplete (hours
+curation, Google OAuth dashboard config). Same pattern as 2026-08-28 member
+accounts — the ticket is explicit, so the write path ships and Specs are left
+alone unless asked.
+
+Storage stays Vercel Blob (`venue-images`). No Supabase Storage. Member writes
+go through `requireMember()` (session + unstruck profile), Postgres-backed
+rate limits, then `revalidateTag`.
+
+---
+
 ## 2026-08-28 — Reversed two explicit auth rules to add member Google sign-in + a login-wall on venue pages
 
 `Specs/auth-security.md` said, in three separate places (the anonymous-access

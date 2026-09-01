@@ -11,6 +11,7 @@ import {
   PaymentTag,
   VenueLocation,
 } from "@/components/venues/venue-bits";
+import { formatStudentRating } from "@/lib/ratings";
 
 /**
  * Rows select the venue on the map (fly-to + anchored mini-card) — they
@@ -64,6 +65,11 @@ export function VenueRow({
               <VenueLocation venue={venue} />
             </div>
           </div>
+          {venue.studentRating ? (
+            <span className="venue-row-rating">
+              {formatStudentRating(venue.studentRating, "list")}
+            </span>
+          ) : null}
         </div>
         <div className="venue-row-bottom">
           <div className="venue-tags">

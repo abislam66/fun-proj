@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { resolveProblemReport } from "@/actions/admin";
+import { resolveProblemReport, resolveVenuePhoto } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Input } from "@/components/ui/primitives";
 import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
@@ -13,6 +13,7 @@ import {
   type AdminVenueSort,
   type AdminVenueZoneFilter,
 } from "@/lib/admin-venue-list";
+import type { PendingVenuePhoto } from "@/lib/db/queries";
 import type { ProblemReportRow, VenueRow } from "@/lib/db/schema";
 import { OTHER_MAP_ZONE } from "@/lib/venues";
 
@@ -28,13 +29,17 @@ type ResolvableStatus = Exclude<ProblemReportRow["status"], "open">;
 export function AdminDashboard({
   initialReports,
   initialVenues,
+  initialPendingPhotos,
 }: {
   initialReports: ProblemReportRow[];
   initialVenues: VenueRow[];
+  initialPendingPhotos: PendingVenuePhoto[];
 }) {
   const [venues] = useState(initialVenues);
   const [reports, setReports] = useState(initialReports);
+  const [pendingPhotos, setPendingPhotos] = useState(initialPendingPhotos);
   const [pendingReportId, setPendingReportId] = useState<string | null>(null);
+  const [pendingPhotoId, setPendingPhotoId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [venueFilter, setVenueFilter] = useState<"all" | VenueRow["status"]>(
     "all",
@@ -70,6 +75,7 @@ export function AdminDashboard({
   const openReports = reports.filter(
     (report) => report.status === "open",
   ).length;
+  const pendingPhotoCount = pendingPhotos.length;
   const stale = venues.filter(
     (venue) => !venue.lastVerifiedAt && venue.status !== "retired",
   ).length;
@@ -85,6 +91,19 @@ export function AdminDashboard({
           ? { ...report, status, resolvedAt: new Date() }
           : report,
       ),
+    );
+  }
+
+  async function resolvePhoto(
+    photoId: string,
+    action: "approve" | "reject",
+  ) {
+    setPendingPhotoId(photoId);
+    const result = await resolveVenuePhoto({ photoId, action });
+    setPendingPhotoId(null);
+    if (!result.ok) return;
+    setPendingPhotos((current) =>
+      current.filter((photo) => photo.id !== photoId),
     );
   }
 
@@ -115,6 +134,12 @@ export function AdminDashboard({
           <span>Open reports</span>
           <strong className={openReports ? "metric-alert" : undefined}>
             {openReports}
+          </strong>
+        </article>
+        <article>
+          <span>Pending photos</span>
+          <strong className={pendingPhotoCount ? "metric-alert" : undefined}>
+            {pendingPhotoCount}
           </strong>
         </article>
         <article>
@@ -313,6 +338,56 @@ export function AdminDashboard({
           ))}
           {visibleReports.length === 0 ? (
             <p className="admin-empty">No reports in this queue.</p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="admin-panel" id="photos">
+        <div className="admin-panel-header">
+          <div>
+            <h2>Photo queue</h2>
+            <p>Member submissions go public only after you approve them.</p>
+          </div>
+        </div>
+
+        <div className="report-queue">
+          {pendingPhotos.map((photo) => (
+            <article className="report-row photo-queue-row" key={photo.id}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                alt={photo.alt}
+                className="photo-queue-thumb"
+                src={photo.url}
+              />
+              <div className="report-copy">
+                <Link href={`/admin/venues/${photo.venueId}`}>
+                  {photo.venueName}
+                </Link>
+                <p>
+                  From {photo.uploaderDisplayName} ·{" "}
+                  {new Date(photo.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <div className="report-row-actions">
+                <Button
+                  disabled={pendingPhotoId === photo.id}
+                  onClick={() => void resolvePhoto(photo.id, "approve")}
+                  variant="secondary"
+                >
+                  Approve
+                </Button>
+                <Button
+                  disabled={pendingPhotoId === photo.id}
+                  onClick={() => void resolvePhoto(photo.id, "reject")}
+                  variant="ghost"
+                >
+                  Reject
+                </Button>
+              </div>
+            </article>
+          ))}
+          {pendingPhotos.length === 0 ? (
+            <p className="admin-empty">No photos waiting for review.</p>
           ) : null}
         </div>
       </section>

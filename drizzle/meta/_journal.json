@@ -64,6 +64,13 @@
       "when": 1787873174227,
       "tag": "0008_dark_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788300151317,
+      "tag": "0009_motionless_shocker",
+      "breakpoints": true
     }
   ]
 }

@@ -51,3 +51,17 @@ export const ALLOWED_VENUE_IMAGE_TYPES = [
   "image/webp",
 ] as const;
 export const MAX_VENUE_PHOTOS = 10;
+
+export const MAX_REVIEW_TEXT_LENGTH = 1000;
+
+/** Member rating upserts per user per rolling day. */
+export const RATING_UPSERT_RATE_LIMIT = {
+  max: 5,
+  windowMs: 24 * 60 * 60 * 1000,
+} as const;
+
+/** Member photo submissions per user per rolling day. */
+export const MEMBER_PHOTO_RATE_LIMIT = {
+  max: 3,
+  windowMs: 24 * 60 * 60 * 1000,
+} as const;
