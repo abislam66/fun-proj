@@ -218,11 +218,46 @@ a.button {
 
 .admin-table-tools {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--spacing-sm);
 }
 
 .admin-search {
   width: min(18rem, 30vw);
+}
+
+.admin-table-tools .admin-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
+  min-width: 11.5rem;
+  padding-right: 2.1rem;
+  border-color: var(--color-cherry);
+  background-color: var(--color-cherry);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath fill='%23fff' d='M0 0h10L5 6 0 0Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.65rem 0.4rem;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-table-tools .admin-select:hover {
+  border-color: var(--color-cherry-hover);
+  background-color: var(--color-cherry-hover);
+}
+
+.admin-table-tools .admin-select:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.admin-table-tools .admin-select option {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: 600;
 }
 
 .admin-search .input,
@@ -877,6 +912,10 @@ a.button {
 
   .admin-table-tools {
     flex-direction: column;
+  }
+
+  .admin-table-tools .admin-select {
+    width: 100%;
   }
 
   .admin-hours-row {

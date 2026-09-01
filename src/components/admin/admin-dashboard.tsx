@@ -6,7 +6,15 @@ import { useMemo, useState } from "react";
 import { resolveProblemReport } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Input } from "@/components/ui/primitives";
+import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
+import {
+  adminVenueZoneLabel,
+  filterAndSortAdminVenues,
+  type AdminVenueSort,
+  type AdminVenueZoneFilter,
+} from "@/lib/admin-venue-list";
 import type { ProblemReportRow, VenueRow } from "@/lib/db/schema";
+import { OTHER_MAP_ZONE } from "@/lib/venues";
 
 const reportLabels: Record<ProblemReportRow["kind"], string> = {
   closed: "Reported closed",
@@ -31,6 +39,8 @@ export function AdminDashboard({
   const [venueFilter, setVenueFilter] = useState<"all" | VenueRow["status"]>(
     "all",
   );
+  const [zoneFilter, setZoneFilter] = useState<AdminVenueZoneFilter>("all");
+  const [venueSort, setVenueSort] = useState<AdminVenueSort>("updated");
   const [reportFilter, setReportFilter] = useState<
     "all" | ProblemReportRow["status"]
   >("open");
@@ -42,14 +52,13 @@ export function AdminDashboard({
 
   const visibleVenues = useMemo(
     () =>
-      venues.filter(
-        (venue) =>
-          (venueFilter === "all" || venue.status === venueFilter) &&
-          `${venue.name} ${venue.slug}`
-            .toLowerCase()
-            .includes(search.trim().toLowerCase()),
-      ),
-    [search, venues, venueFilter],
+      filterAndSortAdminVenues(venues, {
+        search,
+        status: venueFilter,
+        zone: zoneFilter,
+        sort: venueSort,
+      }),
+    [search, venues, venueFilter, venueSort, zoneFilter],
   );
   const visibleReports = reports.filter(
     (report) => reportFilter === "all" || report.status === reportFilter,
@@ -145,6 +154,41 @@ export function AdminDashboard({
                 <option value="retired">Retired</option>
               </select>
             </label>
+            <label>
+              <span className="sr-only">Filter venues by zone</span>
+              <select
+                className="admin-select"
+                onChange={(event) =>
+                  setZoneFilter(event.target.value as AdminVenueZoneFilter)
+                }
+                value={zoneFilter}
+              >
+                <option value="all">All zones</option>
+                {MAP_ZONE_KEYS_SORTED.map((key) => (
+                  <option key={key} value={key}>
+                    {MAP_ZONES[key].label}
+                  </option>
+                ))}
+                <option value={OTHER_MAP_ZONE}>
+                  Other / Outside mapped zones
+                </option>
+                <option value="unset">Not set</option>
+              </select>
+            </label>
+            <label>
+              <span className="sr-only">Sort venues</span>
+              <select
+                className="admin-select"
+                onChange={(event) =>
+                  setVenueSort(event.target.value as AdminVenueSort)
+                }
+                value={venueSort}
+              >
+                <option value="updated">Recently updated</option>
+                <option value="name">Name A–Z</option>
+                <option value="zone">Zone</option>
+              </select>
+            </label>
           </div>
         </div>
 
@@ -179,7 +223,7 @@ export function AdminDashboard({
                       {venue.status}
                     </span>
                   </td>
-                  <td>{venue.mapZone || "Not set"}</td>
+                  <td>{adminVenueZoneLabel(venue.mapZone)}</td>
                   <td>
                     {venue.lastVerifiedAt
                       ? venue.lastVerifiedAt.toLocaleDateString()
