@@ -33,13 +33,13 @@ export const MAP_ZONE_MARK = {
 export type MapZoneMark = (typeof MAP_ZONE_MARK)[keyof typeof MAP_ZONE_MARK];
 
 /**
- * Retro-HUD redesign (branch: map-ui-pixel-hud) — each zone gets its own
- * badge color + glyph so the campus overview reads like a game map's
- * region key, instead of every zone sharing one cherry hue. `color` is
- * the zone's own signature hue (badge/pin fill); `soft` is a lighter
- * wash for the overview building-fill layer. `icon` picks which glyph
- * `zone-label-icon.ts` bakes into the badge: "truck" for the two food-
- * truck corridors, "walk" for the pedestrian walk, "cap" for the
+ * Retro-HUD redesign (branch: map-ui-pixel-hud) — every zone badge shares
+ * one signature hue (`color`, the brand cherry) and one light wash
+ * (`soft`, for the overview building-fill layer) rather than a hue per
+ * zone, per the brand rule to keep cherry/white even in bold redesigns
+ * (zones are told apart by `icon` + label, not by color). `icon` picks
+ * which glyph `zone-label-icon.ts` bakes into the badge: "truck" for the
+ * two food-truck corridors, "walk" for the pedestrian walk, "cap" for the
  * Student Center (campus-life hub), "binoculars" for Vantage & The View
  * ("the view"), "cup" for Richie's Cafe, "star" as the generic default
  * for the street corridors that don't have their own landmark glyph.
@@ -72,8 +72,8 @@ export const MAP_ZONES = {
   "student-center": {
     key: "student-center",
     label: "Student Center",
-    color: "#4a7856",
-    soft: "#dcede1",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "cap" as MapZoneIcon,
     description:
       "N 13th Street and W Montgomery Avenue wrapping the Student Center. " +
@@ -100,8 +100,8 @@ export const MAP_ZONES = {
   "w-montgomery": {
     key: "w-montgomery",
     label: "W Montgomery",
-    color: "#c15a82",
-    soft: "#f8e1ec",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
       "W Montgomery Avenue along Klein Law, stopping short of the Student Center zone at 13th.",
@@ -119,8 +119,8 @@ export const MAP_ZONES = {
   "vantage-view": {
     key: "vantage-view",
     label: "Vantage & The View",
-    color: "#4c6fa0",
-    soft: "#dee7f5",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "binoculars" as MapZoneIcon,
     description: "The Vantage and The View buildings.",
     sort: 2,
@@ -137,8 +137,8 @@ export const MAP_ZONES = {
   "the-wall": {
     key: "the-wall",
     label: "The Wall",
-    color: "#8b6544",
-    soft: "#efe2d3",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
       "12th Street vendor-pad plaza immediately west of Anderson Hall, not the hall itself.",
@@ -156,8 +156,8 @@ export const MAP_ZONES = {
   "serc-trucks": {
     key: "serc-trucks",
     label: "SERC trucks",
-    color: "#3f8e8a",
-    soft: "#d9f0ee",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "truck" as MapZoneIcon,
     description:
       "N 12th Street west of Engineering and SERC. East edge pushed out " +
@@ -177,8 +177,8 @@ export const MAP_ZONES = {
   "tyler-trucks": {
     key: "tyler-trucks",
     label: "Tyler trucks",
-    color: "#c99a3b",
-    soft: "#f7ebd0",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "truck" as MapZoneIcon,
     description:
       "W Norris Street from Tomlinson through Presser Hall, ending just before Tyler’s east edge.",
@@ -196,8 +196,8 @@ export const MAP_ZONES = {
   "richies-cafe": {
     key: "richies-cafe",
     label: "Richie's Cafe",
-    color: "#c1618a",
-    soft: "#f8e3ed",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "cup" as MapZoneIcon,
     description:
       "Richie's Cafe on W Berks — the cafe footprint only, not Facilities. " +
@@ -221,8 +221,8 @@ export const MAP_ZONES = {
   "liacouras-walk": {
     key: "liacouras-walk",
     label: "Liacouras Walk",
-    color: "#8a6bb0",
-    soft: "#eae1f5",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "walk" as MapZoneIcon,
     description:
       "1902–1938 N. Liacouras Walk — this stretch of the walkway, not 1940 " +
@@ -245,8 +245,8 @@ export const MAP_ZONES = {
   "cecil-b-moore": {
     key: "cecil-b-moore",
     label: "Cecil B. Moore Ave",
-    color: "#b5383f",
-    soft: "#f5dcdd",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
       "Cecil B. Moore Avenue between roughly 17th and 14th — approximate corridor, not hand-traced like the other zones. " +
@@ -265,8 +265,8 @@ export const MAP_ZONES = {
   "broad-st": {
     key: "broad-st",
     label: "N Broad St",
-    color: "#7a2338",
-    soft: "#f0dce1",
+    color: "#9D2235",
+    soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
       "N Broad Street from roughly Cecil B. Moore north to Susquehanna — approximate corridor (interpolated between two real geocoded points, Morgan Hall at 1601 and the McDonald's at 2109), not hand-traced like the other zones. Narrower south of Diamond St (~39.984) because Broad runs close enough to the campus core there to threaten the deliberate gaps other zones carve out (e.g. between Klein Law and Student Center, and west of the 1940 Residence Hall); wider north of that where there's no such conflict.",

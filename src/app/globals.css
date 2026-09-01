@@ -839,7 +839,7 @@ button {
 
 .map-legend-icon-zone {
   border-radius: var(--radius-pixel);
-  background: #e0c98f;
+  background: var(--color-cherry-soft);
 }
 
 /* Below the desktop breakpoint the mobile results sheet already owns
