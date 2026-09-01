@@ -59,6 +59,15 @@
   --radius-lg: 0.75rem;
   --radius-sheet: 1rem;
   --radius-full: 9999px;
+  /* Pixel/Y2K map chrome (branch: map-ui-pixel-hud, phase beta): a flat,
+     sharp-cornered radius plus a hard, un-blurred offset shadow — the
+     opposite of the soft glassmorphism used elsewhere in the app. Scoped
+     to the map overlay windows (HUD button, search/legend windows,
+     mini-card, cluster popover) rather than redefining --radius-* or
+     the app's normal shadow usage globally. */
+  --radius-pixel: 0.2rem;
+  --shadow-pixel: 3px 3px 0 rgba(23, 19, 16, 0.35);
+  --shadow-pixel-sm: 2px 2px 0 rgba(23, 19, 16, 0.3);
 
   --duration-micro: 100ms;
   --duration-short: 200ms;
@@ -429,13 +438,15 @@ button {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* Cream/parchment ground (phase beta: Y2K pixel-computer reference) —
+     replaces the cooler grey-green wash the overview used before. */
   background:
     radial-gradient(
       ellipse at 30% 20%,
-      rgba(157, 34, 53, 0.05),
+      rgba(157, 34, 53, 0.04),
       transparent 45%
     ),
-    linear-gradient(160deg, #f0f0ec 0%, var(--color-map-land) 55%, #e7ebe8 100%);
+    linear-gradient(160deg, #f7f1e3 0%, #f2ead6 55%, #ece1c9 100%);
 }
 
 .venue-map-canvas {
@@ -446,6 +457,16 @@ button {
 .venue-map .maplibregl-map,
 .venue-map .maplibregl-canvas {
   outline: none;
+}
+
+/* The basemap tiles (OpenFreeMap Positron) are neutral grey/white — a
+   mild warm filter on the whole canvas shifts the rendered map (tiles
+   AND our own baked sprites, since MapLibre draws everything into one
+   WebGL canvas) toward the reference's cream/parchment palette without
+   forking or self-hosting a custom map style. Kept subtle so the cherry
+   zone/pill colors stay recognizable rather than washed out. */
+.venue-map .maplibregl-canvas {
+  filter: sepia(0.25) saturate(0.92) brightness(1.03) hue-rotate(-6deg);
 }
 
 /* The canvas is keyboard-operable (arrows pan, +/- zoom) — keep a visible
@@ -511,22 +532,27 @@ button {
   width: 2.75rem; /* 44px minimum touch target */
   height: 2.75rem;
   place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
   background: var(--color-surface);
   color: var(--color-ink);
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-data), monospace;
   font-size: 1.15rem;
+  font-weight: 700;
   line-height: 1;
-  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06);
+  box-shadow: var(--shadow-pixel-sm);
   transition:
     background var(--duration-micro) var(--ease-move),
-    border-color var(--duration-micro) var(--ease-move),
-    color var(--duration-micro) var(--ease-move);
+    transform var(--duration-micro) var(--ease-move);
 }
 
 .map-control-button:hover:not(:disabled) {
-  background: var(--color-surface-raised);
+  background: var(--color-cherry-soft);
+}
+
+.map-control-button:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(23, 19, 16, 0.3);
 }
 
 .map-control-button:focus-visible {
@@ -633,12 +659,16 @@ button {
 }
 
 .map-hud-reset {
+  display: inline-flex;
   flex-shrink: 0;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--color-cherry);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: #f0e6e1;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  border: 1.5px solid var(--color-cherry);
+  border-radius: var(--radius-pixel);
+  background: var(--color-cherry-deep);
+  box-shadow: var(--shadow-pixel-sm);
+  color: #fff4ee;
   font-family: var(--font-data), monospace;
   font-size: var(--text-micro);
   font-weight: 700;
@@ -646,11 +676,23 @@ button {
   text-transform: uppercase;
   cursor: pointer;
   pointer-events: auto;
-  transition: background var(--duration-micro) var(--ease-move);
+  transition:
+    background var(--duration-micro) var(--ease-move),
+    transform var(--duration-micro) var(--ease-move);
+}
+
+.map-hud-reset svg {
+  flex-shrink: 0;
+  color: #f2c9c9;
 }
 
 .map-hud-reset:hover:not(:disabled) {
   background: var(--color-cherry);
+}
+
+.map-hud-reset:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(23, 19, 16, 0.3);
 }
 
 .map-hud-reset:disabled {
@@ -681,6 +723,134 @@ button {
   text-underline-offset: 2px;
 }
 
+/* Retro floating "windows" (phase beta: Y2K pixel-computer reference) —
+   an opaque titlebar + body, hard pixel border/shadow, no blur. The
+   search window is a second real surface onto the same filters state
+   FilterBar already owns (see venue-map.tsx) — not a duplicate control. */
+.map-search-window,
+.map-legend {
+  position: absolute;
+  z-index: 4;
+  width: min(15.5rem, calc(100vw - 2rem));
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pixel);
+  overflow: hidden;
+}
+
+.map-search-window {
+  top: calc(var(--spacing-md) + 2.5rem);
+  right: var(--spacing-md);
+}
+
+.map-legend {
+  left: var(--spacing-md);
+  bottom: var(--spacing-md);
+  width: min(11rem, calc(100vw - 2rem));
+}
+
+.map-search-window-titlebar,
+.map-legend-titlebar {
+  padding: 0.35rem var(--spacing-sm);
+  background: var(--color-marquee);
+  color: #f0e6e1;
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-bottom: 1.5px solid var(--color-cherry);
+}
+
+.map-search-window-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+}
+
+.map-search-input-wrap .input {
+  min-height: 2.5rem;
+  border-radius: var(--radius-pixel);
+  border-color: var(--color-marquee);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+}
+
+.map-search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.map-search-chips .chip {
+  min-height: 1.9rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-pixel);
+  border-color: var(--color-marquee);
+  font-size: var(--text-micro);
+}
+
+.map-search-chips .chip-active {
+  background: var(--color-cherry);
+  color: #fff4ee;
+}
+
+.map-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: var(--spacing-sm);
+  list-style: none;
+  color: var(--color-ink-secondary);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+}
+
+.map-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.map-legend-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 1.25px solid var(--color-marquee);
+  color: #fff4ee;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.map-legend-icon-spot {
+  border-radius: var(--radius-full);
+  background: var(--color-cherry);
+}
+
+.map-legend-icon-cluster {
+  border-radius: var(--radius-pixel);
+  background: var(--color-cherry-deep);
+}
+
+.map-legend-icon-zone {
+  border-radius: var(--radius-pixel);
+  background: #e0c98f;
+}
+
+/* Below the desktop breakpoint the mobile results sheet already owns
+   search/filters — the floating window and legend would only crowd a
+   small screen with a second, redundant search surface, so both are
+   desktop-only chrome (see the 64rem media query further down). */
+.map-search-window,
+.map-legend {
+  display: none;
+}
+
 .map-mini-card-anchor {
   position: absolute;
   /* left/top are written by venue-map.tsx from the selected pin's
@@ -705,13 +875,10 @@ button {
 
 .map-mini-card {
   position: relative;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 10px 28px rgba(28, 25, 23, 0.12),
-    0 0 18px rgba(157, 34, 53, 0.1);
-  backdrop-filter: blur(8px);
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pixel);
   transition: transform var(--duration-short) var(--ease-move);
 }
 
@@ -840,13 +1007,10 @@ button {
 
 .map-cluster-card {
   width: min(16rem, calc(100vw - 2rem));
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 10px 28px rgba(28, 25, 23, 0.12),
-    0 0 18px rgba(157, 34, 53, 0.1);
-  backdrop-filter: blur(8px);
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pixel);
   overflow: hidden;
 }
 
@@ -857,6 +1021,7 @@ button {
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
   background: var(--color-cherry);
+  border-bottom: 1.5px solid var(--color-marquee);
   font-family: var(--font-data), monospace;
   font-size: var(--text-small);
   font-weight: 700;
@@ -911,10 +1076,11 @@ button {
 }
 
 .map-cluster-card-swatch {
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.9rem;
+  height: 0.9rem;
   flex-shrink: 0;
-  border-radius: var(--radius-full);
+  border: 1.25px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
 }
 
 .map-cluster-card-row-text {
@@ -1679,6 +1845,18 @@ button {
 
   .map-attribution {
     right: var(--spacing-xl);
+    bottom: var(--spacing-xl);
+  }
+
+  .map-search-window {
+    display: block;
+    top: calc(var(--spacing-xl) + 2.75rem);
+    right: var(--spacing-xl);
+  }
+
+  .map-legend {
+    display: block;
+    left: var(--spacing-xl);
     bottom: var(--spacing-xl);
   }
 }

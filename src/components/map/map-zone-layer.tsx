@@ -207,12 +207,15 @@ export function MapZoneLayer({
         source: SOURCE_ID,
         filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.streetLine],
         layout: {
-          "line-cap": "round",
+          "line-cap": "butt",
           "line-join": "round",
         },
         paint: {
           "line-color": ZONE_FILL_MATCH,
           "line-width": ["interpolate", ["linear"], ["zoom"], 14, 4, 16, 7],
+          // A dashed core reads as a pixel-drawn road stripe rather than a
+          // solid modern line — part of the Y2K reference's aesthetic.
+          "line-dasharray": [2, 1.6],
         },
       },
       beforeIdFor(map, STREET_LINE_CORE_ID),

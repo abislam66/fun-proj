@@ -17,6 +17,7 @@ import {
   VenuePillLayer,
   VENUE_PILL_LAYER_ID,
 } from "@/components/map/venue-pill-layer";
+import { Chip, Input } from "@/components/ui/primitives";
 import {
   CuisineTags,
   HalalTag,
@@ -38,7 +39,7 @@ import {
 } from "@/config/site";
 import { getOpenStatus } from "@/lib/hours";
 import { mapZoneContaining } from "@/lib/map/point-in-polygon";
-import type { Venue } from "@/lib/venues";
+import type { Venue, VenueFilters } from "@/lib/venues";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -68,6 +69,8 @@ export function VenueMap({
   hoveredId,
   backPath,
   selectedZones,
+  filters,
+  onFiltersChange,
   onSelect,
   onHover,
   onClearSelection,
@@ -79,6 +82,10 @@ export function VenueMap({
   backPath: string;
   /** Zone filter selection — any number of zones can be active at once. */
   selectedZones: MapZoneKey[];
+  /** Backs the floating retro search/filter window (same state as the
+   * sidebar's FilterBar — this is a second surface onto it, not a copy). */
+  filters: VenueFilters;
+  onFiltersChange: (filters: VenueFilters) => void;
   onSelect: (venueId: string) => void;
   onHover: (venueId: string | null) => void;
   onClearSelection: () => void;
@@ -121,22 +128,26 @@ export function VenueMap({
     return counts;
   }, [venues]);
 
-  // HUD coordinate readout — the map center, live as the camera moves.
+  // HUD coordinate + zoom readout — the map center, live as the camera moves.
   const [hudCenter, setHudCenter] = useState<{ lat: number; lng: number } | null>(
     null,
   );
+  const [hudZoom, setHudZoom] = useState<number | null>(null);
 
   useEffect(() => {
     if (!map) return;
-    function updateCenter() {
+    function updateHud() {
       if (!map) return;
       const c = map.getCenter();
       setHudCenter({ lat: c.lat, lng: c.lng });
+      setHudZoom(map.getZoom());
     }
-    updateCenter();
-    map.on("move", updateCenter);
+    updateHud();
+    map.on("move", updateHud);
+    map.on("zoom", updateHud);
     return () => {
-      map.off("move", updateCenter);
+      map.off("move", updateHud);
+      map.off("zoom", updateHud);
     };
   }, [map]);
 
@@ -484,17 +495,89 @@ export function VenueMap({
           {hudCenter
             ? `LAT: ${hudCenter.lat.toFixed(4)} N   LON: ${Math.abs(hudCenter.lng).toFixed(4)} W`
             : ""}
+          {hudZoom !== null ? `   ZOOM: ${hudZoom.toFixed(1)}` : ""}
         </span>
-        {zonesActive ? (
-          <button
-            className="map-hud-reset"
-            disabled={!ready}
-            onClick={resetView}
-            type="button"
-          >
-            All zones
-          </button>
-        ) : null}
+        <button
+          className="map-hud-reset"
+          disabled={!ready}
+          onClick={resetView}
+          type="button"
+        >
+          <svg aria-hidden="true" fill="currentColor" height="10" viewBox="0 0 10 10" width="10">
+            <path d="M5 0 6.13 3.35 9.51 3.35 6.79 5.4 7.94 8.76 5 6.7 2.06 8.76 3.21 5.4 0.49 3.35 3.87 3.35Z" />
+          </svg>
+          All zones
+        </button>
+      </div>
+
+      <div className="map-search-window">
+        <div className="map-search-window-titlebar">
+          <span>SEARCH</span>
+        </div>
+        <div className="map-search-window-body">
+          <label className="map-search-input-wrap">
+            <span className="sr-only">Search venues or cuisines</span>
+            <Input
+              onChange={(event) =>
+                onFiltersChange({ ...filters, query: event.target.value })
+              }
+              placeholder="Search food or a place"
+              type="search"
+              value={filters.query}
+            />
+          </label>
+          <div className="map-search-chips">
+            <Chip
+              active={filters.openNow}
+              onClick={() =>
+                onFiltersChange({ ...filters, openNow: !filters.openNow })
+              }
+            >
+              Open now
+            </Chip>
+            <Chip
+              active={filters.isHalal}
+              onClick={() =>
+                onFiltersChange({ ...filters, isHalal: !filters.isHalal })
+              }
+            >
+              Halal
+            </Chip>
+            <Chip
+              active={filters.isVeganFriendly}
+              onClick={() =>
+                onFiltersChange({
+                  ...filters,
+                  isVeganFriendly: !filters.isVeganFriendly,
+                })
+              }
+            >
+              Vegan
+            </Chip>
+          </div>
+        </div>
+      </div>
+
+      <div className="map-legend">
+        <div className="map-legend-titlebar">
+          <span>LEGEND</span>
+        </div>
+        <ul className="map-legend-list">
+          <li>
+            <span aria-hidden="true" className="map-legend-icon map-legend-icon-spot" />
+            Individual spot
+          </li>
+          <li>
+            <span aria-hidden="true" className="map-legend-icon map-legend-icon-cluster">
+              +
+            </span>
+            Multiple spots
+          </li>
+          <li>
+            <span aria-hidden="true" className="map-legend-icon map-legend-icon-zone" />
+            Zone area
+          </li>
+        </ul>
       </div>
 
       <MapAttribution />

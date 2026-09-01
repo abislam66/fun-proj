@@ -39,10 +39,19 @@ export type MapZoneMark = (typeof MAP_ZONE_MARK)[keyof typeof MAP_ZONE_MARK];
  * the zone's own signature hue (badge/pin fill); `soft` is a lighter
  * wash for the overview building-fill layer. `icon` picks which glyph
  * `zone-label-icon.ts` bakes into the badge: "truck" for the two food-
- * truck corridors, "walk" for the pedestrian walk, "food" for the
- * Student Center food court, "star" as the generic default.
+ * truck corridors, "walk" for the pedestrian walk, "cap" for the
+ * Student Center (campus-life hub), "binoculars" for Vantage & The View
+ * ("the view"), "cup" for Richie's Cafe, "star" as the generic default
+ * for the street corridors that don't have their own landmark glyph.
  */
-export type MapZoneIcon = "star" | "truck" | "walk" | "food";
+export type MapZoneIcon =
+  | "star"
+  | "truck"
+  | "walk"
+  | "food"
+  | "cap"
+  | "binoculars"
+  | "cup";
 
 /** GeoJSON `role` values in `public/maps/map-zones.geojson`. */
 export const MAP_ZONE_GEOJSON_ROLE = {
@@ -65,7 +74,7 @@ export const MAP_ZONES = {
     label: "Student Center",
     color: "#4a7856",
     soft: "#dcede1",
-    icon: "food" as MapZoneIcon,
+    icon: "cap" as MapZoneIcon,
     description:
       "N 13th Street and W Montgomery Avenue wrapping the Student Center. " +
       "Widened 2026-08-30 from a notched L-shape to a full rectangle — the " +
@@ -112,7 +121,7 @@ export const MAP_ZONES = {
     label: "Vantage & The View",
     color: "#4c6fa0",
     soft: "#dee7f5",
-    icon: "star" as MapZoneIcon,
+    icon: "binoculars" as MapZoneIcon,
     description: "The Vantage and The View buildings.",
     sort: 2,
     mark: MAP_ZONE_MARK.buildingFill,
@@ -189,7 +198,7 @@ export const MAP_ZONES = {
     label: "Richie's Cafe",
     color: "#c1618a",
     soft: "#f8e3ed",
-    icon: "star" as MapZoneIcon,
+    icon: "cup" as MapZoneIcon,
     description:
       "Richie's Cafe on W Berks — the cafe footprint only, not Facilities. " +
       "Given a NE lobe 2026-08-30 to also reach Land of A Thousand Hills " +
