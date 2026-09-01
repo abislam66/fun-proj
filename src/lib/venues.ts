@@ -2,6 +2,7 @@ import type { CuisineKey } from "@/config/cuisines";
 import { MAP_ZONE_KEYS, MAP_ZONES, type MapZoneKey } from "@/config/map-zones";
 import { isHoursUnknown, isOpenNow, type VenueHours } from "@/lib/hours";
 import { pointInMapZone } from "@/lib/map/point-in-polygon";
+import type { StudentRatingSummary } from "@/lib/ratings";
 
 /**
  * Admin-only sentinel for "outside every drawn map zone" — deliberately
@@ -42,6 +43,7 @@ export interface Venue {
   cuisines: CuisineKey[];
   hours: VenueHours | null;
   lastVerifiedAt: string | null;
+  studentRating: StudentRatingSummary | null;
 }
 
 export interface VenueFilters {

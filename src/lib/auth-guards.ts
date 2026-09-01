@@ -13,3 +13,16 @@ export function assertIsAdmin(profile: ProfileRow | null | undefined): void {
     throw new AuthError("Admin access required");
   }
 }
+
+/**
+ * Any signed-in profile that is not struck can write member content
+ * (ratings, photo submissions). Admins with a profile pass too.
+ */
+export function assertIsMember(profile: ProfileRow | null | undefined): void {
+  if (!profile) {
+    throw new AuthError("Sign in required");
+  }
+  if (profile.struckAt) {
+    throw new AuthError("Your account can’t post right now.");
+  }
+}

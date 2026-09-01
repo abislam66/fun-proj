@@ -55,6 +55,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           Venues
         </Link>
         <Link href="/admin#reports">Problem reports</Link>
+        <Link href="/admin#photos">Photo queue</Link>
       </nav>
 
       <main className="admin-main">{children}</main>

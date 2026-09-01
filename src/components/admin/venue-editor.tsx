@@ -434,7 +434,9 @@ function VenueEditorForm({
                           </Button>
                           <Button
                             aria-label="Move photo later"
-                            disabled={photoPending || index === photos.length - 1}
+                            disabled={
+                              photoPending || index === photos.length - 1
+                            }
                             onClick={() => movePhotoUpDown(photo.id, "down")}
                             type="button"
                             variant="ghost"
@@ -512,7 +514,9 @@ function VenueEditorForm({
                     {MAP_ZONES[key].label}
                   </option>
                 ))}
-                <option value={OTHER_MAP_ZONE}>Other / Outside mapped zones</option>
+                <option value={OTHER_MAP_ZONE}>
+                  Other / Outside mapped zones
+                </option>
               </select>
             </Field>
             {zoneWarning ? (
@@ -588,8 +592,12 @@ function VenueEditorForm({
             title="Location"
           >
             <VenueLocationPicker
-              lat={Number.isFinite(Number(draft.lat)) ? Number(draft.lat) : null}
-              lng={Number.isFinite(Number(draft.lng)) ? Number(draft.lng) : null}
+              lat={
+                Number.isFinite(Number(draft.lat)) ? Number(draft.lat) : null
+              }
+              lng={
+                Number.isFinite(Number(draft.lng)) ? Number(draft.lng) : null
+              }
               onChange={(lat, lng) => {
                 setField("lat", lat.toFixed(6));
                 setField("lng", lng.toFixed(6));

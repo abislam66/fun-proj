@@ -22,3 +22,11 @@ export {
   resetPasswordSchema,
   type ResetPasswordInput,
 } from "./auth";
+
+export {
+  submitRatingSchema,
+  deleteRatingSchema,
+  removeRatingSchema,
+  resolveVenuePhotoSchema,
+  type SubmitRatingInput,
+} from "./rating";

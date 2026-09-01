@@ -129,9 +129,10 @@ export function VenueMap({
   }, [venues]);
 
   // HUD coordinate + zoom readout — the map center, live as the camera moves.
-  const [hudCenter, setHudCenter] = useState<{ lat: number; lng: number } | null>(
-    null,
-  );
+  const [hudCenter, setHudCenter] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [hudZoom, setHudZoom] = useState<number | null>(null);
 
   useEffect(() => {
@@ -503,7 +504,13 @@ export function VenueMap({
           onClick={resetView}
           type="button"
         >
-          <svg aria-hidden="true" fill="currentColor" height="10" viewBox="0 0 10 10" width="10">
+          <svg
+            aria-hidden="true"
+            fill="currentColor"
+            height="10"
+            viewBox="0 0 10 10"
+            width="10"
+          >
             <path d="M5 0 6.13 3.35 9.51 3.35 6.79 5.4 7.94 8.76 5 6.7 2.06 8.76 3.21 5.4 0.49 3.35 3.87 3.35Z" />
           </svg>
           All zones
@@ -564,17 +571,26 @@ export function VenueMap({
         </div>
         <ul className="map-legend-list">
           <li>
-            <span aria-hidden="true" className="map-legend-icon map-legend-icon-spot" />
+            <span
+              aria-hidden="true"
+              className="map-legend-icon map-legend-icon-spot"
+            />
             Individual spot
           </li>
           <li>
-            <span aria-hidden="true" className="map-legend-icon map-legend-icon-cluster">
+            <span
+              aria-hidden="true"
+              className="map-legend-icon map-legend-icon-cluster"
+            >
               +
             </span>
             Multiple spots
           </li>
           <li>
-            <span aria-hidden="true" className="map-legend-icon map-legend-icon-zone" />
+            <span
+              aria-hidden="true"
+              className="map-legend-icon map-legend-icon-zone"
+            />
             Zone area
           </li>
         </ul>

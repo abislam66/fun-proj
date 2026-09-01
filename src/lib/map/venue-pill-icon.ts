@@ -94,7 +94,10 @@ export function venuePillIconId(
  * clusters of the same size reuse one baked sprite regardless of which
  * venues happen to be in them.
  */
-export function clusterPillIconId(count: number, state: VenuePillState): string {
+export function clusterPillIconId(
+  count: number,
+  state: VenuePillState,
+): string {
   return `cluster-pill/${state}/${count}`;
 }
 

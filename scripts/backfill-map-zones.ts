@@ -28,7 +28,12 @@ async function main() {
   const db = drizzle(client);
 
   const rows = await db
-    .select({ id: venues.id, slug: venues.slug, lat: venues.lat, lng: venues.lng })
+    .select({
+      id: venues.id,
+      slug: venues.slug,
+      lat: venues.lat,
+      lng: venues.lng,
+    })
     .from(venues);
 
   console.log(`Backfilling map_zone for ${rows.length} venue(s)…`);

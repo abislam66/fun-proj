@@ -4,7 +4,10 @@ import { AdminAccessDenied } from "@/components/admin/access-denied";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AuthError, requireAdmin } from "@/lib/auth";
 import { listAllVenuesAdmin } from "@/lib/db/queries";
-import { getProblemReportQueue } from "@/actions/admin";
+import {
+  getPendingVenuePhotoQueue,
+  getProblemReportQueue,
+} from "@/actions/admin";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -20,10 +23,17 @@ export default async function AdminPage() {
     throw error;
   }
 
-  const [venues, reports] = await Promise.all([
+  const [venues, reports, pendingPhotos] = await Promise.all([
     listAllVenuesAdmin(),
     getProblemReportQueue(),
+    getPendingVenuePhotoQueue(),
   ]);
 
-  return <AdminDashboard initialReports={reports} initialVenues={venues} />;
+  return (
+    <AdminDashboard
+      initialPendingPhotos={pendingPhotos}
+      initialReports={reports}
+      initialVenues={venues}
+    />
+  );
 }

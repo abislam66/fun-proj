@@ -95,15 +95,15 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 - **Shared state:** Same URL searchParams and payload as mobile — filter/search/selection stay in sync across panes. Hovering or focusing a list row highlights the matching cuisine pill on the map; selecting a pin scrolls/focuses the list row.
 - **Rows select, never navigate:** Clicking a list row (desktop pane or mobile sheet) selects the venue on the map — fly-to plus anchored mini-card; on mobile the sheet tucks to peek so the map is visible. The mini-card's "View details" is the only path from the explorer to `/eat/[slug]`. The map is the primary surface — list rows feed it.
 - **Staged arrival:** The mini-card never pops while the camera is still traveling. Selection sequences like a user would move: fly into the host zone (or ease a zone-less venue to street zoom ~16), and only on arrival does the popup appear over the pill. No movement needed → instant pop.
-- **List density:** Comfortable rows with name, cuisine tags, zone, open-status badge, payment icons — designed for mouse scan, not thumb-only.
+- **List density:** Comfortable rows with name, cuisine tags, zone, open-status badge, payment icons, and a compact student-rating readout when one exists — designed for mouse scan, not thumb-only.
 - **Map:** Larger campus view earns the desktop width; cuisine pills remain legible; controls sit bottom-right of the map pane, stacked above the attribution line (not floating over the list).
 - **No mobile chrome on desktop:** No grab-handle sheet, no peek/mid/full detents, no “tap to expand list.” If it looks like a phone UI scaled up, it’s wrong.
 - **Empty / filtered states:** Friendly empty copy in the list pane; map still shows campus (pins filtered). Never a blank white half-screen.
 
 ### Venue detail (`/eat/[slug]`)
 
-- **Content order (all breakpoints):** name → hedged open-status (mono) → cuisine / zone / payment → photos (only when a venue has them) → description → hours → last-verified → report. Phase 2: student rating primary, Google snapshot secondary and never merged.
-- **Photos:** horizontal snap-scroll strip of 4:3 frames (`radius-lg`, border, `surface-raised` letterbox), no heading, no lightbox. Venues without photos get **nothing** — no placeholder frame (cards only when they contain content). Source is `venue_photos` (DB + Vercel Blob for admin uploads) as of 2026-08-25 — see `Context/decisions.md`; appearance is unchanged from the original frontend-only version.
+- **Content order (all breakpoints):** name → hedged open-status (mono) → cuisine / zone / payment → photos (only when a venue has them) → student rating + reviews → description → hours → last-verified → report. Student rating is primary; Google snapshots (not in this slice) stay secondary and never merged.
+- **Photos:** horizontal snap-scroll strip of 4:3 frames (`radius-lg`, border, `surface-raised` letterbox), no heading, no lightbox. Venues without photos get **nothing** — no placeholder frame (cards only when they contain content). Source is published `venue_photos` only (DB + Vercel Blob). Member submissions stay out of this strip until an admin approves them. An “Add a photo” control can sit under the strip; it is not a second gallery.
 - **Mobile:** Single column, back returns to explorer with preserved filters/map position.
 - **Desktop:** Typography-led reading column (~40rem) with generous vertical rhythm; optional sticky mini context (open status + primary cuisine) as the user scrolls. Not a cramped phone article stretched to 1200px. Back / “View on map” restores the split explorer state.
 
@@ -163,6 +163,7 @@ Maps to `Specs/architecture-planning.md`:
 
 - `components/map/` — `VenueMap`, `CampusBuildingLayer`, `VenuePinLayer`, `LocateControl`, `MapAttribution`
 - `components/venues/` — `VenueExplorer`, `VenueList`, `VenueListRow`, `VenueMiniCard`, `FilterBar`, `OpenStatusBadge`, `PaymentIcons`, `CuisineTags`
+- `components/reviews/` — `VenueReviews`, `StarRating`
 - `components/ui/` — Button, Chip, Sheet, Input, EmptyState, Wordmark
 - Tokens in `globals.css` + Tailwind 4 `@theme`
 
@@ -187,6 +188,7 @@ Maps to `Specs/architecture-planning.md`:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-01 | Student ratings after the photo strip; pending member photos never on the public strip | TUE-12: aggregate + composer + review list belong with the venue facts, not mixed into the gallery. Member uploads wait in admin queue so the 10-photo strip stays curated. |
 | 2026-07-17 | Cherry Compass design system created | Design consultation from specs + competitive research; cream+serif indie alternative rejected as AI-default |
 | 2026-07-17 | OpenFreeMap Positron basemap | Muted land so cherry pins dominate; $0, keyless, swappable |
 | 2026-07-17 | Cuisine-label pill pins (not status beacons) | Pin must help decide what to eat; open status lives on list/mini-card |

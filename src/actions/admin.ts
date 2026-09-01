@@ -10,25 +10,35 @@ import {
 } from "@/config/site";
 import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
+import { blobBackedPhotoSource, canPublishVenuePhoto } from "@/lib/ratings";
 import {
+  countPublishedVenuePhotos,
   deleteVenuePhotoById,
+  getRatingById,
   getVenueById,
   getVenuePhotoById,
   getVenuePhotosForAdmin,
   insertVenue,
   insertVenuePhoto,
+  listPendingVenuePhotos,
   listProblemReports,
   listSlugsExcept,
+  publishMemberVenuePhoto,
+  rejectMemberVenuePhoto,
+  removeRating,
   setVenuePhotoOrder,
   updateProblemReportStatus,
   updateVenue,
   type AdminVenuePhoto,
+  type PendingVenuePhoto,
 } from "@/lib/db/queries";
 import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
 import {
   reorderVenuePhotosSchema,
+  removeRatingSchema,
   resolveProblemReportSchema,
+  resolveVenuePhotoSchema,
   venueIdSchema,
   venueInputSchema,
   venuePhotoIdSchema,
@@ -198,7 +208,7 @@ export async function deleteVenuePhoto(raw: unknown): Promise<ActionResult> {
     }
 
     await deleteVenuePhotoById(photoId);
-    if (photo.source === "admin") {
+    if (blobBackedPhotoSource(photo.source)) {
       await del(photo.url).catch(() => {});
     }
 
@@ -337,4 +347,70 @@ export async function getProblemReportQueue(
 ) {
   await requireAdmin();
   return listProblemReports(status);
+}
+
+/** Admin: pending member photo submissions. */
+export async function getPendingVenuePhotoQueue(): Promise<
+  PendingVenuePhoto[]
+> {
+  await requireAdmin();
+  return listPendingVenuePhotos();
+}
+
+/** Admin: publish or reject a member photo. */
+export async function resolveVenuePhoto(raw: unknown): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const { photoId, action } = resolveVenuePhotoSchema.parse(raw);
+    const photo = await getVenuePhotoById(photoId);
+    if (!photo || photo.source !== "member" || photo.status !== "pending") {
+      return { ok: false, error: "Photo not found" };
+    }
+
+    const venue = await getVenueById(photo.venueId);
+    if (!venue) {
+      return { ok: false, error: "Venue not found" };
+    }
+
+    if (action === "approve") {
+      const publishedCount = await countPublishedVenuePhotos(photo.venueId);
+      if (!canPublishVenuePhoto(publishedCount)) {
+        return {
+          ok: false,
+          error: `This venue already has ${MAX_VENUE_PHOTOS} photos — remove one before approving.`,
+        };
+      }
+      await publishMemberVenuePhoto(photo.id, photo.venueId);
+    } else {
+      await rejectMemberVenuePhoto(photo.id);
+      await del(photo.url).catch(() => {});
+    }
+
+    revalidateVenue(venue.slug);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: hide a rating/review without deleting the row. */
+export async function hideRating(raw: unknown): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const { ratingId, reason } = removeRatingSchema.parse(raw);
+    const rating = await getRatingById(ratingId);
+    if (!rating) {
+      return { ok: false, error: "Rating not found" };
+    }
+    const venue = await getVenueById(rating.venueId);
+    if (!venue) {
+      return { ok: false, error: "Venue not found" };
+    }
+
+    await removeRating(ratingId, reason ?? "Removed by a moderator");
+    revalidateVenue(venue.slug);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return fail(error);
+  }
 }
