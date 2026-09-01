@@ -5,7 +5,10 @@ import { useState } from "react";
 
 import { submitVenuePhoto } from "@/actions/photos";
 import { Button } from "@/components/ui/primitives";
-import { ALLOWED_VENUE_IMAGE_TYPES, MAX_VENUE_IMAGE_BYTES } from "@/config/site";
+import {
+  ALLOWED_VENUE_IMAGE_TYPES,
+  MAX_VENUE_IMAGE_BYTES,
+} from "@/config/site";
 
 export function AddVenuePhotoForm({ venueId }: { venueId: string }) {
   const [open, setOpen] = useState(false);

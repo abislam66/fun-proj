@@ -35,8 +35,8 @@ describe("assertIsMember", () => {
   it("denies missing or struck profiles", () => {
     expect(() => assertIsMember(null)).toThrow(AuthError);
     expect(() => assertIsMember(undefined)).toThrow(AuthError);
-    expect(() =>
-      assertIsMember(profile({ struckAt: new Date() })),
-    ).toThrow(AuthError);
+    expect(() => assertIsMember(profile({ struckAt: new Date() }))).toThrow(
+      AuthError,
+    );
   });
 });

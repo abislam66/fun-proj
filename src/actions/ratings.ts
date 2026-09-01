@@ -42,7 +42,10 @@ export async function submitRating(raw: unknown): Promise<ActionResult> {
       return { ok: false, error: "Venue not found" };
     }
     if (venue.status === "retired") {
-      return { ok: false, error: "This place has closed — new ratings are closed too." };
+      return {
+        ok: false,
+        error: "This place has closed — new ratings are closed too.",
+      };
     }
 
     await assertRatingUpsertAllowed(session.id);

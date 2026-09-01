@@ -44,7 +44,9 @@ export function StarRating({
             role="radio"
             type="button"
           >
-            <span className="sr-only">{stars} star{stars === 1 ? "" : "s"}</span>
+            <span className="sr-only">
+              {stars} star{stars === 1 ? "" : "s"}
+            </span>
             <span aria-hidden="true">★</span>
           </button>
         );

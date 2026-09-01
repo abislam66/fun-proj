@@ -94,10 +94,7 @@ export function AdminDashboard({
     );
   }
 
-  async function resolvePhoto(
-    photoId: string,
-    action: "approve" | "reject",
-  ) {
+  async function resolvePhoto(photoId: string, action: "approve" | "reject") {
     setPendingPhotoId(photoId);
     const result = await resolveVenuePhoto({ photoId, action });
     setPendingPhotoId(null);

@@ -106,7 +106,10 @@ export function VenueLocationPicker({
   useEffect(() => {
     if (!markerRef.current || lat === null || lng === null) return;
     const current = markerRef.current.getLngLat();
-    if (Math.abs(current.lat - lat) > 1e-9 || Math.abs(current.lng - lng) > 1e-9) {
+    if (
+      Math.abs(current.lat - lat) > 1e-9 ||
+      Math.abs(current.lng - lng) > 1e-9
+    ) {
       markerRef.current.setLngLat([lng, lat]);
     }
   }, [lat, lng]);
@@ -123,9 +126,9 @@ export function VenueLocationPicker({
     <div className="admin-location-picker">
       <div className="admin-location-picker-map" ref={containerRef} />
       <p className="admin-inline-note">
-        Click the map or drag the pin to set the exact location. Campus
-        bounds: {CAMPUS_BOUNDS.south}–{CAMPUS_BOUNDS.north} lat,{" "}
-        {CAMPUS_BOUNDS.west}–{CAMPUS_BOUNDS.east} lng.
+        Click the map or drag the pin to set the exact location. Campus bounds:{" "}
+        {CAMPUS_BOUNDS.south}–{CAMPUS_BOUNDS.north} lat, {CAMPUS_BOUNDS.west}–
+        {CAMPUS_BOUNDS.east} lng.
       </p>
     </div>
   );

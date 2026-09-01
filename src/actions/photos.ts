@@ -61,7 +61,10 @@ export async function submitVenuePhoto(
       return { ok: false, error: "Venue not found" };
     }
     if (venue.status === "retired") {
-      return { ok: false, error: "This place has closed — new photos are closed too." };
+      return {
+        ok: false,
+        error: "This place has closed — new photos are closed too.",
+      };
     }
 
     await assertMemberPhotoAllowed(session.id);

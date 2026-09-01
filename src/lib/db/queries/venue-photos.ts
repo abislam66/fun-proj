@@ -35,9 +35,13 @@ async function fetchVenuePhotos(slug: string): Promise<VenuePhoto[]> {
 
 /** Published photos for a venue's public gallery — pending/rejected never leak. */
 export function getVenuePhotosBySlug(slug: string): Promise<VenuePhoto[]> {
-  return unstable_cache(() => fetchVenuePhotos(slug), [`venue-photos-${slug}`], {
-    tags: ["venues", `venue:${slug}`],
-  })();
+  return unstable_cache(
+    () => fetchVenuePhotos(slug),
+    [`venue-photos-${slug}`],
+    {
+      tags: ["venues", `venue:${slug}`],
+    },
+  )();
 }
 
 /** Published rows for the admin photo manager, in display order. */
@@ -48,7 +52,10 @@ export async function getVenuePhotosForAdmin(
     .select()
     .from(venuePhotos)
     .where(
-      and(eq(venuePhotos.venueId, venueId), eq(venuePhotos.status, "published")),
+      and(
+        eq(venuePhotos.venueId, venueId),
+        eq(venuePhotos.status, "published"),
+      ),
     )
     .orderBy(asc(venuePhotos.sortOrder), asc(venuePhotos.createdAt));
 }
@@ -60,7 +67,10 @@ export async function countPublishedVenuePhotos(
     .select({ total: count() })
     .from(venuePhotos)
     .where(
-      and(eq(venuePhotos.venueId, venueId), eq(venuePhotos.status, "published")),
+      and(
+        eq(venuePhotos.venueId, venueId),
+        eq(venuePhotos.status, "published"),
+      ),
     );
   return Number(row?.total ?? 0);
 }
@@ -87,7 +97,10 @@ export async function insertVenuePhoto(
     })
     .from(venuePhotos)
     .where(
-      and(eq(venuePhotos.venueId, venueId), eq(venuePhotos.status, "published")),
+      and(
+        eq(venuePhotos.venueId, venueId),
+        eq(venuePhotos.status, "published"),
+      ),
     );
   const nextSortOrder = sortRow?.nextSortOrder ?? 0;
 
@@ -142,7 +155,9 @@ export async function assertMemberPhotoAllowed(userId: string): Promise<void> {
     );
 
   if (isOverLimit(row?.total ?? 0, MEMBER_PHOTO_RATE_LIMIT.max)) {
-    throw new RateLimitError("Too many photo submissions today. Try again tomorrow.");
+    throw new RateLimitError(
+      "Too many photo submissions today. Try again tomorrow.",
+    );
   }
 }
 
@@ -175,7 +190,10 @@ export async function publishMemberVenuePhoto(
     })
     .from(venuePhotos)
     .where(
-      and(eq(venuePhotos.venueId, venueId), eq(venuePhotos.status, "published")),
+      and(
+        eq(venuePhotos.venueId, venueId),
+        eq(venuePhotos.status, "published"),
+      ),
     );
   const nextSortOrder = sortRow?.nextSortOrder ?? 0;
 

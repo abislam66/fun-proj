@@ -12,7 +12,11 @@ const venueId = "00000000-0000-4000-8000-000000000099";
 describe("submitRatingSchema", () => {
   it("accepts a rating with optional review text", () => {
     expect(
-      submitRatingSchema.parse({ venueId, stars: 5, reviewText: "Get the gyro." }),
+      submitRatingSchema.parse({
+        venueId,
+        stars: 5,
+        reviewText: "Get the gyro.",
+      }),
     ).toEqual({
       venueId,
       stars: 5,
@@ -30,7 +34,11 @@ describe("submitRatingSchema", () => {
     expect(() => submitRatingSchema.parse({ venueId, stars: 0 })).toThrow();
     expect(() => submitRatingSchema.parse({ venueId, stars: 6 })).toThrow();
     expect(() =>
-      submitRatingSchema.parse({ venueId, stars: 4, reviewText: "x".repeat(1001) }),
+      submitRatingSchema.parse({
+        venueId,
+        stars: 4,
+        reviewText: "x".repeat(1001),
+      }),
     ).toThrow();
   });
 

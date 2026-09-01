@@ -50,7 +50,10 @@ export const venueInputSchema = z
       .optional(),
     lat: z.number().min(CAMPUS_BOUNDS.south).max(CAMPUS_BOUNDS.north),
     lng: z.number().min(CAMPUS_BOUNDS.west).max(CAMPUS_BOUNDS.east),
-    mapZone: z.enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE]).nullable().optional(),
+    mapZone: z
+      .enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE])
+      .nullable()
+      .optional(),
     building: z.string().trim().max(120).nullable().optional(),
     floor: z.string().trim().max(40).nullable().optional(),
     acceptsCash: z.boolean().nullable().optional(),

@@ -77,9 +77,7 @@ async function fetchPublishedVenues(): Promise<PublicVenue[]> {
     rows.map((row) => row.id),
   );
 
-  return rows.map((row) =>
-    normalizeVenue(row, aggregates.get(row.id) ?? null),
-  );
+  return rows.map((row) => normalizeVenue(row, aggregates.get(row.id) ?? null));
 }
 
 export function getPublishedVenues(): Promise<PublicVenue[]> {

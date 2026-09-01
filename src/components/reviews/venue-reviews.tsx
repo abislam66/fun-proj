@@ -8,10 +8,7 @@ import { hideRating } from "@/actions/admin";
 import { StarRating } from "@/components/reviews/star-rating";
 import { Button } from "@/components/ui/primitives";
 import { MAX_REVIEW_TEXT_LENGTH } from "@/config/site";
-import {
-  formatStudentRating,
-  type StudentRatingSummary,
-} from "@/lib/ratings";
+import { formatStudentRating, type StudentRatingSummary } from "@/lib/ratings";
 import { formatRelativeDate } from "@/lib/relative-time";
 
 export type PublicReview = {
@@ -58,7 +55,9 @@ export function VenueReviews({
     <section className="detail-section reviews-section">
       <h2>Student ratings</h2>
       {summary ? (
-        <p className="student-rating-aggregate">{formatStudentRating(summary)}</p>
+        <p className="student-rating-aggregate">
+          {formatStudentRating(summary)}
+        </p>
       ) : (
         <p className="reviews-empty">No student ratings yet.</p>
       )}
@@ -179,7 +178,11 @@ function ReviewComposer({
           {initial ? "Update" : "Post"}
         </Button>
         {initial ? (
-          <Button disabled={pending} onClick={() => void remove()} variant="ghost">
+          <Button
+            disabled={pending}
+            onClick={() => void remove()}
+            variant="ghost"
+          >
             Remove
           </Button>
         ) : null}

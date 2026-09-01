@@ -213,8 +213,7 @@ export function buildZoneLabelIcon(
     ) + BORDER,
   );
   const width = plateW + PAD * 2 + SHADOW_OFFSET;
-  const height =
-    PAD + plateH + STEM_LINE_HEIGHT + STEM_DOT_RADIUS * 2 + BORDER;
+  const height = PAD + plateH + STEM_LINE_HEIGHT + STEM_DOT_RADIUS * 2 + BORDER;
 
   canvas.width = width * SCALE;
   canvas.height = height * SCALE;

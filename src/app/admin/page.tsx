@@ -4,7 +4,10 @@ import { AdminAccessDenied } from "@/components/admin/access-denied";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { AuthError, requireAdmin } from "@/lib/auth";
 import { listAllVenuesAdmin } from "@/lib/db/queries";
-import { getPendingVenuePhotoQueue, getProblemReportQueue } from "@/actions/admin";
+import {
+  getPendingVenuePhotoQueue,
+  getProblemReportQueue,
+} from "@/actions/admin";
 
 export const metadata: Metadata = {
   title: "Admin",

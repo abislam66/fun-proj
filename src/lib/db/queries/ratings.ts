@@ -2,15 +2,8 @@ import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { RATING_UPSERT_RATE_LIMIT } from "@/config/site";
 import { db } from "@/lib/db";
-import {
-  profiles,
-  ratings,
-  type RatingRow,
-} from "@/lib/db/schema";
-import {
-  studentRatingSummary,
-  type StudentRatingSummary,
-} from "@/lib/ratings";
+import { profiles, ratings, type RatingRow } from "@/lib/db/schema";
+import { studentRatingSummary, type StudentRatingSummary } from "@/lib/ratings";
 import { RateLimitError, isOverLimit } from "@/lib/ratelimit";
 
 export type VenueReview = {
@@ -38,11 +31,16 @@ export async function getRatingAggregatesByVenueIds(
       count: count(),
     })
     .from(ratings)
-    .where(and(eq(ratings.status, "active"), inArray(ratings.venueId, venueIds)))
+    .where(
+      and(eq(ratings.status, "active"), inArray(ratings.venueId, venueIds)),
+    )
     .groupBy(ratings.venueId);
 
   for (const row of rows) {
-    const summary = studentRatingSummary(Number(row.average), Number(row.count));
+    const summary = studentRatingSummary(
+      Number(row.average),
+      Number(row.count),
+    );
     if (summary) summaries.set(row.venueId, summary);
   }
   return summaries;
@@ -59,10 +57,15 @@ export async function getVenueRatingAggregate(
     .from(ratings)
     .where(and(eq(ratings.venueId, venueId), eq(ratings.status, "active")));
 
-  return studentRatingSummary(Number(row?.average ?? 0), Number(row?.count ?? 0));
+  return studentRatingSummary(
+    Number(row?.average ?? 0),
+    Number(row?.count ?? 0),
+  );
 }
 
-export async function listVenueReviews(venueId: string): Promise<VenueReview[]> {
+export async function listVenueReviews(
+  venueId: string,
+): Promise<VenueReview[]> {
   const rows = await db
     .select({
       id: ratings.id,
@@ -106,9 +109,7 @@ export async function assertRatingUpsertAllowed(userId: string): Promise<void> {
     .where(and(eq(ratings.userId, userId), gte(ratings.updatedAt, since)));
 
   if (isOverLimit(row?.total ?? 0, RATING_UPSERT_RATE_LIMIT.max)) {
-    throw new RateLimitError(
-      "Too many ratings today. Try again tomorrow.",
-    );
+    throw new RateLimitError("Too many ratings today. Try again tomorrow.");
   }
 }
 
@@ -157,7 +158,11 @@ export async function deleteOwnRating(
 }
 
 export async function getRatingById(id: string): Promise<RatingRow | null> {
-  const [row] = await db.select().from(ratings).where(eq(ratings.id, id)).limit(1);
+  const [row] = await db
+    .select()
+    .from(ratings)
+    .where(eq(ratings.id, id))
+    .limit(1);
   return row ?? null;
 }
 

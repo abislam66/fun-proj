@@ -1019,7 +1019,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm)
+    var(--spacing-md);
   background: var(--color-cherry);
   border-bottom: 1.5px solid var(--color-marquee);
   font-family: var(--font-data), monospace;

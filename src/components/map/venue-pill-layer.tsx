@@ -155,10 +155,8 @@ function buildRenderUnits(
       continue;
     }
     const members = group.map((p) => p.venue);
-    const lng =
-      group.reduce((sum, p) => sum + p.venue.lng, 0) / group.length;
-    const lat =
-      group.reduce((sum, p) => sum + p.venue.lat, 0) / group.length;
+    const lng = group.reduce((sum, p) => sum + p.venue.lng, 0) / group.length;
+    const lat = group.reduce((sum, p) => sum + p.venue.lat, 0) / group.length;
     const state: VenuePillState =
       clusterMemberIds(members) === hoveredClusterKey ? "hover" : "normal";
     units.push({ kind: "cluster", members, anchor: { lng, lat }, state });
@@ -340,7 +338,9 @@ export function VenuePillLayer({
       setOpenCluster(null);
     }
 
-    function closePopoverOnOutsideClick(e: { point: { x: number; y: number } }) {
+    function closePopoverOnOutsideClick(e: {
+      point: { x: number; y: number };
+    }) {
       if (!map) return;
       const hits = map.queryRenderedFeatures([e.point.x, e.point.y], {
         layers: [VENUE_PILL_LAYER_ID],
@@ -420,7 +420,11 @@ export function VenuePillLayer({
       // cluster growing/shrinking simply mints a fresh image.
       for (const unit of units) {
         if (unit.kind === "venue") {
-          const iconId = venuePillIconId(unit.venue.id, unit.state, unit.venue.name);
+          const iconId = venuePillIconId(
+            unit.venue.id,
+            unit.state,
+            unit.venue.name,
+          );
           if (!map.hasImage(iconId)) {
             const asset = buildVenuePillIcon(unit.venue.name, unit.state);
             map.addImage(iconId, asset, { pixelRatio: asset.pixelRatio });

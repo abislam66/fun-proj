@@ -16,7 +16,7 @@
 - **Known gaps:** of the 61 active venues, 22 have no `hours` (confirmed via web research as venues with no credible posted schedule, mostly independent trucks — correctly left `null`/"Hours unknown" rather than guessed). Two venues (**Pretzel Dough**, **Vegan Tree**) were skipped entirely during the 2026-08-21 enrichment pass and need a manual look — Pretzel Dough's existence near campus couldn't be confirmed under that name, and Vegan Tree shows as **CLOSED** on current Yelp listings at both known locations (possible retirement candidate). See `Context/decisions.md` for why the KML seed source, the admin-publish path, and the auth mechanism changed in the 2026-08-18 session, and `Context/backlog.md` for deferred items.
 - **Venue zones: admin-controlled as of 2026-08-26.** The old disconnected `zoneKey` (4 values, admin-picked, display-text-only) is gone. `venues.map_zone` is now the single source of truth, admin-selected from the co-founder's real 8 map zones (or explicit "Other/Outside mapped zones") in `/admin/venues/[id]`, with a live warning if the picked zone disagrees with what the coordinates actually compute to. Of 74 live venues, 25 sit inside a real drawn zone and 49 are "other" (most of campus is outside the 8 hand-drawn areas — expected, not a data problem). See `Context/decisions.md` 2026-08-26.
 - **Venue photos: multi-photo gallery (up to 10) as of 2026-08-26.** The single-admin-photo model is gone — admin can upload, remove, reorder, and set a cover photo across up to `MAX_VENUE_PHOTOS` (10) photos per venue in `/admin/venues/[id]`, all still in the one `venue_photos` table from the 2026-08-25 consolidation (no schema change needed, just query/action layer changes). The co-founder's public `VenuePhotoGallery` was not touched — it already rendered any photo count with no extra controls, so 0/1/2–10 behavior was already correct by design. Storage is still Vercel Blob (`venue-images`); blob cleanup on delete only ever targets admin-uploaded photos, never legacy (locally-hosted) ones. Full detail: `Context/decisions.md` 2026-08-26.
-- **IMPORTANT — the "tueats-dev" project was never created.** `.env.local`'s Supabase project (`ehuhoitlezcijbbfkzan`) *is* production — confirmed 2026-08-27 by matching its dashboard project ref and finding same-day admin edits already live there. Every session's work, including everything in this log, has been happening directly against production data. Vercel's `tueats` project is now connected to `abislam66/fun-proj` (GitHub App re-authorized after repo ownership transferred from `templeterror`) with Production env vars pointed at this same Supabase project; a manual `vercel --prod` deploy was smoke-tested clean (map, filters, venue detail, photos, admin sign-in) before merging `integrate-cofounder-work` → `main`. There is still no separate dev database — treat every local `pnpm dev` session as touching the real live data.
+- **IMPORTANT — the "tueats-dev" project was never created.** `.env.local`'s Supabase project (`ehuhoitlezcijbbfkzan`) _is_ production — confirmed 2026-08-27 by matching its dashboard project ref and finding same-day admin edits already live there. Every session's work, including everything in this log, has been happening directly against production data. Vercel's `tueats` project is now connected to `abislam66/fun-proj` (GitHub App re-authorized after repo ownership transferred from `templeterror`) with Production env vars pointed at this same Supabase project; a manual `vercel --prod` deploy was smoke-tested clean (map, filters, venue detail, photos, admin sign-in) before merging `integrate-cofounder-work` → `main`. There is still no separate dev database — treat every local `pnpm dev` session as touching the real live data.
 - **Two new map zones as of 2026-08-27: Cecil B. Moore Ave and N Broad St.** Added because 27 real venues (mostly this session's Cecil B Moore/Broad St batch) had nowhere to go but "other." Both are approximate straight-line corridors (no tracing tool available), interpolated from real geocoded anchors — Broad St's shape is deliberately narrower south of Diamond St because the street runs close enough to the campus core there to threaten existing zones' deliberate gaps (Klein Law/Student Center notch, the 1940 Residence Hall exclusion). Verified via a full 92-venue old-vs-new regression check (zero regressions) before backfilling — see `Context/decisions.md` 2026-08-27.
 - **`is_halal` and `is_vegan_friendly` added as of 2026-08-27** — both plain booleans, default false, admin-editable checkboxes in `/admin/venues/[id]`, filter chips on the public filter bar, small "Halal" tag on cards/detail (mirroring the existing "Cash Only" tag pattern). `is_halal` is deliberately never auto-set by any script — user determines this by hand. `is_vegan_friendly` was researched venue-by-venue against official menus/delivery-platform listings; 8 of 49 published venues currently qualify (Chopsticks Express, Yummy Phở, CAVA, BurgerFi, Saladworks, Zen Japanese Food Fast, Panda Express, QDOBA) — see `Context/decisions.md` for the evidence bar used and what got excluded despite partial signals (e.g. Champ's Diner's conflicting reviews, Maple Star's vegetarian-only udon).
 - **Vercel Web Analytics added as of 2026-08-27** — `@vercel/analytics`'s `<Analytics />` in the root layout (`src/app/layout.tsx`), covering the whole app including `/admin`. No prior analytics existed (checked first). Needs a real Vercel deploy to start reporting — nothing shows in the dashboard until then.
@@ -27,16 +27,16 @@
 - **Next up:**
   1. Run migration `0009_motionless_shocker.sql` (`pnpm db:migrate` with `DIRECT_DATABASE_URL`) on the live DB **before** deploying this branch — `getPublishedVenues` now reads `ratings`, so the homepage will error until the table exists.
   2. Complete the Google Cloud + Supabase manual configuration above, then do a real end-to-end sign-in test (not just local verification) before pushing.
-  2. Retire **Vegan Tree** via `/admin` — reconfirmed 2026-08-27 as CLOSED per Yelp (this was already flagged 2026-08-21; still not acted on).
-  3. Resolve **Pretzel Dough**'s identity — still unconfirmed after a second research pass 2026-08-27; the nearest name match found (Philly Pretzel Factory) is a different brand, not a confirmed match.
-  4. Manually set `is_halal` for venues where it applies — deliberately never auto-set (see 2026-08-27 decisions entry).
-  5. 7 published venues still have no hours after two research passes — see the missing-hours report delivered 2026-08-27 (conversation record) for the full list and reasons; re-check periodically in case they get a web presence.
-  6. Flag to resolve: **OWL Breakfast & Lunch**'s hours have a source conflict (screenshot-sourced Tue-closed/6:30am-start vs. a 2026-08-27 web search's Mon-Fri-open/6am-start) — kept the screenshot version per "prefer the most recent official/location-specific source," but worth a direct confirm.
-  7. Optional: give a building/landmark to the ~7 venues whose location text got generic after the zone-system replacement (see the 2026-08-26 decisions entry for the exact list) — cosmetic, not urgent.
-  8. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for a second admin account.
-  9. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
-  10. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
-  11. Manually verify, through a real authenticated browser session: the multi-photo admin UI, the map-zone picker/dropdown/warning UI, the photo-upload flow, and the new Halal/Vegan Friendly checkboxes — all verified at the data/logic layer this session or earlier, never through a real `/admin` click-through.
+  3. Retire **Vegan Tree** via `/admin` — reconfirmed 2026-08-27 as CLOSED per Yelp (this was already flagged 2026-08-21; still not acted on).
+  4. Resolve **Pretzel Dough**'s identity — still unconfirmed after a second research pass 2026-08-27; the nearest name match found (Philly Pretzel Factory) is a different brand, not a confirmed match.
+  5. Manually set `is_halal` for venues where it applies — deliberately never auto-set (see 2026-08-27 decisions entry).
+  6. 7 published venues still have no hours after two research passes — see the missing-hours report delivered 2026-08-27 (conversation record) for the full list and reasons; re-check periodically in case they get a web presence.
+  7. Flag to resolve: **OWL Breakfast & Lunch**'s hours have a source conflict (screenshot-sourced Tue-closed/6:30am-start vs. a 2026-08-27 web search's Mon-Fri-open/6am-start) — kept the screenshot version per "prefer the most recent official/location-specific source," but worth a direct confirm.
+  8. Optional: give a building/landmark to the ~7 venues whose location text got generic after the zone-system replacement (see the 2026-08-26 decisions entry for the exact list) — cosmetic, not urgent.
+  9. When the friend's email is available: repeat the Add-User + DB-grant bootstrap for a second admin account.
+  10. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
+  11. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
+  12. Manually verify, through a real authenticated browser session: the multi-photo admin UI, the map-zone picker/dropdown/warning UI, the photo-upload flow, and the new Halal/Vegan Friendly checkboxes — all verified at the data/logic layer this session or earlier, never through a real `/admin` click-through.
 
 ---
 
@@ -97,6 +97,7 @@ in the query layer (`upsertAdminVenuePhoto` always replaced the one
 `source: "admin"` row) and has been removed.
 
 **What shipped:**
+
 - `lib/db/queries/venue-photos.ts`: `getVenuePhotosForAdmin` (full list),
   `insertVenuePhoto` (always appends), `deleteVenuePhotoById`,
   `setVenuePhotoOrder` (rewrites `sort_order` to a given id order via a
@@ -155,6 +156,7 @@ was ~7 venues losing a specific zone-based label (not the 49 it looked
 like), since `building` already wins over zone text where set.
 
 **What shipped:**
+
 - `venues.map_zone` replaces `zone_key` (migrations `0006`/`0007` — add,
   backfill via `scripts/backfill-map-zones.ts`, then drop). Backfill uses
   the same `mapZoneContaining()` the live filter already trusted — not a
@@ -201,6 +203,7 @@ preserve the co-founder's frontend exactly and only change the data
 source.
 
 **What changed:**
+
 - New `venue_photos` table (`venue_id`, `url`, `alt`,
   `source: 'legacy' | 'admin'`, `sort_order`) replaces `venues.image_url`
   (migration `0005_tough_captain_america.sql`, applied to `tueats-dev`).
@@ -255,6 +258,7 @@ Full reasoning for both scoping calls (admin-only, and Vercel Blob over
 Supabase Storage) is in `Context/decisions.md`.
 
 **What changed:**
+
 - `venues.image_url` column (migration `0004_yummy_bloodaxe.sql`, applied
   to `tueats-dev`).
 - `uploadVenueImage`/`removeVenueImage` server actions

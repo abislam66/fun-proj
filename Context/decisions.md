@@ -7,7 +7,7 @@
 
 ---
 
-## 2026-09-01 — Member ratings/reviews plus a member photo *queue*, not a menu CMS
+## 2026-09-01 — Member ratings/reviews plus a member photo _queue_, not a menu CMS
 
 TUE-12 asked for user-generated reviews and menu pictures. Specs already defined
 reviews as Feature 9–10 (one `ratings` row per user per venue; stars required,
@@ -50,6 +50,7 @@ specs rather than scale the request down. `Specs/auth-security.md` and
 rather than leaving them describing a rule the code now violates.
 
 **What actually changed, concretely:**
+
 - A `member` role is now real (it previously existed only as an unused enum
   value): any Google account can create one by hitting the sign-in gate on a
   venue page. It grants nothing beyond "can view venue detail pages" —
@@ -89,7 +90,7 @@ login" were both stated more than once, including in a dedicated "never do
 this" list clearly written to stop exactly this from happening later. This
 entry exists so a future session doesn't read the old, now-superseded
 reasoning in `Context/backlog.md`'s "OTP-friction auth fallback" note (which
-describes a *different*, still-hypothetical scenario — a campus-domain-
+describes a _different_, still-hypothetical scenario — a campus-domain-
 restricted Google OAuth supplementing member OTP, not replacing it as the
 only method) and assume this shipped quietly or by accident.
 
@@ -97,9 +98,9 @@ only method) and assume this shipped quietly or by accident.
 
 ## 2026-08-27 — Evidence bar for `is_vegan_friendly`, and how the Broad St zone conflict was actually resolved
 
-**`is_vegan_friendly`'s bar, applied literally:** a venue only qualifies with a specific, named, standing menu item that's plant-based — not a drink, not a side by itself, not "could be made vegan on request." This ruled out several venues that had *some* signal: Champ's Diner had one source claiming vegan options and a Yelp reviewer directly denying it — conflicting evidence, left false rather than picking a side. Maple Star has vegetarian udon, confirmed, but vegetarian isn't vegan (broth/egg risk) and nothing confirmed it was actually vegan — left false. Mexican Grill Stand has a standing "veggies" taco/burrito filling, but nothing confirmed it ships without cheese/crema by default — the difference between "a real menu path" (counts, like Saladworks'/QDOBA's build-your-own vegan bowls, which do count) and "an ingredient that could theoretically anchor a request" (doesn't count) was the deciding line throughout.
+**`is_vegan_friendly`'s bar, applied literally:** a venue only qualifies with a specific, named, standing menu item that's plant-based — not a drink, not a side by itself, not "could be made vegan on request." This ruled out several venues that had _some_ signal: Champ's Diner had one source claiming vegan options and a Yelp reviewer directly denying it — conflicting evidence, left false rather than picking a side. Maple Star has vegetarian udon, confirmed, but vegetarian isn't vegan (broth/egg risk) and nothing confirmed it was actually vegan — left false. Mexican Grill Stand has a standing "veggies" taco/burrito filling, but nothing confirmed it ships without cheese/crema by default — the difference between "a real menu path" (counts, like Saladworks'/QDOBA's build-your-own vegan bowls, which do count) and "an ingredient that could theoretically anchor a request" (doesn't count) was the deciding line throughout.
 
-**How the Broad St zone was widened without breaking the co-founder's deliberate gaps:** the naive fix (just enlarge the polygon to cover Wendy's/Panera's stored coordinates) would have swallowed the intentional notch between Klein Law and the Student Center zone and the intentional exclusion of the 1940 Residence Hall from Liacouras Walk — both real, tested design decisions from the original 8-zone build. The actual fix had two parts: (1) Wendy's/Panera's own coordinates were bad estimates from the 2026-08-26 batch-add (guessed too close to the campus core) — corrected via linear interpolation between two *real* geocoded points on the same street (Chick-fil-A Morgan Hall at 1601, McDonald's at 2109), which placed them meaningfully further from the conflict zone than originally guessed; (2) the zone polygon itself became a stepped/flag shape (full width north of Diamond St, narrow south of it) rather than a uniform rectangle, because Broad St and the campus core genuinely run close together south of Diamond. Before writing any DB update, every one of the 92 live venues was checked old-8-zones vs. new-10-zones (not "does the new zone's bounding box overlap" — an actual point-in-polygon comparison) to catch any real regression before it happened, not after.
+**How the Broad St zone was widened without breaking the co-founder's deliberate gaps:** the naive fix (just enlarge the polygon to cover Wendy's/Panera's stored coordinates) would have swallowed the intentional notch between Klein Law and the Student Center zone and the intentional exclusion of the 1940 Residence Hall from Liacouras Walk — both real, tested design decisions from the original 8-zone build. The actual fix had two parts: (1) Wendy's/Panera's own coordinates were bad estimates from the 2026-08-26 batch-add (guessed too close to the campus core) — corrected via linear interpolation between two _real_ geocoded points on the same street (Chick-fil-A Morgan Hall at 1601, McDonald's at 2109), which placed them meaningfully further from the conflict zone than originally guessed; (2) the zone polygon itself became a stepped/flag shape (full width north of Diamond St, narrow south of it) rather than a uniform rectangle, because Broad St and the campus core genuinely run close together south of Diamond. Before writing any DB update, every one of the 92 live venues was checked old-8-zones vs. new-10-zones (not "does the new zone's bounding box overlap" — an actual point-in-polygon comparison) to catch any real regression before it happened, not after.
 
 **Why Mexican Grill Stand's "already had hours" surprised me mid-task:** it had been miscategorized as missing during an earlier scan of this same session — a bookkeeping slip on my end, not a data issue. The apply script's own "only write if currently null/empty" guard caught it and skipped the write, which is exactly why that guard exists.
 
@@ -148,6 +149,7 @@ matter of removing the "only ever one admin row" constraint from the
 query/action layer, not a schema change.
 
 **What changed:**
+
 - `getAdminVenuePhoto`/`upsertAdminVenuePhoto`/`deleteAdminVenuePhoto`
   (single-row, upsert-in-place) replaced by `getVenuePhotosForAdmin`
   (full list), `insertVenuePhoto` (always appends), `deleteVenuePhotoById`,
@@ -210,6 +212,7 @@ real 8-zone map system (`config/map-zones.ts`) computed silently in the
 background with no admin visibility.
 
 **What changed:**
+
 - `venues.zone_key` → `venues.map_zone` (migrations `0006`/`0007`), storing
   one of the 8 `MapZoneKey`s or the literal `"other"` sentinel
   (`OTHER_MAP_ZONE`, `src/lib/venues.ts`) — deliberately **not** added to
@@ -289,7 +292,7 @@ exactly what they did before (single upload/replace/remove) — they just
 now target the one `source: 'admin'` row per venue in `venue_photos`
 instead of `venues.image_url`. Legacy rows are never touched by admin
 actions. An admin-uploaded photo is appended after any legacy photos and
-shows up in the *same* gallery strip, at the *same* position photos
+shows up in the _same_ gallery strip, at the _same_ position photos
 already occupy — no second photo UI on the page.
 
 **Removed, not cofounder's:** the separate "hero image" block this
