@@ -7,6 +7,20 @@
 
 ---
 
+## 2026-09-02 — Deferred error monitoring (no Sentry) for V1 launch
+
+Pre-launch audits repeatedly flagged that failures caught by the new
+`error.tsx`/`global-error.tsx`/`admin/error.tsx` boundaries (added this same
+session) show the user a friendly message but capture nothing anywhere for
+the site owner to see. The fix would normally be Sentry or an equivalent.
+Explicit call: **don't add it, and don't add any new dependency for it, for
+V1** — rely on Vercel's built-in function/runtime logs for now, and revisit
+Sentry once TuEats has real usage post-launch. Recorded so a future session
+doesn't read "no error monitoring" as an oversight and reach for Sentry
+mid-launch-prep without checking back first.
+
+---
+
 ## 2026-09-01 — Venue pins share zone-label chrome
 
 The site owner liked the zone name plates (square-ish fill, ink outline,

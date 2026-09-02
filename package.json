@@ -18,7 +18,8 @@
     "db:migrate": "drizzle-kit migrate",
     "seed:kml": "tsx --env-file=.env.local scripts/seed-kml.ts",
     "enrich:venues": "tsx --env-file=.env.local scripts/enrich-venues/apply.ts",
-    "backfill:map-zones": "tsx --env-file=.env.local scripts/backfill-map-zones.ts"
+    "backfill:map-zones": "tsx --env-file=.env.local scripts/backfill-map-zones.ts",
+    "refresh:dev-from-prod": "tsx --env-file=.env.local --env-file=.env.prod-readonly.local scripts/refresh-dev-from-prod.ts"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "5.2.8",

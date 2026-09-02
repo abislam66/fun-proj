@@ -58,10 +58,11 @@ Two things deliberately **outside** the build:
 | `NEXT_PUBLIC_SITE_URL` | Yes | Canonical URL per environment (localhost / preview URL / production) — drives auth redirects and OG tags. |
 | `NEXT_PUBLIC_MAP_STYLE_URL` | Yes | OpenFreeMap style URL — the one-value tile-provider swap. |
 | `IP_HASH_SALT` | Yes | Salt for anonymous-report IP hashing. Different value per environment. |
+| `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob read/write token for admin-uploaded venue photos (`src/actions/admin.ts`, `put`/`del`). **Production** must use the production Blob store's token; **Preview and Development** must use the separate dev Blob store's token — never the same store. Vercel Blob tokens are scoped per store, so this separation is what keeps a delete/upload from a non-production environment from ever reaching a real production photo. |
 
 > ⚠️ Never commit `.env` files or real secret values. Keep a `.env.example` with dummy values checked in.
 
-In Vercel, Preview and Production environments hold **different values** for the Supabase variables (dev project vs prod project) — this is what makes previews safe by construction.
+In Vercel, Preview and Production environments hold **different values** for the Supabase and Blob variables (dev project/store vs prod project/store) — this is what makes previews safe by construction.
 
 ---
 
@@ -159,4 +160,4 @@ Note: Vercel deploys on push regardless of GitHub checks by default — turn on 
 - Rotate any secret immediately if it is accidentally committed.
 - The Supabase **service-role key** is used nowhere — not in Vercel, not in CI, not locally (see `auth-security.md`).
 - Resend credentials live inside each Supabase project's SMTP settings, not in this app's environment.
-- The only secrets this app actually holds: two connection strings and `IP_HASH_SALT`. Small surface, keep it that way.
+- The only secrets this app actually holds: two connection strings, `IP_HASH_SALT`, and `BLOB_READ_WRITE_TOKEN`. Small surface, keep it that way.

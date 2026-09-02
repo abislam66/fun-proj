@@ -647,7 +647,10 @@ button {
 .map-hud-coords {
   display: none;
   margin-left: auto;
-  color: var(--color-cherry-hover);
+  /* cherry-hover here measured ~3:1 against the dark marquee background —
+     fails WCAG AA for this small text. cherry-soft keeps the same cherry
+     family (a pale tint, not a new hue) at ~16:1. */
+  color: var(--color-cherry-soft);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -1449,6 +1452,14 @@ button {
   margin: 0 0 var(--spacing-md);
   color: var(--color-ink-secondary);
   font-size: var(--text-small);
+}
+
+.page-loading {
+  padding: var(--spacing-3xl) 0;
+  color: var(--color-ink-secondary);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  text-align: center;
 }
 
 .text-link,

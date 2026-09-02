@@ -6,11 +6,13 @@ export {
   listSlugsExcept,
   insertVenue,
   updateVenue,
+  bulkUpdateVenueHalal,
   insertProblemReport,
   listProblemReports,
   updateProblemReportStatus,
   toVenue,
   type PublicVenue,
+  type AdminVenueRow,
 } from "./venues";
 export {
   getVenuePhotosBySlug,

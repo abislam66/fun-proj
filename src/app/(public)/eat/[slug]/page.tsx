@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { SignInGate } from "@/components/venues/sign-in-gate";
 import { VenueDetail } from "@/components/venues/venue-detail";
@@ -14,10 +16,37 @@ import type { Venue } from "@/lib/venues";
 
 export const dynamic = "force-dynamic";
 
+// React's cache() dedupes this by argument within a single request, so
+// generateMetadata and the page component below share one DB call
+// instead of two — same pattern Next's own docs recommend for this exact
+// "metadata needs the same data as the page" case.
+const loadVenue = cache(getVenueBySlug);
+
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ from?: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const row = await loadVenue(slug);
+  if (!row) return {};
+
+  // Deliberately not row.description — that's gated content, and this
+  // metadata is visible to anonymous crawlers/link-preview bots that
+  // never pass the sign-in gate. Only the venue's name (already public
+  // on the anonymous map/list) goes in the title/description here.
+  const description = `See hours, location, and details for ${row.name} on TuEats — sign in with Google to view.`;
+  return {
+    title: row.name,
+    description,
+    alternates: { canonical: `/eat/${slug}` },
+    openGraph: { title: row.name, description, url: `/eat/${slug}` },
+    twitter: { title: row.name, description },
+  };
+}
 
 export default async function VenueDetailPage({
   params,
@@ -25,7 +54,7 @@ export default async function VenueDetailPage({
 }: PageProps) {
   const { slug } = await params;
   const query = await searchParams;
-  const row = await getVenueBySlug(slug);
+  const row = await loadVenue(slug);
 
   if (!row) {
     notFound();

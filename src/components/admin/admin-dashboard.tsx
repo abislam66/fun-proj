@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { resolveProblemReport, resolveVenuePhoto } from "@/actions/admin";
+import {
+  bulkSetVenueHalal,
+  resolveProblemReport,
+  resolveVenuePhoto,
+} from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { Button, Input } from "@/components/ui/primitives";
+import { Button, Chip, Input } from "@/components/ui/primitives";
+import { CUISINE_KEYS, CUISINES } from "@/config/cuisines";
 import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
 import {
   adminVenueZoneLabel,
@@ -13,9 +18,21 @@ import {
   type AdminVenueSort,
   type AdminVenueZoneFilter,
 } from "@/lib/admin-venue-list";
-import type { PendingVenuePhoto } from "@/lib/db/queries";
+import type { AdminVenueRow, PendingVenuePhoto } from "@/lib/db/queries";
 import type { ProblemReportRow, VenueRow } from "@/lib/db/schema";
 import { OTHER_MAP_ZONE } from "@/lib/venues";
+
+type TriFilter = "all" | "yes" | "no";
+type CompletenessFlag = "hours" | "description" | "photo";
+
+function venueMissingHours(venue: AdminVenueRow): boolean {
+  const hours = venue.hours as Record<string, unknown> | null;
+  return !hours || Object.keys(hours).length === 0;
+}
+
+function venueMissingDescription(venue: AdminVenueRow): boolean {
+  return !venue.description || !venue.description.trim();
+}
 
 const reportLabels: Record<ProblemReportRow["kind"], string> = {
   closed: "Reported closed",
@@ -32,10 +49,10 @@ export function AdminDashboard({
   initialPendingPhotos,
 }: {
   initialReports: ProblemReportRow[];
-  initialVenues: VenueRow[];
+  initialVenues: AdminVenueRow[];
   initialPendingPhotos: PendingVenuePhoto[];
 }) {
-  const [venues] = useState(initialVenues);
+  const [venues, setVenues] = useState(initialVenues);
   const [reports, setReports] = useState(initialReports);
   const [pendingPhotos, setPendingPhotos] = useState(initialPendingPhotos);
   const [pendingReportId, setPendingReportId] = useState<string | null>(null);
@@ -46,16 +63,51 @@ export function AdminDashboard({
   );
   const [zoneFilter, setZoneFilter] = useState<AdminVenueZoneFilter>("all");
   const [venueSort, setVenueSort] = useState<AdminVenueSort>("updated");
+  const [cuisineFilter, setCuisineFilter] = useState("all");
+  const [halalFilter, setHalalFilter] = useState<TriFilter>("all");
+  const [veganFilter, setVeganFilter] = useState<TriFilter>("all");
+  const [completenessFlags, setCompletenessFlags] = useState<
+    Set<CompletenessFlag>
+  >(new Set());
   const [reportFilter, setReportFilter] = useState<
     "all" | ProblemReportRow["status"]
   >("open");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkNotice, setBulkNotice] = useState("");
+  const [bulkNoticeIsError, setBulkNoticeIsError] = useState(false);
+
+  function toggleCompletenessFlag(flag: CompletenessFlag) {
+    setCompletenessFlags((current) => {
+      const next = new Set(current);
+      if (next.has(flag)) next.delete(flag);
+      else next.add(flag);
+      return next;
+    });
+  }
+
+  const anyExtraFilterActive =
+    cuisineFilter !== "all" ||
+    halalFilter !== "all" ||
+    veganFilter !== "all" ||
+    completenessFlags.size > 0;
+
+  function clearExtraFilters() {
+    setCuisineFilter("all");
+    setHalalFilter("all");
+    setVeganFilter("all");
+    setCompletenessFlags(new Set());
+  }
 
   const venueNameById = useMemo(
     () => new Map(venues.map((venue) => [venue.id, venue.name])),
     [venues],
   );
 
-  const visibleVenues = useMemo(
+  // Zone/status/search/sort stay main's (`filterAndSortAdminVenues`) —
+  // Cuisine/Halal/Vegan Friendly/completeness are additional narrowing on
+  // top of that result, not a second competing filter pipeline.
+  const zoneSortedVenues = useMemo(
     () =>
       filterAndSortAdminVenues(venues, {
         search,
@@ -65,6 +117,46 @@ export function AdminDashboard({
       }),
     [search, venues, venueFilter, venueSort, zoneFilter],
   );
+
+  const visibleVenues = useMemo(
+    () =>
+      zoneSortedVenues.filter((venue) => {
+        if (cuisineFilter !== "all" && !venue.cuisines.includes(cuisineFilter))
+          return false;
+        if (halalFilter !== "all" && venue.isHalal !== (halalFilter === "yes"))
+          return false;
+        if (
+          veganFilter !== "all" &&
+          venue.isVeganFriendly !== (veganFilter === "yes")
+        )
+          return false;
+        if (completenessFlags.has("hours") && !venueMissingHours(venue))
+          return false;
+        if (
+          completenessFlags.has("description") &&
+          !venueMissingDescription(venue)
+        )
+          return false;
+        if (completenessFlags.has("photo") && venue.photoCount > 0)
+          return false;
+        return true;
+      }),
+    [
+      zoneSortedVenues,
+      cuisineFilter,
+      halalFilter,
+      veganFilter,
+      completenessFlags,
+    ],
+  );
+
+  const allVisibleSelected =
+    visibleVenues.length > 0 &&
+    visibleVenues.every((venue) => selectedIds.has(venue.id));
+  const someVisibleSelected = visibleVenues.some((venue) =>
+    selectedIds.has(venue.id),
+  );
+
   const visibleReports = reports.filter(
     (report) => reportFilter === "all" || report.status === reportFilter,
   );
@@ -102,6 +194,68 @@ export function AdminDashboard({
     setPendingPhotos((current) =>
       current.filter((photo) => photo.id !== photoId),
     );
+  }
+
+  function toggleVenueSelected(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        const next = new Set(current);
+        for (const venue of visibleVenues) next.delete(venue.id);
+        return next;
+      }
+      const next = new Set(current);
+      for (const venue of visibleVenues) next.add(venue.id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  /** Bulk actions live in one small table so a future field (Vegan
+   * Friendly, zone, status, ...) is just another entry + server action,
+   * not a new bar/confirmation/feedback plumbing. */
+  async function applyBulkHalal(isHalal: boolean) {
+    const ids = [...selectedIds];
+    const confirmed = window.confirm(
+      isHalal
+        ? `Mark ${ids.length} selected venues as Halal?`
+        : `Mark ${ids.length} selected venues as not Halal?`,
+    );
+    if (!confirmed) return;
+
+    setBulkPending(true);
+    setBulkNotice("");
+    const result = await bulkSetVenueHalal({ ids, isHalal });
+    setBulkPending(false);
+
+    if (!result.ok) {
+      setBulkNoticeIsError(true);
+      setBulkNotice(result.error);
+      return;
+    }
+
+    const updated = new Set(result.data.updatedIds);
+    setVenues((current) =>
+      current.map((venue) =>
+        updated.has(venue.id) ? { ...venue, isHalal } : venue,
+      ),
+    );
+    setBulkNoticeIsError(false);
+    setBulkNotice(
+      `Updated ${result.data.updatedIds.length} venue${result.data.updatedIds.length === 1 ? "" : "s"}.`,
+    );
+    clearSelection();
   }
 
   return (
@@ -214,12 +368,149 @@ export function AdminDashboard({
           </div>
         </div>
 
+        <div className="admin-filter-row">
+          <label>
+            <span className="sr-only">Filter venues by cuisine</span>
+            <select
+              className="admin-select"
+              onChange={(event) => setCuisineFilter(event.target.value)}
+              value={cuisineFilter}
+            >
+              <option value="all">All cuisines</option>
+              {CUISINE_KEYS.map((key) => (
+                <option key={key} value={key}>
+                  {CUISINES[key].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">Filter venues by Halal status</span>
+            <select
+              className="admin-select"
+              onChange={(event) =>
+                setHalalFilter(event.target.value as TriFilter)
+              }
+              value={halalFilter}
+            >
+              <option value="all">Halal: all</option>
+              <option value="yes">Halal: yes</option>
+              <option value="no">Halal: no</option>
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">
+              Filter venues by Vegan Friendly status
+            </span>
+            <select
+              className="admin-select"
+              onChange={(event) =>
+                setVeganFilter(event.target.value as TriFilter)
+              }
+              value={veganFilter}
+            >
+              <option value="all">Vegan Friendly: all</option>
+              <option value="yes">Vegan Friendly: yes</option>
+              <option value="no">Vegan Friendly: no</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="admin-filter-row admin-filter-chips">
+          <Chip
+            active={completenessFlags.has("hours")}
+            onClick={() => toggleCompletenessFlag("hours")}
+          >
+            Missing hours
+          </Chip>
+          <Chip
+            active={completenessFlags.has("description")}
+            onClick={() => toggleCompletenessFlag("description")}
+          >
+            Missing description
+          </Chip>
+          <Chip
+            active={completenessFlags.has("photo")}
+            onClick={() => toggleCompletenessFlag("photo")}
+          >
+            Missing photo
+          </Chip>
+          {anyExtraFilterActive ? (
+            <button
+              className="admin-bulk-clear"
+              onClick={clearExtraFilters}
+              type="button"
+            >
+              Clear extra filters
+            </button>
+          ) : null}
+        </div>
+
+        {selectedIds.size > 0 ? (
+          <div className="admin-bulk-bar">
+            <span className="admin-bulk-count">
+              {selectedIds.size} selected
+            </span>
+            <button
+              className="admin-bulk-clear"
+              onClick={clearSelection}
+              type="button"
+            >
+              Clear selection
+            </button>
+            <span aria-hidden="true" className="admin-bulk-divider" />
+            <span className="admin-bulk-action-label">Halal</span>
+            <Button
+              disabled={bulkPending}
+              onClick={() => void applyBulkHalal(true)}
+              variant="secondary"
+            >
+              Yes
+            </Button>
+            <Button
+              disabled={bulkPending}
+              onClick={() => void applyBulkHalal(false)}
+              variant="secondary"
+            >
+              No
+            </Button>
+          </div>
+        ) : null}
+
+        {bulkNotice ? (
+          <div
+            className={
+              bulkNoticeIsError
+                ? "admin-notice admin-notice-error"
+                : "admin-notice"
+            }
+            role="status"
+          >
+            {bulkNotice}
+          </div>
+        ) : null}
+
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    aria-label="Select all visible venues"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAllVisible}
+                    ref={(node) => {
+                      if (node) {
+                        node.indeterminate =
+                          someVisibleSelected && !allVisibleSelected;
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                </th>
                 <th>Venue</th>
                 <th>Status</th>
+                <th>Halal</th>
                 <th>Zone</th>
                 <th>Verified</th>
                 <th>Updated</th>
@@ -231,6 +522,14 @@ export function AdminDashboard({
             <tbody>
               {visibleVenues.map((venue) => (
                 <tr key={venue.id}>
+                  <td>
+                    <input
+                      aria-label={`Select ${venue.name}`}
+                      checked={selectedIds.has(venue.id)}
+                      onChange={() => toggleVenueSelected(venue.id)}
+                      type="checkbox"
+                    />
+                  </td>
                   <td>
                     <Link
                       className="admin-record-link"
@@ -244,6 +543,13 @@ export function AdminDashboard({
                     <span className={`admin-status status-${venue.status}`}>
                       {venue.status}
                     </span>
+                  </td>
+                  <td>
+                    {venue.isHalal ? (
+                      <span className="admin-status halal-tag">Halal</span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td>{adminVenueZoneLabel(venue.mapZone)}</td>
                   <td>
