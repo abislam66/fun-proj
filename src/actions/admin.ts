@@ -2,6 +2,7 @@
 
 import { del, put } from "@vercel/blob";
 import { revalidateTag } from "next/cache";
+import { z } from "zod";
 
 import {
   ALLOWED_VENUE_IMAGE_TYPES,
@@ -12,6 +13,7 @@ import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import { blobBackedPhotoSource, canPublishVenuePhoto } from "@/lib/ratings";
 import {
+  bulkUpdateVenueHalal,
   countPublishedVenuePhotos,
   deleteVenuePhotoById,
   getRatingById,
@@ -35,6 +37,7 @@ import {
 import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
 import {
+  bulkSetHalalSchema,
   reorderVenuePhotosSchema,
   removeRatingSchema,
   resolveProblemReportSchema,
@@ -51,6 +54,20 @@ export type ActionResult<T = void> =
 function fail(error: unknown): ActionResult<never> {
   if (error instanceof AuthError || error instanceof RateLimitError) {
     return { ok: false, error: error.message };
+  }
+  if (error instanceof z.ZodError) {
+    // Default .message is a pretty-printed JSON dump of every issue —
+    // unreadable in the admin's single-line notice banner. The client
+    // already validates with friendly per-field messages
+    // (validateVenueDraft); this is only the server-side safety net for
+    // whatever that missed, so a readable joined summary is enough.
+    const message = error.issues
+      .map((issue) => {
+        const field = issue.path.join(".");
+        return field ? `${field}: ${issue.message}` : issue.message;
+      })
+      .join("; ");
+    return { ok: false, error: message || "Invalid input." };
   }
   if (error instanceof Error) {
     return { ok: false, error: error.message };
@@ -322,6 +339,24 @@ export async function verifyVenue(
         lastVerifiedAt: now.toISOString(),
       },
     };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: bulk-set Halal on many venues in one action (used by the admin list's bulk selection). */
+export async function bulkSetVenueHalal(
+  raw: unknown,
+): Promise<ActionResult<{ updatedIds: string[] }>> {
+  try {
+    await requireAdmin();
+    const { ids, isHalal } = bulkSetHalalSchema.parse(raw);
+    const updated = await bulkUpdateVenueHalal(ids, isHalal);
+
+    revalidateTag("venues");
+    for (const row of updated) revalidateTag(`venue:${row.slug}`);
+
+    return { ok: true, data: { updatedIds: updated.map((row) => row.id) } };
   } catch (error) {
     return fail(error);
   }

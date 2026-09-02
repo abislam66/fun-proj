@@ -1,11 +1,20 @@
 import { unstable_cache } from "next/cache";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  ne,
+  sql,
+} from "drizzle-orm";
 
 import { CUISINE_KEYS } from "@/config/cuisines";
 import { MAP_ZONE_KEYS } from "@/config/map-zones";
 import { db } from "@/lib/db";
 import {
   problemReports,
+  venuePhotos,
   venues,
   type ProblemReportRow,
   type VenueInsert,
@@ -66,9 +75,19 @@ export function toVenue(row: PublicVenue): Venue {
 
 const PUBLIC_STATUSES = ["published", "retired"] as const;
 
+// The list/map endpoint ships to every client on every home page load, so
+// it skips columns only the detail page (`fetchVenueBySlug`, full row)
+// actually reads: `toVenue()` never puts description/retiredAt/createdAt/
+// updatedAt into the `Venue` shape the map/list render. `description` is
+// nulled back in rather than typed away, so `normalizeVenue`'s VenueRow
+// contract stays a single, unchanged shape.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to exclude them from listColumns below
+const { description, retiredAt, createdAt, updatedAt, ...listColumns } =
+  getTableColumns(venues);
+
 async function fetchPublishedVenues(): Promise<PublicVenue[]> {
   const rows = await db
-    .select()
+    .select(listColumns)
     .from(venues)
     .where(eq(venues.status, "published"))
     .orderBy(venues.name);
@@ -77,7 +96,18 @@ async function fetchPublishedVenues(): Promise<PublicVenue[]> {
     rows.map((row) => row.id),
   );
 
-  return rows.map((row) => normalizeVenue(row, aggregates.get(row.id) ?? null));
+  return rows.map((row) =>
+    normalizeVenue(
+      {
+        ...row,
+        description: null,
+        retiredAt: null,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+      },
+      aggregates.get(row.id) ?? null,
+    ),
+  );
 }
 
 export function getPublishedVenues(): Promise<PublicVenue[]> {
@@ -108,8 +138,20 @@ export function getVenueBySlug(slug: string): Promise<PublicVenue | null> {
   )();
 }
 
-export async function listAllVenuesAdmin(): Promise<VenueRow[]> {
-  return db.select().from(venues).orderBy(desc(venues.updatedAt));
+export type AdminVenueRow = VenueRow & { photoCount: number };
+
+/** Powers the admin venue list + its "missing photo" completeness filter. */
+export async function listAllVenuesAdmin(): Promise<AdminVenueRow[]> {
+  const rows = await db
+    .select({
+      ...getTableColumns(venues),
+      photoCount: sql<number>`count(${venuePhotos.id})::int`,
+    })
+    .from(venues)
+    .leftJoin(venuePhotos, eq(venuePhotos.venueId, venues.id))
+    .groupBy(venues.id)
+    .orderBy(desc(venues.updatedAt));
+  return rows;
 }
 
 export async function getVenueById(id: string): Promise<VenueRow | null> {
@@ -152,6 +194,18 @@ export async function updateVenue(
     throw new Error("Venue not found");
   }
   return row;
+}
+
+/** Bulk admin edit: sets `isHalal` for many venues in one statement — nothing else changes. */
+export async function bulkUpdateVenueHalal(
+  ids: string[],
+  isHalal: boolean,
+): Promise<VenueRow[]> {
+  return db
+    .update(venues)
+    .set({ isHalal, updatedAt: new Date() })
+    .where(inArray(venues.id, ids))
+    .returning();
 }
 
 export async function insertProblemReport(values: {

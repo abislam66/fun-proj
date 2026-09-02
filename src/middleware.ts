@@ -1,5 +1,18 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
+// Duplicated from src/lib/auth.ts (not imported): that module pulls in
+// Drizzle/postgres and next/headers, neither safe in this file's Edge
+// runtime — this tiny helper is cheaper to keep in sync by hand than to
+// risk breaking middleware by importing a Node-only module graph into it.
+function hardenSessionCookie(options: CookieOptions): CookieOptions {
+  return {
+    ...options,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: options.sameSite ?? "lax",
+  };
+}
 
 /**
  * Runs on every page (not just /admin) because Supabase's SSR client can
@@ -44,7 +57,7 @@ export async function middleware(request: NextRequest) {
           request: { headers: request.headers },
         });
         for (const { name, value, options } of cookiesToSet) {
-          response.cookies.set(name, value, options);
+          response.cookies.set(name, value, hardenSessionCookie(options));
         }
       },
     },

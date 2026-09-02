@@ -7,6 +7,7 @@ export {
   venueIdSchema,
   venuePhotoIdSchema,
   reorderVenuePhotosSchema,
+  bulkSetHalalSchema,
   problemKindSchema,
   reportProblemSchema,
   resolveProblemReportSchema,

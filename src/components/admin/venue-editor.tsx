@@ -290,6 +290,39 @@ function VenueEditorForm({
     setField("hours", next);
   }
 
+  const WEEKDAY_TARGETS: WeekdayKey[] = ["tue", "wed", "thu", "fri"];
+
+  function copyMondayToWeekdays() {
+    const monday = draft.hours.mon?.[0];
+    if (!monday) {
+      setNotice("Set Monday's hours first.");
+      setNoticeIsError(true);
+      return;
+    }
+    const wouldOverwrite = WEEKDAY_TARGETS.some((day) => {
+      const existing = draft.hours[day]?.[0];
+      return (
+        existing &&
+        (existing.open !== monday.open || existing.close !== monday.close)
+      );
+    });
+    if (
+      wouldOverwrite &&
+      !window.confirm(
+        "Tue–Fri already have different hours set. Overwrite them with Monday's?",
+      )
+    ) {
+      return;
+    }
+    const next = { ...draft.hours };
+    for (const day of WEEKDAY_TARGETS) {
+      next[day] = [{ ...monday }];
+    }
+    setField("hours", next);
+    setNotice("Copied Monday's hours to Tue–Fri.");
+    setNoticeIsError(false);
+  }
+
   return (
     <AdminShell>
       <div className="editor-heading">
@@ -652,6 +685,15 @@ function VenueEditorForm({
             </label>
             {draft.hoursKnown ? (
               <div className="admin-hours">
+                <Button
+                  className="admin-hours-copy"
+                  disabled={!draft.hours.mon?.[0]}
+                  onClick={copyMondayToWeekdays}
+                  type="button"
+                  variant="secondary"
+                >
+                  Copy Monday → Tue–Fri
+                </Button>
                 {WEEKDAY_KEYS.map((day) => {
                   const range = draft.hours[day]?.[0];
                   return (

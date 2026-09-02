@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { CAMPUS_BOUNDS } from "@/config/site";
-import { reportProblemSchema, venueInputSchema } from "@/lib/validation";
+import {
+  bulkSetHalalSchema,
+  reportProblemSchema,
+  venueInputSchema,
+} from "@/lib/validation";
 
 describe("venueInputSchema", () => {
   const valid = {
@@ -43,6 +47,43 @@ describe("venueInputSchema", () => {
   it("rejects invalid cuisine tags", () => {
     expect(() =>
       venueInputSchema.parse({ ...valid, cuisines: ["barbecue"] }),
+    ).toThrow();
+  });
+});
+
+describe("bulkSetHalalSchema", () => {
+  const ids = [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+  ];
+
+  it("accepts a list of venue ids and a boolean", () => {
+    const parsed = bulkSetHalalSchema.parse({ ids, isHalal: true });
+    expect(parsed.ids).toEqual(ids);
+    expect(parsed.isHalal).toBe(true);
+  });
+
+  it("rejects an empty id list", () => {
+    expect(() =>
+      bulkSetHalalSchema.parse({ ids: [], isHalal: true }),
+    ).toThrow();
+  });
+
+  it("rejects non-uuid ids", () => {
+    expect(() =>
+      bulkSetHalalSchema.parse({ ids: ["not-a-uuid"], isHalal: true }),
+    ).toThrow();
+  });
+
+  it("rejects a non-boolean isHalal value", () => {
+    expect(() =>
+      bulkSetHalalSchema.parse({ ids, isHalal: "yes" }),
+    ).toThrow();
+  });
+
+  it("rejects unknown keys (strict)", () => {
+    expect(() =>
+      bulkSetHalalSchema.parse({ ids, isHalal: true, status: "published" }),
     ).toThrow();
   });
 });

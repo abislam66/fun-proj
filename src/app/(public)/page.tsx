@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { SiteHeader } from "@/components/layout/site-header";
 import { VenueExplorer } from "@/components/venues/venue-explorer";
 import { getUser } from "@/lib/auth";
 import { getPublishedVenues, toVenue } from "@/lib/db/queries";
@@ -5,6 +8,32 @@ import { getPublishedVenues, toVenue } from "@/lib/db/queries";
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+/**
+ * Shown only if the venue query itself fails (a real outage) — not for a
+ * failed session check, which degrades to "signed out" instead of taking
+ * the whole page down (see below). Kept to a plain link rather than a
+ * client "Try again" button so this stays a Server Component.
+ */
+function HomePageUnavailable() {
+  return (
+    <div className="public-page">
+      <SiteHeader />
+      <main className="detail-page">
+        <div className="empty-state">
+          <span aria-hidden="true" className="empty-state-mark">
+            !
+          </span>
+          <h2>Can&rsquo;t load the map right now</h2>
+          <p>Something&rsquo;s wrong on our end. Please try again shortly.</p>
+          <Link className="button button-primary" href="/">
+            Try again
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
+}
 
 export default async function HomePage({ searchParams }: PageProps) {
   const values = await searchParams;
@@ -14,11 +43,25 @@ export default async function HomePage({ searchParams }: PageProps) {
     else if (value !== undefined) params.set(key, value);
   });
 
-  const [publishedRows, session] = await Promise.all([
+  // Independent failure handling: a broken session check shouldn't take
+  // down the whole map (degrade to signed-out instead), but a broken
+  // venue query has no graceful in-page fallback — that's the core
+  // content, so it gets the dedicated unavailable state.
+  const [venuesResult, userResult] = await Promise.allSettled([
     getPublishedVenues(),
     getUser(),
   ]);
-  const venues = publishedRows.map(toVenue);
+
+  if (venuesResult.status === "rejected") {
+    console.error("Homepage: failed to load venues:", venuesResult.reason);
+    return <HomePageUnavailable />;
+  }
+  if (userResult.status === "rejected") {
+    console.error("Homepage: failed to resolve session:", userResult.reason);
+  }
+
+  const venues = venuesResult.value.map(toVenue);
+  const session = userResult.status === "fulfilled" ? userResult.value : null;
   const user = session ? { displayName: session.profile.displayName } : null;
 
   return (

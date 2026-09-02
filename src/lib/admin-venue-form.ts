@@ -1,6 +1,6 @@
 import type { CuisineKey } from "@/config/cuisines";
 import { MAP_ZONES, type MapZoneKey } from "@/config/map-zones";
-import { CAMPUS_BOUNDS } from "@/config/site";
+import { CAMPUS_BOUNDS, DEFAULT_VIEWPORT } from "@/config/site";
 import type { VenueRow } from "@/lib/db/schema";
 import type { VenueHours } from "@/lib/hours";
 import { mapZoneContaining } from "@/lib/map/point-in-polygon";
@@ -51,8 +51,10 @@ export const EMPTY_VENUE_DRAFT: VenueDraft = {
   type: "truck",
   description: "",
   status: "draft",
-  lat: CAMPUS_BOUNDS.south.toFixed(4),
-  lng: CAMPUS_BOUNDS.west.toFixed(4),
+  // Campus center, not a bounds corner — every new venue used to need a
+  // pan away from the SW corner before the map picker was even useful.
+  lat: DEFAULT_VIEWPORT.center[1].toFixed(4),
+  lng: DEFAULT_VIEWPORT.center[0].toFixed(4),
   mapZone: "",
   building: "",
   floor: "",

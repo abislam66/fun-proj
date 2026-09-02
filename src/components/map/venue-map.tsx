@@ -130,18 +130,37 @@ export function VenueMap({
 
   useEffect(() => {
     if (!map) return;
-    function updateHud() {
+    // MapLibre fires "move"/"zoom" on every animation frame during a pan,
+    // zoom, or fly-to — updating this text readout that often means a
+    // React re-render on every single frame, competing with MapLibre's
+    // own WebGL repaint for the same frame budget. A coordinate readout
+    // updating every ~100ms instead of every ~16ms reads identically to
+    // the eye, so the live handler is throttled; moveend/zoomend still
+    // sync unthrottled so the settled position is always exact.
+    let lastUpdate = 0;
+    const HUD_THROTTLE_MS = 100;
+    function syncHud() {
       if (!map) return;
       const c = map.getCenter();
       setHudCenter({ lat: c.lat, lng: c.lng });
       setHudZoom(map.getZoom());
     }
-    updateHud();
-    map.on("move", updateHud);
-    map.on("zoom", updateHud);
+    function throttledSyncHud() {
+      const now = performance.now();
+      if (now - lastUpdate < HUD_THROTTLE_MS) return;
+      lastUpdate = now;
+      syncHud();
+    }
+    syncHud();
+    map.on("move", throttledSyncHud);
+    map.on("zoom", throttledSyncHud);
+    map.on("moveend", syncHud);
+    map.on("zoomend", syncHud);
     return () => {
-      map.off("move", updateHud);
-      map.off("zoom", updateHud);
+      map.off("move", throttledSyncHud);
+      map.off("zoom", throttledSyncHud);
+      map.off("moveend", syncHud);
+      map.off("zoomend", syncHud);
     };
   }, [map]);
 

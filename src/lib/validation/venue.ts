@@ -40,22 +40,45 @@ export const venueStatusSchema = z.enum(["draft", "published", "retired"]);
 export const venueInputSchema = z
   .object({
     id: z.uuid().optional(),
-    name: z.string().trim().min(1).max(MAX_VENUE_NAME_LENGTH),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Enter a venue name.")
+      .max(MAX_VENUE_NAME_LENGTH, `Keep the name under ${MAX_VENUE_NAME_LENGTH} characters.`),
     type: venueTypeSchema.default("truck"),
     description: z
       .string()
       .trim()
-      .max(MAX_VENUE_DESCRIPTION_LENGTH)
+      .max(
+        MAX_VENUE_DESCRIPTION_LENGTH,
+        `Keep the description under ${MAX_VENUE_DESCRIPTION_LENGTH} characters.`,
+      )
       .nullable()
       .optional(),
-    lat: z.number().min(CAMPUS_BOUNDS.south).max(CAMPUS_BOUNDS.north),
-    lng: z.number().min(CAMPUS_BOUNDS.west).max(CAMPUS_BOUNDS.east),
+    lat: z
+      .number()
+      .min(CAMPUS_BOUNDS.south, `Latitude must be at least ${CAMPUS_BOUNDS.south}.`)
+      .max(CAMPUS_BOUNDS.north, `Latitude must be at most ${CAMPUS_BOUNDS.north}.`),
+    lng: z
+      .number()
+      .min(CAMPUS_BOUNDS.west, `Longitude must be at least ${CAMPUS_BOUNDS.west}.`)
+      .max(CAMPUS_BOUNDS.east, `Longitude must be at most ${CAMPUS_BOUNDS.east}.`),
     mapZone: z
-      .enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE])
+      .enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE], { error: "Choose a valid zone." })
       .nullable()
       .optional(),
-    building: z.string().trim().max(120).nullable().optional(),
-    floor: z.string().trim().max(40).nullable().optional(),
+    building: z
+      .string()
+      .trim()
+      .max(120, "Keep the building/landmark under 120 characters.")
+      .nullable()
+      .optional(),
+    floor: z
+      .string()
+      .trim()
+      .max(40, "Keep the floor under 40 characters.")
+      .nullable()
+      .optional(),
     acceptsCash: z.boolean().nullable().optional(),
     acceptsCard: z.boolean().nullable().optional(),
     isHalal: z.boolean().default(false),
@@ -90,6 +113,19 @@ export const reorderVenuePhotosSchema = z
   .object({
     venueId: z.uuid(),
     photoIds: z.array(z.uuid()).min(1).max(MAX_VENUE_PHOTOS),
+  })
+  .strict();
+
+/**
+ * Bulk admin edits, one schema per field so each stays a narrow,
+ * single-purpose write (matches `upsertVenue`/`publishVenue`/etc.) rather
+ * than a generic "patch any field" endpoint. Add a sibling schema here
+ * (e.g. `bulkSetVeganFriendlySchema`) when a new bulk action is needed.
+ */
+export const bulkSetHalalSchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(200),
+    isHalal: z.boolean(),
   })
   .strict();
 
