@@ -86,7 +86,7 @@ export function CampusDiningLayer({
         layout: {
           "icon-image": DINING_PILL_ICON,
           "icon-text-fit": "width",
-          "icon-text-fit-padding": [3, 8, 3, 8],
+          "icon-text-fit-padding": [5, 10, 5, 10],
           "icon-padding": 0,
           "icon-anchor": "bottom",
           "icon-allow-overlap": true,

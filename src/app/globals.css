@@ -724,14 +724,16 @@ button {
 }
 
 /* Retro floating "windows" (phase beta: Y2K pixel-computer reference) —
-   an opaque titlebar + body, hard pixel border/shadow, no blur. The
-   search window is a second real surface onto the same filters state
-   FilterBar already owns (see venue-map.tsx) — not a duplicate control. */
-.map-search-window,
+   an opaque titlebar + body, hard pixel border/shadow, no blur. Legend
+   is desktop-only chrome — the mobile sheet already owns search/filters,
+   and a floating legend would crowd a small screen. */
 .map-legend {
   position: absolute;
   z-index: 4;
-  width: min(15.5rem, calc(100vw - 2rem));
+  display: none;
+  left: var(--spacing-md);
+  bottom: var(--spacing-md);
+  width: min(11rem, calc(100vw - 2rem));
   border: 1.5px solid var(--color-marquee);
   border-radius: var(--radius-pixel);
   background: var(--color-surface);
@@ -739,18 +741,6 @@ button {
   overflow: hidden;
 }
 
-.map-search-window {
-  top: calc(var(--spacing-md) + 2.5rem);
-  right: var(--spacing-md);
-}
-
-.map-legend {
-  left: var(--spacing-md);
-  bottom: var(--spacing-md);
-  width: min(11rem, calc(100vw - 2rem));
-}
-
-.map-search-window-titlebar,
 .map-legend-titlebar {
   padding: 0.35rem var(--spacing-sm);
   background: var(--color-marquee);
@@ -760,40 +750,6 @@ button {
   font-weight: 700;
   letter-spacing: 0.08em;
   border-bottom: 1.5px solid var(--color-cherry);
-}
-
-.map-search-window-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm);
-}
-
-.map-search-input-wrap .input {
-  min-height: 2.5rem;
-  border-radius: var(--radius-pixel);
-  border-color: var(--color-marquee);
-  font-family: var(--font-data), monospace;
-  font-size: var(--text-small);
-}
-
-.map-search-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.map-search-chips .chip {
-  min-height: 1.9rem;
-  padding: 0.3rem 0.55rem;
-  border-radius: var(--radius-pixel);
-  border-color: var(--color-marquee);
-  font-size: var(--text-micro);
-}
-
-.map-search-chips .chip-active {
-  background: var(--color-cherry);
-  color: #fff4ee;
 }
 
 .map-legend-list {
@@ -842,15 +798,6 @@ button {
   background: var(--color-cherry-soft);
 }
 
-/* Below the desktop breakpoint the mobile results sheet already owns
-   search/filters — the floating window and legend would only crowd a
-   small screen with a second, redundant search surface, so both are
-   desktop-only chrome (see the 64rem media query further down). */
-.map-search-window,
-.map-legend {
-  display: none;
-}
-
 .map-mini-card-anchor {
   position: absolute;
   /* left/top are written by venue-map.tsx from the selected pin's
@@ -859,9 +806,9 @@ button {
   top: -9999px;
   left: -9999px;
   z-index: 5;
-  /* Card bottom sits a pill's height plus a gap above the pin coordinate
-     — the 3.25rem must match MINI_CARD_PIN_CLEARANCE in venue-map.tsx. */
-  transform: translate(-50%, calc(-100% - 3.25rem));
+  /* Card bottom sits a plate's height plus a gap above the pin coordinate
+     — the 4.25rem must match MINI_CARD_PIN_CLEARANCE in venue-map.tsx. */
+  transform: translate(-50%, calc(-100% - 4.25rem));
 }
 
 /* Pin too close to the top edge — open beneath the pin instead. */
@@ -998,7 +945,7 @@ button {
   top: -9999px;
   left: -9999px;
   z-index: 6;
-  transform: translate(-50%, calc(-100% - 0.75rem));
+  transform: translate(-50%, calc(-100% - 4.25rem));
 }
 
 .map-cluster-card-anchor-below {
@@ -1992,12 +1939,6 @@ button {
   .map-attribution {
     right: var(--spacing-xl);
     bottom: var(--spacing-xl);
-  }
-
-  .map-search-window {
-    display: block;
-    top: calc(var(--spacing-xl) + 2.75rem);
-    right: var(--spacing-xl);
   }
 
   .map-legend {

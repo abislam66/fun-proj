@@ -17,7 +17,6 @@ import {
   VenuePillLayer,
   VENUE_PILL_LAYER_ID,
 } from "@/components/map/venue-pill-layer";
-import { Chip, Input } from "@/components/ui/primitives";
 import {
   CuisineTags,
   HalalTag,
@@ -39,14 +38,14 @@ import {
 } from "@/config/site";
 import { getOpenStatus } from "@/lib/hours";
 import { mapZoneContaining } from "@/lib/map/point-in-polygon";
-import type { Venue, VenueFilters } from "@/lib/venues";
+import type { Venue } from "@/lib/venues";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
-// Screen-px gap between the pin coordinate (the pill's stem tip) and the
-// mini-card bottom: the 43px-tall pill plus breathing room. Keep in sync
-// with the .map-mini-card-anchor transform in globals.css.
-const MINI_CARD_PIN_CLEARANCE = 52;
+// Screen-px gap between the pin coordinate (the stem-dot tip) and the
+// mini-card bottom: the ~61px-tall plate plus breathing room. Keep in
+// sync with the .map-mini-card-anchor transform in globals.css.
+const MINI_CARD_PIN_CLEARANCE = 68;
 
 // Zoom a selection flies to when its venue has no host zone (zone flights
 // have their own fitBounds). Street level, where pills read individually.
@@ -69,8 +68,6 @@ export function VenueMap({
   hoveredId,
   backPath,
   selectedZones,
-  filters,
-  onFiltersChange,
   onSelect,
   onHover,
   onClearSelection,
@@ -82,10 +79,6 @@ export function VenueMap({
   backPath: string;
   /** Zone filter selection — any number of zones can be active at once. */
   selectedZones: MapZoneKey[];
-  /** Backs the floating retro search/filter window (same state as the
-   * sidebar's FilterBar — this is a second surface onto it, not a copy). */
-  filters: VenueFilters;
-  onFiltersChange: (filters: VenueFilters) => void;
   onSelect: (venueId: string) => void;
   onHover: (venueId: string | null) => void;
   onClearSelection: () => void;
@@ -515,54 +508,6 @@ export function VenueMap({
           </svg>
           All zones
         </button>
-      </div>
-
-      <div className="map-search-window">
-        <div className="map-search-window-titlebar">
-          <span>SEARCH</span>
-        </div>
-        <div className="map-search-window-body">
-          <label className="map-search-input-wrap">
-            <span className="sr-only">Search venues or cuisines</span>
-            <Input
-              onChange={(event) =>
-                onFiltersChange({ ...filters, query: event.target.value })
-              }
-              placeholder="Search food or a place"
-              type="search"
-              value={filters.query}
-            />
-          </label>
-          <div className="map-search-chips">
-            <Chip
-              active={filters.openNow}
-              onClick={() =>
-                onFiltersChange({ ...filters, openNow: !filters.openNow })
-              }
-            >
-              Open now
-            </Chip>
-            <Chip
-              active={filters.isHalal}
-              onClick={() =>
-                onFiltersChange({ ...filters, isHalal: !filters.isHalal })
-              }
-            >
-              Halal
-            </Chip>
-            <Chip
-              active={filters.isVeganFriendly}
-              onClick={() =>
-                onFiltersChange({
-                  ...filters,
-                  isVeganFriendly: !filters.isVeganFriendly,
-                })
-              }
-            >
-              Vegan
-            </Chip>
-          </div>
-        </div>
       </div>
 
       <div className="map-legend">

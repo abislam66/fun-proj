@@ -44,36 +44,36 @@ Campus overview draws **map zones**, not every venue pin. Two marks, named in `s
 
 Click a zone → fly in → venue pills whose coordinates fall inside that zone. List-filter `zone_key` (`norris` / `montgomery` / `twelfth`) is unrelated. Zone names use a light cherry plate (`#F3E6E9`) with a thin cherry outline — the same family as `buildingFill`, not a white text halo. Each name is an opaque sprite so overlapping plates cover each other instead of blending.
 
-## Pins — cuisine only
+## Pins — venue name plates
 
 ### Design
 
-Cherry **pill + stem**. White label text = short primary cuisine (Halal, Mex, Amer, Chin, Fruit, Carib, Food). Same cherry fill for every venue — do not recolor by open/closed.
+Cherry **square name plate + leader-line-and-dot stem**, matching zone-label chrome (hard ink outline, flat offset shadow). White label text = venue name. Same cherry fill for every venue — do not recolor by open/closed. Clustered coinciding spots share one "N spots" plate.
 
 **Decision split:**
 
 | Surface | Helps answer |
 |---------|----------------|
-| Pin | What kind of food is here? |
-| Mini-card / list | Name, open status, payment (zone line on list rows only — the mini-card never shows address/zone, that's detail-page info) |
+| Pin | What's here? (name) |
+| Mini-card / list | Cuisine tags, open status, payment (zone line on list rows only — the mini-card never shows address/zone, that's detail-page info) |
 | Detail | Full story |
 
 ### Label source
 
-`venue.cuisines[0]` → abbrev from `config/cuisines.ts` (see `public/pins/README.md`). Multiple tags → primary only on the pin; full tags on list/detail.
+`venue.name`, baked into the sprite. Cuisine tags live on the list, mini-card, and detail — not on the pin.
 
 ### Rendering strategy
 
 ```
 For each published venue:
-  HTML Marker (or symbol with text field)
-    └─ CuisinePill { label, selected }
+  MapLibre symbol layer
+    └─ canvas sprite from buildVenuePillIcon(name, state)
 User location → separate blue-dot Marker
 ```
 
-At ~40 trucks, HTML Markers with a shared React pill component are fine and make dynamic labels easy. If venue count grows into the hundreds, move to a symbol layer + SDF or pre-rasterized sprites per cuisine key.
+At ~40 trucks, one baked sprite per venue × state is fine. Coinciding coordinates collapse to a cluster plate (`buildClusterPillIcon`).
 
-**Anchor:** Stem tip → `anchor: 'bottom'`.
+**Anchor:** Stem-dot tip → `anchor: 'bottom'`.
 
 ### Density (Norris / Montgomery)
 
@@ -87,12 +87,12 @@ Pin tap → popup anchored above the pill: **name, cuisine tags, open-status bad
 ### Motion
 
 - **GSAP** (dynamic import after map load): one-shot stagger of pills into place; skip if `prefers-reduced-motion`
-- **Framer Motion:** selected pill scale / ring
+- **Framer Motion:** selected plate halo
 - Open-status motion stays on badges, not pins
 
 ### Phase 3 venue types
 
-Keep cuisine pills. Don’t invent truck-only pin components.
+Keep name plates. Don’t invent truck-only pin components.
 
 ## Meal-plan dining info pins
 
@@ -101,7 +101,7 @@ Meal-plan dining (Student Center food court, J&H dining hall, Morgan Hall food c
 | Aspect | Value |
 |--------|-------|
 | Data | `src/config/campus-dining.ts` — static markers on footprint centroids (Morgan pin sits between the North/South towers where the dining floor is) |
-| Look | Same pill+stem silhouette at 2/3 venue-pill scale (same bitmap registered at a higher pixelRatio); white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text; whole layer at 65% `icon-opacity`/`text-opacity` so the static pins visibly recede behind zone marks and venue pills |
+| Look | Same square plate + line-and-dot stem at 2/3 venue-plate scale (same bitmap registered at a higher pixelRatio); white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text; whole layer at 65% `icon-opacity`/`text-opacity` so the static pins visibly recede behind zone marks and venue plates |
 | Behavior | Non-interactive: no hover, no click, no mini-card. Map-background clicks through them clear selection like any other map click |
 | Zones | Zoom-gated: layer `minzoom` 16 hides them at the campus overview (zoom 14.6) — they appear only at building-scale zoom. Hidden entirely (`visible` prop) once a zone is selected so venue pills take over |
 | Collision | Placed like zone labels: `icon/text-allow-overlap: true` + `ignore-placement` — always render once past `minzoom` (building labels at the same centroids would otherwise collide them away) |
@@ -118,8 +118,7 @@ TuEats overlays always sit **above** the Positron basemap (including OSM road na
 | `VenueMap` | MapLibre init, style URL, bounds, controls shell |
 | `CampusBuildingLayer` | Curated campus footprints + labels (GeoJSON, 2D) |
 | `CampusDiningLayer` | Neutral one-per-building info pins for meal-plan dining halls |
-| `VenuePinLayer` | Markers / symbols; maps primary cuisine → pill label |
-| `CuisinePill` | Shared pin chrome + label text |
+| `VenuePillLayer` | Baked name-plate sprites; cluster coinciding spots |
 | `LocateControl` | Client geolocation + blue-dot marker |
 | `MapAttribution` | Required attribution UI |
 
@@ -127,7 +126,7 @@ TuEats overlays always sit **above** the Positron basemap (including OSM road na
 
 - [ ] Default viewport is campus bbox
 - [ ] Interactive &lt;2s on mid-range phone (lazy MapLibre)
-- [ ] Every pin shows a cuisine label (or “Food”)
+- [ ] Every pin shows a venue name (or “N spots” cluster)
 - [ ] Open status is **not** encoded on the pin color
 - [ ] Attribution visible
 - [ ] Location never leaves the browser
