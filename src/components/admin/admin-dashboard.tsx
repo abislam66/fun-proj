@@ -121,10 +121,7 @@ export function AdminDashboard({
   const visibleVenues = useMemo(
     () =>
       zoneSortedVenues.filter((venue) => {
-        if (
-          cuisineFilter !== "all" &&
-          !venue.cuisines.includes(cuisineFilter)
-        )
+        if (cuisineFilter !== "all" && !venue.cuisines.includes(cuisineFilter))
           return false;
         if (halalFilter !== "all" && venue.isHalal !== (halalFilter === "yes"))
           return false;
@@ -144,7 +141,13 @@ export function AdminDashboard({
           return false;
         return true;
       }),
-    [zoneSortedVenues, cuisineFilter, halalFilter, veganFilter, completenessFlags],
+    [
+      zoneSortedVenues,
+      cuisineFilter,
+      halalFilter,
+      veganFilter,
+      completenessFlags,
+    ],
   );
 
   const allVisibleSelected =
@@ -396,7 +399,9 @@ export function AdminDashboard({
             </select>
           </label>
           <label>
-            <span className="sr-only">Filter venues by Vegan Friendly status</span>
+            <span className="sr-only">
+              Filter venues by Vegan Friendly status
+            </span>
             <select
               className="admin-select"
               onChange={(event) =>

@@ -234,10 +234,10 @@ export function VenueLocationPicker({
       ) : null}
       <div className="admin-location-picker-map" ref={containerRef} />
       <p className="admin-inline-note">
-        Click the map or drag the pin to set the exact location — search
-        only recenters the map, it never sets coordinates on its own.
-        Campus bounds: {CAMPUS_BOUNDS.south}–{CAMPUS_BOUNDS.north} lat,{" "}
-        {CAMPUS_BOUNDS.west}–{CAMPUS_BOUNDS.east} lng.
+        Click the map or drag the pin to set the exact location — search only
+        recenters the map, it never sets coordinates on its own. Campus bounds:{" "}
+        {CAMPUS_BOUNDS.south}–{CAMPUS_BOUNDS.north} lat, {CAMPUS_BOUNDS.west}–
+        {CAMPUS_BOUNDS.east} lng.
       </p>
     </div>
   );

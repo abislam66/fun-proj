@@ -76,9 +76,7 @@ describe("bulkSetHalalSchema", () => {
   });
 
   it("rejects a non-boolean isHalal value", () => {
-    expect(() =>
-      bulkSetHalalSchema.parse({ ids, isHalal: "yes" }),
-    ).toThrow();
+    expect(() => bulkSetHalalSchema.parse({ ids, isHalal: "yes" })).toThrow();
   });
 
   it("rejects unknown keys (strict)", () => {

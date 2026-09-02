@@ -12,12 +12,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
     // getPublishedVenues() already filters to status "published" at the DB
     // level — draft/retired venues never reach this list.
-    ...venues.map(
-      (venue): MetadataRoute.Sitemap[number] => ({
-        url: `${SITE_URL}/eat/${venue.slug}`,
-        changeFrequency: "weekly",
-        priority: 0.6,
-      }),
-    ),
+    ...venues.map((venue): MetadataRoute.Sitemap[number] => ({
+      url: `${SITE_URL}/eat/${venue.slug}`,
+      changeFrequency: "weekly",
+      priority: 0.6,
+    })),
   ];
 }

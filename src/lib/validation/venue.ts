@@ -44,7 +44,10 @@ export const venueInputSchema = z
       .string()
       .trim()
       .min(1, "Enter a venue name.")
-      .max(MAX_VENUE_NAME_LENGTH, `Keep the name under ${MAX_VENUE_NAME_LENGTH} characters.`),
+      .max(
+        MAX_VENUE_NAME_LENGTH,
+        `Keep the name under ${MAX_VENUE_NAME_LENGTH} characters.`,
+      ),
     type: venueTypeSchema.default("truck"),
     description: z
       .string()
@@ -57,14 +60,28 @@ export const venueInputSchema = z
       .optional(),
     lat: z
       .number()
-      .min(CAMPUS_BOUNDS.south, `Latitude must be at least ${CAMPUS_BOUNDS.south}.`)
-      .max(CAMPUS_BOUNDS.north, `Latitude must be at most ${CAMPUS_BOUNDS.north}.`),
+      .min(
+        CAMPUS_BOUNDS.south,
+        `Latitude must be at least ${CAMPUS_BOUNDS.south}.`,
+      )
+      .max(
+        CAMPUS_BOUNDS.north,
+        `Latitude must be at most ${CAMPUS_BOUNDS.north}.`,
+      ),
     lng: z
       .number()
-      .min(CAMPUS_BOUNDS.west, `Longitude must be at least ${CAMPUS_BOUNDS.west}.`)
-      .max(CAMPUS_BOUNDS.east, `Longitude must be at most ${CAMPUS_BOUNDS.east}.`),
+      .min(
+        CAMPUS_BOUNDS.west,
+        `Longitude must be at least ${CAMPUS_BOUNDS.west}.`,
+      )
+      .max(
+        CAMPUS_BOUNDS.east,
+        `Longitude must be at most ${CAMPUS_BOUNDS.east}.`,
+      ),
     mapZone: z
-      .enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE], { error: "Choose a valid zone." })
+      .enum([...MAP_ZONE_KEYS, OTHER_MAP_ZONE], {
+        error: "Choose a valid zone.",
+      })
       .nullable()
       .optional(),
     building: z

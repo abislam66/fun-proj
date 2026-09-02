@@ -74,11 +74,26 @@ async function main() {
   console.log(`Source (read-only): ${sourceRef}`);
   console.log(`Target (write):     ${targetRef}`);
 
-  assert(sourceRef === PROD_REF, `source ref must be prod (${PROD_REF}), got ${sourceRef}`);
-  assert(targetRef === DEV_REF, `target ref must be dev (${DEV_REF}), got ${targetRef}`);
-  assert(targetRef !== PROD_REF, "target ref must never equal the production ref");
-  assert(sourceRef !== targetRef, "source and target ref must not be the same project");
-  assert(prodUrl !== devUrl, "source and target connection strings must not be identical");
+  assert(
+    sourceRef === PROD_REF,
+    `source ref must be prod (${PROD_REF}), got ${sourceRef}`,
+  );
+  assert(
+    targetRef === DEV_REF,
+    `target ref must be dev (${DEV_REF}), got ${targetRef}`,
+  );
+  assert(
+    targetRef !== PROD_REF,
+    "target ref must never equal the production ref",
+  );
+  assert(
+    sourceRef !== targetRef,
+    "source and target ref must not be the same project",
+  );
+  assert(
+    prodUrl !== devUrl,
+    "source and target connection strings must not be identical",
+  );
 
   console.log("Safety checks passed.");
 
@@ -101,13 +116,11 @@ async function main() {
     // as-is (pending/published/rejected) since it's real venue-photo
     // content, not identity, and copying it lets the admin moderation
     // queue be tested against realistic data too.
-    const legacyPhotoRows: Record<string, unknown>[] = photoRows.map(
-      (row) => ({
-        ...row,
-        source: "legacy",
-        uploaded_by: null,
-      }),
-    );
+    const legacyPhotoRows: Record<string, unknown>[] = photoRows.map((row) => ({
+      ...row,
+      source: "legacy",
+      uploaded_by: null,
+    }));
 
     const [existingVenuesRow] = await target`select count(*)::int from venues`;
     const [existingPhotosRow] =
