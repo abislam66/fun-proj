@@ -40,6 +40,24 @@
 
 ---
 
+## 2026-09-01 — Retagged 10 venues whose stored zone lagged the polygons
+
+After the 2026-08-30 zone widenings, ten listings still had `map_zone = other` while their coordinates already sat inside a drawn area (Saxbys Fox, E&E, the SAC Green truck, both Saxbys, Stella's, Oh Brother, Tropical Smoothie, Land of A Thousand Hills, plus draft Cha Cha and retired Eddie's). Updated those rows to the computed zone so the list label matches the public map. No lat/lng changes.
+
+---
+
+## 2026-09-01 — Venue pins match zone-label chrome
+
+Redrawn the detailed truck pins in `venue-pill-icon.ts` to share the zone-plate language: square corners (not stadium pills), more text padding, hard ink outline + offset shadow, and a leader-line-and-dot stem instead of a triangle tail. Dining info pins keep the white/stone palette but follow the same silhouette. Mini-card clearance bumped to 4rem so the popup still sits above the taller plate.
+
+---
+
+## 2026-09-01 — Removed the map overlay search window
+
+The floating SEARCH box on the desktop map (query + Open now / Halal / Vegan chips) duplicated the left-pane FilterBar and sat on top of pins. Removed it and the `filters` / `onFiltersChange` plumbing that only existed to drive that overlay. Search/filters stay in the sidebar (desktop) and the mobile sheet. Legend, HUD, and map controls are unchanged.
+
+---
+
 ## 2026-09-01 — TUE-12 member ratings/reviews and moderated gallery photos
 
 Pulled Feature 9–10 forward: `ratings` table (stars required, review text optional, one per user per venue), `requireMember()`, `submitRating`/`deleteRating`, student aggregate on detail + list rows, composer + review list on `/eat/[slug]`. Member photo submissions reuse Vercel Blob + `venue_photos` with `source: member` / `status: pending|published|rejected`; admin dashboard gained a photo queue (approve blocked at 10 published). Migration `0009_motionless_shocker.sql` is additive — not auto-applied; run `pnpm db:migrate` against the live DB before this ships.

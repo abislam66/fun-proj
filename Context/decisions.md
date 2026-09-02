@@ -7,6 +7,20 @@
 
 ---
 
+## 2026-09-01 — Venue pins share zone-label chrome
+
+The site owner liked the zone name plates (square-ish fill, ink outline,
+offset shadow, leader-line-and-dot stem) and asked for the same language
+on detailed truck pins: square corners, more text padding, zone-style
+stem. Stadium pills with triangular tails read as a second pin system.
+
+Venue sprites in `venue-pill-icon.ts` now draw that plate. Dining info
+pins keep the white/stone palette but follow the same silhouette so the
+map stays one family. Names stay on the pin; cuisine stays on the list /
+mini-card / detail.
+
+---
+
 ## 2026-09-01 — Member ratings/reviews plus a member photo _queue_, not a menu CMS
 
 TUE-12 asked for user-generated reviews and menu pictures. Specs already defined

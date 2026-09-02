@@ -152,10 +152,8 @@ export function VenueExplorer({
       <div className="explorer-map">
         <VenueMapLoader
           backPath={backPath}
-          filters={filters}
           hoveredId={hoveredId}
           onClearSelection={() => setSelectedId(null)}
-          onFiltersChange={setFilters}
           onHover={setHoveredId}
           onSelect={setSelectedId}
           onSelectZone={(key) => {

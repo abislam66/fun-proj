@@ -1,12 +1,16 @@
 /**
- * Canvas-drawn pill+stem icons for the map's symbol layers — generated at
+ * Canvas-drawn name-plate icons for the map's symbol layers — generated at
  * runtime so no binary asset is checked in.
  *
- * Venue pills bake the venue name INTO the sprite (one image per venue ×
+ * Venue plates bake the venue name INTO the sprite (one image per venue ×
  * state). MapLibre draws every `icon-image` in a symbol layer first, then
- * every `text-field`, so a stretchable pill plus live text lets one name
- * bleed through an overlapping pill — baked sprites occlude cleanly
+ * every `text-field`, so a stretchable plate plus live text lets one name
+ * bleed through an overlapping plate — baked sprites occlude cleanly
  * instead (same fix as zone-label-icon.ts).
+ *
+ * Chrome matches the zone labels: square plate, hard ink outline, flat
+ * offset shadow, leader-line-and-dot stem. Dining pins share that
+ * silhouette at 2/3 size with a white/stone palette.
  *
  * The neutral campus-dining variant keeps the label-free 9-slice path:
  * its three pins never overlap each other, and its text stays a GL
@@ -15,26 +19,30 @@
 
 const SCALE = 3; // raster oversample for crisp rendering at typical zoom
 const PILL_WIDTH = 64; // dining 9-slice base / venue-pill minimum width
-const PILL_HEIGHT = 30;
-const STEM_WIDTH = 12;
-const STEM_HEIGHT = 8;
-// Margin above/beside the pill so the selected halo isn't clipped. No
-// margin below: the stem tip must stay at the bitmap's bottom edge —
-// it is the map coordinate (icon-anchor: bottom).
+const PILL_HEIGHT = 40;
+const STEM_LINE_WIDTH = 2.5;
+const STEM_LINE_HEIGHT = 9;
+const STEM_DOT_RADIUS = 3;
+const BORDER = 1.25;
+const SHADOW_OFFSET = 2;
+const SHADOW_COLOR = "rgba(23, 19, 16, 0.4)";
+// Margin above/beside the plate so the selected halo and shadow aren't
+// clipped. No margin below: the stem-dot tip must stay at the bitmap's
+// bottom edge — it is the map coordinate (icon-anchor: bottom).
 const PAD = 5;
 const HALO_WIDTH = 2.5;
-const HEIGHT = PAD + PILL_HEIGHT + STEM_HEIGHT;
-const RADIUS = PILL_HEIGHT / 2;
+const HEIGHT =
+  PAD + PILL_HEIGHT + STEM_LINE_HEIGHT + STEM_DOT_RADIUS * 2 + BORDER;
 
+const INK = "#171310";
 const VENUE_FILL = "#9D2235"; // --color-cherry
-const VENUE_STROKE = "#ffffff";
 const VENUE_HALO = "rgba(157, 34, 53, 0.28)";
 const VENUE_TEXT = "#ffffff";
 
 // Drawn at the old z18.5 GL text size; the layer's zoom-scaled
 // `icon-size` shrinks the whole sprite at lower zooms.
 const LABEL_FONT_SIZE = 13;
-const LABEL_PAD_X = 12; // matches the old icon-text-fit-padding sides
+const LABEL_PAD_X = 20;
 
 // Campus-dining info pins: white surface + the campus-building stroke
 // stone, so they read as map furniture — never a tappable cherry venue.
@@ -47,11 +55,8 @@ type PillStyle = {
   borderWidth: number;
   /** Selected-only soft ring outside the border. */
   halo?: string;
-  /**
-   * Outline the stem's slanted edges. The cherry stem reads on its own,
-   * but a white stem on the stone basemap needs an edge to stay visible.
-   */
-  strokeStem?: boolean;
+  /** Stem line + dot outline. Defaults to the plate's ink outline. */
+  stemStroke?: string;
 };
 
 export type PillIconAsset = {
@@ -114,12 +119,12 @@ export function buildClusterPillIcon(
 }
 
 const VENUE_PILL_STYLES: Record<VenuePillState, PillStyle> = {
-  normal: { fill: VENUE_FILL, stroke: VENUE_STROKE, borderWidth: 2 },
-  hover: { fill: VENUE_FILL, stroke: VENUE_STROKE, borderWidth: 3 },
+  normal: { fill: VENUE_FILL, stroke: INK, borderWidth: 1.5 },
+  hover: { fill: VENUE_FILL, stroke: INK, borderWidth: 2.25 },
   selected: {
     fill: VENUE_FILL,
-    stroke: VENUE_STROKE,
-    borderWidth: 3,
+    stroke: INK,
+    borderWidth: 2.25,
     halo: VENUE_HALO,
   },
 };
@@ -134,39 +139,49 @@ function labelFont(): string {
   return `700 ${LABEL_FONT_SIZE}px ${family}`;
 }
 
-/** Paints halo + pill body + stem for a pill `pillWidth` wide (design units). */
+/** Paints halo + square plate + leader-line-and-dot stem (`pillWidth` in design units). */
 function paintPill(
   ctx: CanvasRenderingContext2D,
   pillWidth: number,
   style: PillStyle,
 ) {
-  const { fill, stroke, borderWidth, halo, strokeStem } = style;
-  const width = pillWidth + PAD * 2;
+  const { fill, stroke, borderWidth, halo, stemStroke = INK } = style;
+  const plateX = PAD;
+  const plateY = PAD;
 
-  // Selected-only halo — a soft cherry ring outside the white border,
-  // matching DESIGN.md's "thicker white ring" + glow treatment so the
-  // selected pill reads differently from a merely hovered one.
+  // Selected-only halo — a soft cherry ring outside the ink border so
+  // the selected plate reads differently from a merely hovered one.
   if (halo) {
     ctx.beginPath();
-    ctx.roundRect(
-      PAD - HALO_WIDTH,
-      PAD - HALO_WIDTH,
+    ctx.rect(
+      plateX - HALO_WIDTH,
+      plateY - HALO_WIDTH,
       pillWidth + HALO_WIDTH * 2,
       PILL_HEIGHT + HALO_WIDTH * 2,
-      RADIUS + HALO_WIDTH,
     );
     ctx.fillStyle = halo;
     ctx.fill();
   }
 
-  // Pill body — full stadium, fill + stroke on all sides.
+  // Hard offset shadow — solid, no blur, same pixel-UI treatment as
+  // zone labels. Drawn first so the plate and stem sit on top of it.
   ctx.beginPath();
-  ctx.roundRect(
-    PAD + borderWidth / 2,
-    PAD + borderWidth / 2,
+  ctx.rect(
+    plateX + SHADOW_OFFSET,
+    plateY + SHADOW_OFFSET,
+    pillWidth - BORDER,
+    PILL_HEIGHT - BORDER,
+  );
+  ctx.fillStyle = SHADOW_COLOR;
+  ctx.fill();
+
+  // Square plate — fill + ink outline on all sides.
+  ctx.beginPath();
+  ctx.rect(
+    plateX + borderWidth / 2,
+    plateY + borderWidth / 2,
     pillWidth - borderWidth,
     PILL_HEIGHT - borderWidth,
-    RADIUS - borderWidth / 2,
   );
   ctx.fillStyle = fill;
   ctx.fill();
@@ -174,28 +189,24 @@ function paintPill(
   ctx.strokeStyle = stroke;
   ctx.stroke();
 
-  // Stem — solid triangle overlapping 1px into the pill's bottom edge so
-  // the border reads as "opening up" around it.
-  const cx = width / 2;
+  // Stem — thin leader line ending in a small fill-colored dot at the
+  // true coordinate (`icon-anchor: "bottom"`), matching zone labels.
+  const cx = plateX + pillWidth / 2;
+  const stemTopY = plateY + PILL_HEIGHT;
+  const stemBottomY = stemTopY + STEM_LINE_HEIGHT;
   ctx.beginPath();
-  ctx.moveTo(cx - STEM_WIDTH / 2, PAD + PILL_HEIGHT - 1);
-  ctx.lineTo(cx + STEM_WIDTH / 2, PAD + PILL_HEIGHT - 1);
-  ctx.lineTo(cx, PAD + PILL_HEIGHT + STEM_HEIGHT - 1);
-  ctx.closePath();
+  ctx.moveTo(cx, stemTopY);
+  ctx.lineTo(cx, stemBottomY);
+  ctx.lineWidth = STEM_LINE_WIDTH;
+  ctx.strokeStyle = stemStroke;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, stemBottomY + STEM_DOT_RADIUS, STEM_DOT_RADIUS, 0, Math.PI * 2);
   ctx.fillStyle = fill;
   ctx.fill();
-
-  if (strokeStem) {
-    // Only the two slanted edges — an open path, so no stroke line cuts
-    // horizontally across the pill's bottom border.
-    ctx.beginPath();
-    ctx.moveTo(cx - STEM_WIDTH / 2, PAD + PILL_HEIGHT - 1);
-    ctx.lineTo(cx, PAD + PILL_HEIGHT + STEM_HEIGHT - 1);
-    ctx.lineTo(cx + STEM_WIDTH / 2, PAD + PILL_HEIGHT - 1);
-    ctx.lineWidth = borderWidth;
-    ctx.strokeStyle = stroke;
-    ctx.stroke();
-  }
+  ctx.lineWidth = BORDER;
+  ctx.strokeStyle = stemStroke;
+  ctx.stroke();
 }
 
 /** One opaque sprite: pill + stem + the venue name, sized to the name. */
@@ -214,7 +225,7 @@ export function buildVenuePillIcon(
     PILL_WIDTH,
     Math.ceil(textWidth + LABEL_PAD_X * 2),
   );
-  const width = pillWidth + PAD * 2;
+  const width = pillWidth + PAD * 2 + SHADOW_OFFSET;
 
   canvas.width = width * SCALE;
   canvas.height = HEIGHT * SCALE;
@@ -226,7 +237,7 @@ export function buildVenuePillIcon(
   ctx.fillStyle = VENUE_TEXT;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(name, width / 2, PAD + PILL_HEIGHT / 2);
+  ctx.fillText(name, PAD + pillWidth / 2, PAD + PILL_HEIGHT / 2);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -245,19 +256,19 @@ export function buildVenuePillIcon(
 // units used above. Defined here in design units (pill offset by PAD),
 // then scaled below.
 
-const NINE_SLICE_WIDTH = PILL_WIDTH + PAD * 2;
+const NINE_SLICE_WIDTH = PILL_WIDTH + PAD * 2 + SHADOW_OFFSET;
 
 const CONTENT_DESIGN: [number, number, number, number] = [
   16 + PAD,
-  6 + PAD,
+  9 + PAD,
   48 + PAD,
-  24 + PAD,
+  31 + PAD,
 ];
 const STRETCH_X_DESIGN: [number, number][] = [
   [16 + PAD, 23 + PAD],
   [41 + PAD, 48 + PAD],
 ];
-const STRETCH_Y_DESIGN: [number, number][] = [[14 + PAD, 16 + PAD]];
+const STRETCH_Y_DESIGN: [number, number][] = [[19 + PAD, 21 + PAD]];
 
 const CONTENT = CONTENT_DESIGN.map((v) => v * SCALE) as [
   number,
@@ -306,7 +317,7 @@ export function buildDiningPillIcon(): PillIconAsset {
     fill: DINING_FILL,
     stroke: DINING_STROKE,
     borderWidth: 1.5,
-    strokeStem: true,
+    stemStroke: INK,
   });
   return { ...asset, pixelRatio: asset.pixelRatio * DINING_PILL_DOWNSCALE };
 }

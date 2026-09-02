@@ -147,15 +147,15 @@ See [docs/design/map-and-pins.md](docs/design/map-and-pins.md) and [public/pins/
 
 ## Pins
 
-- **Job:** Answer “what kind of food?” at a glance so a hungry student can scan the corridor.
-- **Shape:** Cherry **cuisine pill** (rounded label + sharp stem). Tip of the stem is the map coordinate.
-- **Info on pin:** **Primary cuisine label only** (short text: Halal, Mex, Amer, Chin, Fruit, Carib, or Food). First cuisine tag wins when multiple exist.
-- **Not on pin:** Open/closed, ratings, cash, name — those live on list rows, mini-card, and detail.
-- **Selected:** Same label, larger + thicker white ring (Framer spring).
-- **Rendering:** Prefer one shared Marker/component that injects the label (don’t explode asset count). Reference SVGs in `public/pins/`. Symbol layer or HTML markers OK at ~40 venues; HTML Marker for selected.
-- **Density:** Collision fade / light cluster at overview; every pill tappable at street zoom (~16+).
-- **Phase 3 types:** Same pill; cuisine still primary. Optional tiny type mark later — not required for trucks.
-- **Meal-plan dining info pins:** The Student Center food court, J&H dining hall, and Morgan Hall food court are meal-plan dining — out of product scope, never venues, never in the DB. Each building gets **one** neutral info pin that just names what's there (`src/config/campus-dining.ts`). Treatment: same pill+stem silhouette at **2/3 the venue-pill size**, with **white surface fill, stone `#B8B4AA` border, ink-secondary regular-weight text, whole layer dimmed to 65% opacity** — deliberately not cherry, small, and visibly faded, so it can't be mistaken for a tappable venue. Non-interactive (no hover, no click, no mini-card). Zoom-gated: hidden at the campus overview (`minzoom` 16 vs. overview zoom 14.6), appearing only once the user zooms to building scale (overlap allowed, placement ignored — like zone label plates); once a zone is selected the whole layer hides so venue pills take over. Don't add more of these casually — cherry venue pills stay the dominant map layer.
+- **Job:** Answer “what's here?” at a glance so a hungry student can scan the corridor.
+- **Shape:** Cherry **name plate** matching zone-label chrome — square corners, hard ink outline, flat offset shadow, leader-line-and-dot stem. The stem-dot tip is the map coordinate.
+- **Info on pin:** **Venue name** baked into the sprite (overlapping plates occlude cleanly). Clustered coinciding spots share one "N spots" plate.
+- **Not on pin:** Open/closed, ratings, cash — those live on list rows, mini-card, and detail.
+- **Selected:** Same plate, thicker ink outline + soft cherry halo.
+- **Rendering:** One canvas sprite per venue × state, registered as a MapLibre image. Symbol layer or HTML markers OK at ~40 venues.
+- **Density:** Collision fade / light cluster at overview; every plate tappable at street zoom (~16+).
+- **Phase 3 types:** Same plate; name still primary. Optional tiny type mark later — not required for trucks.
+- **Meal-plan dining info pins:** The Student Center food court, J&H dining hall, and Morgan Hall food court are meal-plan dining — out of product scope, never venues, never in the DB. Each building gets **one** neutral info pin that just names what's there (`src/config/campus-dining.ts`). Treatment: same square plate + line-and-dot stem at **2/3 the venue-plate size**, with **white surface fill, stone `#B8B4AA` border, ink-secondary regular-weight text, whole layer dimmed to 65% opacity** — deliberately not cherry, small, and visibly faded, so it can't be mistaken for a tappable venue. Non-interactive (no hover, no click, no mini-card). Zoom-gated: hidden at the campus overview (`minzoom` 16 vs. overview zoom 14.6), appearing only once the user zooms to building scale (overlap allowed, placement ignored — like zone label plates); once a zone is selected the whole layer hides so venue plates take over. Don't add more of these casually — cherry venue plates stay the dominant map layer.
 
 ## Component inventory
 
@@ -175,7 +175,7 @@ Maps to `Specs/architecture-planning.md`:
 - Warm cream (#F4F1EA-ish) + high-contrast serif + terracotta (AI-default editorial)
 - Purple/indigo SaaS gradients, photo-feed home, 3-column icon grids
 - Inter / Roboto / system / Montserrat / Poppins as primary type
-- Numbered pins or status-colored pin forests (cuisine-label pills only; open status stays off the pin)
+- Numbered pins or status-colored pin forests (name plates only; open status stays off the pin)
 - Empty/decorative pins with no decision-useful info
 - Merging or visually conflating student ratings with Google snapshots (Phase 2+)
 - Marketing hero on `/` — the map *is* the first viewport
@@ -188,6 +188,8 @@ Maps to `Specs/architecture-planning.md`:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-01 | Venue pins match zone-label chrome: square plate, extra text padding, line-and-dot stem | Site owner asked for the zone-plate look on detailed truck pins — stadium pills + triangle tails read as a different system; sharing the plate/stem language keeps the map one family |
+| 2026-09-01 | No search overlay on the map — search/filters live only in the left pane (desktop) and the mobile sheet | The floating SEARCH window duplicated FilterBar and covered pins. DESIGN already places search on the list side; the map keeps HUD, legend, and controls. |
 | 2026-09-01 | Student ratings after the photo strip; pending member photos never on the public strip | TUE-12: aggregate + composer + review list belong with the venue facts, not mixed into the gallery. Member uploads wait in admin queue so the 10-photo strip stays curated. |
 | 2026-07-17 | Cherry Compass design system created | Design consultation from specs + competitive research; cream+serif indie alternative rejected as AI-default |
 | 2026-07-17 | OpenFreeMap Positron basemap | Muted land so cherry pins dominate; $0, keyless, swappable |
