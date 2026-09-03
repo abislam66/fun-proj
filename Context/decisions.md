@@ -7,6 +7,44 @@
 
 ---
 
+## 2026-09-02 — Admin photo uploads go client → Blob directly (second route-handler exception)
+
+Production admin photo uploads were reported as very slow. Diagnosis: `uploadVenuePhoto`
+(a server action) received the file as `FormData` and called Vercel Blob's `put()`
+server-side — so every photo's bytes crossed the network twice, serially
+(browser → server action → Blob), instead of once. A second, independent bug: no
+`experimental.serverActions.bodySizeLimit` was set, so Next's default 1 MB cap silently
+sat below the app's own 5 MB `MAX_VENUE_IMAGE_BYTES` limit.
+
+Fix: admin photo uploads now use `@vercel/blob/client`'s `upload()` from the browser,
+PUTing bytes straight to Blob storage. A new route handler,
+`src/app/api/admin/photos/upload/route.ts`, issues the scoped upload token via
+`handleUpload()` — `requireAdmin()` plus the venue-exists/photo-count checks run there,
+before any token is issued. This is a **second deliberate exception** to "no custom route
+handlers" (the first is `src/app/auth/callback/route.ts`): Blob's client-upload protocol,
+like OAuth's redirect handshake, has no server-action equivalent — the browser's `upload()`
+helper POSTs a fixed JSON RPC body that a server action can't receive. The route handler
+never touches the database; the DB write (`insertVenuePhoto` + `revalidateTag`) still
+happens through an ordinary server action, `finalizeVenuePhotoUpload`, called by the client
+once the direct upload resolves with the blob's URL. `bodySizeLimit` was also bumped to
+10 MB (next.config.ts) so the member photo-submission action (`src/actions/photos.ts`,
+still server-side `put()` — not changed, out of scope for this fix) stops rejecting
+uploads under the app's own 5 MB limit. CSP's `connect-src` needed `https://vercel.com`
+added — confirmed by reading the SDK source, the browser's `upload()` call actually PUTs
+through Blob's control-plane API at `https://vercel.com/api/blob`, not the
+`*.public.blob.vercel-storage.com` read host (already allowed, on `img-src` only, for the
+`<img>` tags that display photos). Got this wrong on the first pass — added the read host
+to `connect-src` instead — and caught it by actually driving the upload in a real browser,
+where it surfaced as a CSP violation blocking the request. First-hand argument for
+manually verifying a fix like this rather than trusting typecheck/build alone.
+
+Left alone deliberately: the member flow in `src/actions/photos.ts` (lower volume, not the
+reported symptom) and the file input's one-at-a-time UX in `venue-editor.tsx` (no
+`multiple`, no client-side batch queue) — both real, but bigger changes than this fix
+called for.
+
+---
+
 ## 2026-09-02 — Deferred error monitoring (no Sentry) for V1 launch
 
 Pre-launch audits repeatedly flagged that failures caught by the new

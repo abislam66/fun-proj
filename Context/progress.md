@@ -40,6 +40,39 @@
 
 ---
 
+## 2026-09-02 — Admin photo uploads: client-direct-to-Blob (fixed a real slow-upload bug)
+
+Diagnosed a site-owner report that admin photo uploads were taking a very long time.
+Root cause: the upload server action called Vercel Blob's `put()` server-side, so every
+photo's bytes made two full network hops (browser → server action → Blob) instead of
+one; a separate bug meant any photo over 1 MB was silently rejected by Next's default
+server-action body-size cap, below the app's own 5 MB limit.
+
+Fixed by moving the byte transfer to a direct browser → Blob upload
+(`@vercel/blob/client`'s `upload()`), with a new route handler
+(`src/app/api/admin/photos/upload/route.ts`) issuing the scoped, authorized upload token
+— the second deliberate exception to "server actions only" (see `Context/decisions.md`).
+The DB write is still a normal server action (`finalizeVenuePhotoUpload`, replacing
+`uploadVenuePhoto`), now taking `{ id, url }` instead of the file itself, with the
+photo-limit check switched to the existing `countPublishedVenuePhotos` (was fetching all
+photo rows just to read `.length`). Bumped `serverActions.bodySizeLimit` to 10 MB and
+added `https://vercel.com` (Blob's actual upload API host, not the read-only storage
+subdomain — first attempt got this wrong, caught during manual verification below) to
+CSP's `connect-src`. Full detail: `Context/decisions.md` 2026-09-02.
+
+**Manually verified end-to-end against `tueats-dev`** (real admin sign-in, real browser,
+via Playwright): uploaded a photo to a draft venue, confirmed the DB row (`source: admin`,
+`status: published`, correct `url`/`alt`/`sort_order`), confirmed the image renders (both
+in the admin gallery UI and via a direct fetch of the Blob URL), then removed the test
+photo through the app's own delete flow and confirmed both the DB row and the Blob object
+were gone. `pnpm typecheck`/`lint`/`test` (137/137)/`build` all clean after the fix.
+
+Not in scope for this fix (flagged, not touched): the member photo-submission action
+(`src/actions/photos.ts`) still uploads server-side, and the admin upload control is
+still one file at a time (no batch/multi-select).
+
+---
+
 ## 2026-09-01 — Retagged 10 venues whose stored zone lagged the polygons
 
 After the 2026-08-30 zone widenings, ten listings still had `map_zone = other` while their coordinates already sat inside a drawn area (Saxbys Fox, E&E, the SAC Green truck, both Saxbys, Stella's, Oh Brother, Tropical Smoothie, Land of A Thousand Hills, plus draft Cha Cha and retired Eddie's). Updated those rows to the computed zone so the list label matches the public map. No lat/lng changes.
