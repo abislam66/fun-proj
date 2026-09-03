@@ -200,6 +200,18 @@ export async function bulkUpdateVenueHalal(
     .returning();
 }
 
+/** Bulk admin edit: sets `isVeganFriendly` for many venues in one statement — nothing else changes. */
+export async function bulkUpdateVenueVeganFriendly(
+  ids: string[],
+  isVeganFriendly: boolean,
+): Promise<VenueRow[]> {
+  return db
+    .update(venues)
+    .set({ isVeganFriendly, updatedAt: new Date() })
+    .where(inArray(venues.id, ids))
+    .returning();
+}
+
 export async function insertProblemReport(values: {
   venueId: string;
   kind: ProblemReportRow["kind"];

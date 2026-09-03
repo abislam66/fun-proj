@@ -10,6 +10,7 @@ import { AuthError } from "@/lib/auth-guards";
 import { blobBackedPhotoSource, canPublishVenuePhoto } from "@/lib/ratings";
 import {
   bulkUpdateVenueHalal,
+  bulkUpdateVenueVeganFriendly,
   countPublishedVenuePhotos,
   deleteVenuePhotoById,
   getRatingById,
@@ -34,6 +35,7 @@ import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
 import {
   bulkSetHalalSchema,
+  bulkSetVeganFriendlySchema,
   finalizeVenuePhotoUploadSchema,
   reorderVenuePhotosSchema,
   removeRatingSchema,
@@ -333,6 +335,24 @@ export async function bulkSetVenueHalal(
     await requireAdmin();
     const { ids, isHalal } = bulkSetHalalSchema.parse(raw);
     const updated = await bulkUpdateVenueHalal(ids, isHalal);
+
+    revalidateTag("venues");
+    for (const row of updated) revalidateTag(`venue:${row.slug}`);
+
+    return { ok: true, data: { updatedIds: updated.map((row) => row.id) } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: bulk-set Vegan Friendly on many venues in one action (used by the admin list's bulk selection). */
+export async function bulkSetVenueVeganFriendly(
+  raw: unknown,
+): Promise<ActionResult<{ updatedIds: string[] }>> {
+  try {
+    await requireAdmin();
+    const { ids, isVeganFriendly } = bulkSetVeganFriendlySchema.parse(raw);
+    const updated = await bulkUpdateVenueVeganFriendly(ids, isVeganFriendly);
 
     revalidateTag("venues");
     for (const row of updated) revalidateTag(`venue:${row.slug}`);

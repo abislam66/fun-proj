@@ -1,4 +1,4 @@
-import type { CuisineKey } from "@/config/cuisines";
+import { CUISINE_KEYS, type CuisineKey } from "@/config/cuisines";
 import { MAP_ZONE_KEYS, MAP_ZONES, type MapZoneKey } from "@/config/map-zones";
 import { isHoursUnknown, isOpenNow, type VenueHours } from "@/lib/hours";
 import { pointInMapZone } from "@/lib/map/point-in-polygon";
@@ -106,15 +106,6 @@ export function venueLocationText(venue: Venue): {
 export function parseVenueFilters(params: URLSearchParams): VenueFilters {
   const cuisineValues = params.getAll("cuisine");
   const zoneValues = params.getAll("zone");
-  const cuisineKeys: CuisineKey[] = [
-    "american",
-    "caribbean",
-    "chinese",
-    "fruit",
-    "halal",
-    "mexican",
-    "other",
-  ];
   return {
     query: params.get("q")?.trim() ?? "",
     openNow: params.get("open") === "1",
@@ -122,7 +113,7 @@ export function parseVenueFilters(params: URLSearchParams): VenueFilters {
     isVeganFriendly: params.get("vegan") === "1",
     cuisines: uniqueSorted(
       cuisineValues.filter((value): value is CuisineKey =>
-        cuisineKeys.includes(value as CuisineKey),
+        (CUISINE_KEYS as string[]).includes(value),
       ),
     ),
     zones: uniqueSorted(

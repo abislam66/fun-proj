@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CUISINE_KEYS } from "@/config/cuisines";
 import { getMockVenueBySlug, MOCK_VENUES } from "@/lib/venue-fixtures";
 import {
   EMPTY_VENUE_FILTERS,
@@ -112,12 +113,29 @@ describe("venue query serialization", () => {
 
   it("ignores unknown query values", () => {
     // `payment` was a real param until 2026-08-25 — now just another
-    // ignored leftover in old bookmarked URLs.
+    // ignored leftover in old bookmarked URLs. `cuisine=nonexistent` is a
+    // made-up tag, not a real one — this used to (wrongly) use `pizza`,
+    // which IS a real CuisineKey and was only being dropped by a stale
+    // hardcoded allowlist bug in `parseVenueFilters`, now fixed to derive
+    // from `CUISINE_KEYS` directly. See "round-trips every real cuisine
+    // key" below for proof `pizza` now round-trips correctly.
     expect(
       parseVenueFilters(
-        new URLSearchParams("cuisine=pizza&zone=moon&payment=card&open=true"),
+        new URLSearchParams(
+          "cuisine=nonexistent&zone=moon&payment=card&open=true",
+        ),
       ),
     ).toEqual(EMPTY_VENUE_FILTERS);
+  });
+
+  it("round-trips every real cuisine key, including ones the old hardcoded allowlist silently dropped", () => {
+    const query = serializeVenueFilters({
+      ...EMPTY_VENUE_FILTERS,
+      cuisines: [...CUISINE_KEYS],
+    });
+    expect(parseVenueFilters(new URLSearchParams(query)).cuisines).toEqual(
+      [...CUISINE_KEYS].sort(),
+    );
   });
 });
 

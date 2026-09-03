@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CAMPUS_BOUNDS } from "@/config/site";
 import {
   bulkSetHalalSchema,
+  bulkSetVeganFriendlySchema,
   reportProblemSchema,
   venueInputSchema,
 } from "@/lib/validation";
@@ -82,6 +83,53 @@ describe("bulkSetHalalSchema", () => {
   it("rejects unknown keys (strict)", () => {
     expect(() =>
       bulkSetHalalSchema.parse({ ids, isHalal: true, status: "published" }),
+    ).toThrow();
+  });
+});
+
+describe("bulkSetVeganFriendlySchema", () => {
+  const ids = [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+  ];
+
+  it("accepts a list of venue ids and a boolean", () => {
+    const parsed = bulkSetVeganFriendlySchema.parse({
+      ids,
+      isVeganFriendly: true,
+    });
+    expect(parsed.ids).toEqual(ids);
+    expect(parsed.isVeganFriendly).toBe(true);
+  });
+
+  it("rejects an empty id list", () => {
+    expect(() =>
+      bulkSetVeganFriendlySchema.parse({ ids: [], isVeganFriendly: true }),
+    ).toThrow();
+  });
+
+  it("rejects non-uuid ids", () => {
+    expect(() =>
+      bulkSetVeganFriendlySchema.parse({
+        ids: ["not-a-uuid"],
+        isVeganFriendly: true,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a non-boolean isVeganFriendly value", () => {
+    expect(() =>
+      bulkSetVeganFriendlySchema.parse({ ids, isVeganFriendly: "yes" }),
+    ).toThrow();
+  });
+
+  it("rejects unknown keys (strict)", () => {
+    expect(() =>
+      bulkSetVeganFriendlySchema.parse({
+        ids,
+        isVeganFriendly: true,
+        status: "published",
+      }),
     ).toThrow();
   });
 });
