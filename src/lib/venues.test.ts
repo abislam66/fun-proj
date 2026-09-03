@@ -88,6 +88,7 @@ describe("venue query serialization", () => {
       openNow: true,
       isHalal: false,
       isVeganFriendly: false,
+      isCafe: true,
       cuisines: ["mexican", "halal"] as const,
       zones: ["student-center", "serc-trucks"] as const,
     };
@@ -99,13 +100,14 @@ describe("venue query serialization", () => {
     });
 
     expect(query).toBe(
-      "q=rice&open=1&cuisine=halal&cuisine=mexican&zone=serc-trucks&zone=student-center",
+      "q=rice&open=1&cafe=1&cuisine=halal&cuisine=mexican&zone=serc-trucks&zone=student-center",
     );
     expect(parseVenueFilters(new URLSearchParams(query))).toEqual({
       query: "rice",
       openNow: true,
       isHalal: false,
       isVeganFriendly: false,
+      isCafe: true,
       cuisines: ["halal", "mexican"],
       zones: ["serc-trucks", "student-center"],
     });
@@ -148,6 +150,7 @@ describe("filterVenues", () => {
       openNow: false,
       isHalal: false,
       isVeganFriendly: false,
+      isCafe: false,
       cuisines: ["mexican"],
       zones: ["serc-trucks"],
     });
@@ -155,6 +158,16 @@ describe("filterVenues", () => {
     expect(results.map((venue) => venue.slug)).toEqual([
       "twelfth-street-tacos",
     ]);
+  });
+
+  it("filters to venue.type === 'cafe' when isCafe is set", () => {
+    const cafe: Venue = { ...MOCK_VENUES[0]!, slug: "test-cafe", type: "cafe" };
+    const results = filterVenues([...MOCK_VENUES, cafe], {
+      ...EMPTY_VENUE_FILTERS,
+      isCafe: true,
+    });
+
+    expect(results.map((venue) => venue.slug)).toEqual(["test-cafe"]);
   });
 
   it("searches cuisine names and excludes retired venues", () => {

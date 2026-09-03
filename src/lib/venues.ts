@@ -51,6 +51,8 @@ export interface VenueFilters {
   openNow: boolean;
   isHalal: boolean;
   isVeganFriendly: boolean;
+  /** `venue.type === "cafe"` — filters on the venue's business category. */
+  isCafe: boolean;
   cuisines: CuisineKey[];
   zones: MapZoneKey[];
 }
@@ -60,6 +62,7 @@ export const EMPTY_VENUE_FILTERS: VenueFilters = {
   openNow: false,
   isHalal: false,
   isVeganFriendly: false,
+  isCafe: false,
   cuisines: [],
   zones: [],
 };
@@ -111,6 +114,7 @@ export function parseVenueFilters(params: URLSearchParams): VenueFilters {
     openNow: params.get("open") === "1",
     isHalal: params.get("halal") === "1",
     isVeganFriendly: params.get("vegan") === "1",
+    isCafe: params.get("cafe") === "1",
     cuisines: uniqueSorted(
       cuisineValues.filter((value): value is CuisineKey =>
         (CUISINE_KEYS as string[]).includes(value),
@@ -131,6 +135,7 @@ export function serializeVenueFilters(filters: VenueFilters): string {
   if (filters.openNow) params.set("open", "1");
   if (filters.isHalal) params.set("halal", "1");
   if (filters.isVeganFriendly) params.set("vegan", "1");
+  if (filters.isCafe) params.set("cafe", "1");
   uniqueSorted(filters.cuisines).forEach((value) =>
     params.append("cuisine", value),
   );
@@ -154,6 +159,7 @@ export function filterVenues(
     if (filters.openNow && !isOpenNow(venue.hours, now)) return false;
     if (filters.isHalal && !venue.isHalal) return false;
     if (filters.isVeganFriendly && !venue.isVeganFriendly) return false;
+    if (filters.isCafe && venue.type !== "cafe") return false;
     if (
       filters.cuisines.length > 0 &&
       !filters.cuisines.some((cuisine) => venue.cuisines.includes(cuisine))

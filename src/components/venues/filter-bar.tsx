@@ -85,6 +85,12 @@ export function FilterBar({
         >
           Vegan Friendly
         </Chip>
+        <Chip
+          active={filters.isCafe}
+          onClick={() => update("isCafe", !filters.isCafe)}
+        >
+          Café
+        </Chip>
         <button
           aria-controls={drawerId}
           aria-expanded={openMenu === "cuisine"}
