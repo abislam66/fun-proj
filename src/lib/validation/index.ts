@@ -9,6 +9,7 @@ export {
   reorderVenuePhotosSchema,
   finalizeVenuePhotoUploadSchema,
   bulkSetHalalSchema,
+  bulkSetVeganFriendlySchema,
   problemKindSchema,
   reportProblemSchema,
   resolveProblemReportSchema,

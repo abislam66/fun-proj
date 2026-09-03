@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import {
   bulkSetVenueHalal,
+  bulkSetVenueVeganFriendly,
   resolveProblemReport,
   resolveVenuePhoto,
+  type ActionResult,
 } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Chip, Input } from "@/components/ui/primitives";
@@ -24,6 +26,36 @@ import { OTHER_MAP_ZONE } from "@/lib/venues";
 
 type TriFilter = "all" | "yes" | "no";
 type CompletenessFlag = "hours" | "description" | "photo";
+
+type BulkBooleanField = {
+  key: "isHalal" | "isVeganFriendly";
+  label: string;
+  run: (
+    ids: string[],
+    value: boolean,
+  ) => Promise<ActionResult<{ updatedIds: string[] }>>;
+};
+
+/**
+ * One row per bulk-editable boolean field. `applyBulkBoolean` (below) is
+ * the single handler for all of them — add a sibling entry here (each
+ * backed by its own narrow schema/query/action, matching
+ * `bulkSetHalalSchema`) rather than a new bar or a generic "patch any
+ * field" action.
+ */
+const BULK_BOOLEAN_FIELDS: BulkBooleanField[] = [
+  {
+    key: "isHalal",
+    label: "Halal",
+    run: (ids, isHalal) => bulkSetVenueHalal({ ids, isHalal }),
+  },
+  {
+    key: "isVeganFriendly",
+    label: "Vegan Friendly",
+    run: (ids, isVeganFriendly) =>
+      bulkSetVenueVeganFriendly({ ids, isVeganFriendly }),
+  },
+];
 
 function venueMissingHours(venue: AdminVenueRow): boolean {
   const hours = venue.hours as Record<string, unknown> | null;
@@ -222,21 +254,24 @@ export function AdminDashboard({
     setSelectedIds(new Set());
   }
 
-  /** Bulk actions live in one small table so a future field (Vegan
-   * Friendly, zone, status, ...) is just another entry + server action,
-   * not a new bar/confirmation/feedback plumbing. */
-  async function applyBulkHalal(isHalal: boolean) {
+  /**
+   * Bulk actions live in one small table (`BULK_BOOLEAN_FIELDS` below) so a
+   * future field (zone, status, ...) is just another entry + server
+   * action, not a new bar/confirmation/feedback plumbing. Every field
+   * here shares this one handler — the confirm/pending/notice/local-state
+   * update cycle is identical for each, only the label and the server
+   * action differ.
+   */
+  async function applyBulkBoolean(field: BulkBooleanField, value: boolean) {
     const ids = [...selectedIds];
     const confirmed = window.confirm(
-      isHalal
-        ? `Mark ${ids.length} selected venues as Halal?`
-        : `Mark ${ids.length} selected venues as not Halal?`,
+      `Mark ${ids.length} selected venue${ids.length === 1 ? "" : "s"} as ${field.label}${value ? "" : " (No)"}?`,
     );
     if (!confirmed) return;
 
     setBulkPending(true);
     setBulkNotice("");
-    const result = await bulkSetVenueHalal({ ids, isHalal });
+    const result = await field.run(ids, value);
     setBulkPending(false);
 
     if (!result.ok) {
@@ -248,7 +283,7 @@ export function AdminDashboard({
     const updated = new Set(result.data.updatedIds);
     setVenues((current) =>
       current.map((venue) =>
-        updated.has(venue.id) ? { ...venue, isHalal } : venue,
+        updated.has(venue.id) ? { ...venue, [field.key]: value } : venue,
       ),
     );
     setBulkNoticeIsError(false);
@@ -458,22 +493,26 @@ export function AdminDashboard({
             >
               Clear selection
             </button>
-            <span aria-hidden="true" className="admin-bulk-divider" />
-            <span className="admin-bulk-action-label">Halal</span>
-            <Button
-              disabled={bulkPending}
-              onClick={() => void applyBulkHalal(true)}
-              variant="secondary"
-            >
-              Yes
-            </Button>
-            <Button
-              disabled={bulkPending}
-              onClick={() => void applyBulkHalal(false)}
-              variant="secondary"
-            >
-              No
-            </Button>
+            {BULK_BOOLEAN_FIELDS.map((field) => (
+              <Fragment key={field.key}>
+                <span aria-hidden="true" className="admin-bulk-divider" />
+                <span className="admin-bulk-action-label">{field.label}</span>
+                <Button
+                  disabled={bulkPending}
+                  onClick={() => void applyBulkBoolean(field, true)}
+                  variant="secondary"
+                >
+                  Yes
+                </Button>
+                <Button
+                  disabled={bulkPending}
+                  onClick={() => void applyBulkBoolean(field, false)}
+                  variant="secondary"
+                >
+                  No
+                </Button>
+              </Fragment>
+            ))}
           </div>
         ) : null}
 
@@ -511,6 +550,7 @@ export function AdminDashboard({
                 <th>Venue</th>
                 <th>Status</th>
                 <th>Halal</th>
+                <th>Vegan</th>
                 <th>Zone</th>
                 <th>Verified</th>
                 <th>Updated</th>
@@ -547,6 +587,13 @@ export function AdminDashboard({
                   <td>
                     {venue.isHalal ? (
                       <span className="admin-status halal-tag">Halal</span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td>
+                    {venue.isVeganFriendly ? (
+                      <span className="admin-status halal-tag">Vegan</span>
                     ) : (
                       "—"
                     )}

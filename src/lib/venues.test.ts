@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { CUISINE_KEYS } from "@/config/cuisines";
 import { getMockVenueBySlug, MOCK_VENUES } from "@/lib/venue-fixtures";
 import {
   EMPTY_VENUE_FILTERS,
@@ -87,6 +88,7 @@ describe("venue query serialization", () => {
       openNow: true,
       isHalal: false,
       isVeganFriendly: false,
+      isCafe: true,
       cuisines: ["mexican", "halal"] as const,
       zones: ["student-center", "serc-trucks"] as const,
     };
@@ -98,13 +100,14 @@ describe("venue query serialization", () => {
     });
 
     expect(query).toBe(
-      "q=rice&open=1&cuisine=halal&cuisine=mexican&zone=serc-trucks&zone=student-center",
+      "q=rice&open=1&cafe=1&cuisine=halal&cuisine=mexican&zone=serc-trucks&zone=student-center",
     );
     expect(parseVenueFilters(new URLSearchParams(query))).toEqual({
       query: "rice",
       openNow: true,
       isHalal: false,
       isVeganFriendly: false,
+      isCafe: true,
       cuisines: ["halal", "mexican"],
       zones: ["serc-trucks", "student-center"],
     });
@@ -112,12 +115,29 @@ describe("venue query serialization", () => {
 
   it("ignores unknown query values", () => {
     // `payment` was a real param until 2026-08-25 — now just another
-    // ignored leftover in old bookmarked URLs.
+    // ignored leftover in old bookmarked URLs. `cuisine=nonexistent` is a
+    // made-up tag, not a real one — this used to (wrongly) use `pizza`,
+    // which IS a real CuisineKey and was only being dropped by a stale
+    // hardcoded allowlist bug in `parseVenueFilters`, now fixed to derive
+    // from `CUISINE_KEYS` directly. See "round-trips every real cuisine
+    // key" below for proof `pizza` now round-trips correctly.
     expect(
       parseVenueFilters(
-        new URLSearchParams("cuisine=pizza&zone=moon&payment=card&open=true"),
+        new URLSearchParams(
+          "cuisine=nonexistent&zone=moon&payment=card&open=true",
+        ),
       ),
     ).toEqual(EMPTY_VENUE_FILTERS);
+  });
+
+  it("round-trips every real cuisine key, including ones the old hardcoded allowlist silently dropped", () => {
+    const query = serializeVenueFilters({
+      ...EMPTY_VENUE_FILTERS,
+      cuisines: [...CUISINE_KEYS],
+    });
+    expect(parseVenueFilters(new URLSearchParams(query)).cuisines).toEqual(
+      [...CUISINE_KEYS].sort(),
+    );
   });
 });
 
@@ -130,6 +150,7 @@ describe("filterVenues", () => {
       openNow: false,
       isHalal: false,
       isVeganFriendly: false,
+      isCafe: false,
       cuisines: ["mexican"],
       zones: ["serc-trucks"],
     });
@@ -137,6 +158,16 @@ describe("filterVenues", () => {
     expect(results.map((venue) => venue.slug)).toEqual([
       "twelfth-street-tacos",
     ]);
+  });
+
+  it("filters to venue.type === 'cafe' when isCafe is set", () => {
+    const cafe: Venue = { ...MOCK_VENUES[0]!, slug: "test-cafe", type: "cafe" };
+    const results = filterVenues([...MOCK_VENUES, cafe], {
+      ...EMPTY_VENUE_FILTERS,
+      isCafe: true,
+    });
+
+    expect(results.map((venue) => venue.slug)).toEqual(["test-cafe"]);
   });
 
   it("searches cuisine names and excludes retired venues", () => {

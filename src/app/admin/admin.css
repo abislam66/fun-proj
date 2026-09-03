@@ -294,9 +294,11 @@ a.button {
   padding-top: 0;
 }
 
-/* Compact bar shown only while 1+ venue rows are selected — Halal is the
-   first bulk action; add a sibling label/button pair here for future
-   fields (Vegan Friendly, zone, status, ...) rather than a new bar. */
+/* Compact bar shown only while 1+ venue rows are selected — Halal and
+   Vegan Friendly are rendered by looping BULK_BOOLEAN_FIELDS
+   (admin-dashboard.tsx), each contributing a divider/label/button group
+   via flex-wrap + gap. Add a sibling field there for future bulk actions
+   (zone, status, ...) rather than a new bar. */
 .admin-bulk-bar {
   display: flex;
   flex-wrap: wrap;

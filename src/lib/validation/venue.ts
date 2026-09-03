@@ -157,12 +157,19 @@ export const finalizeVenuePhotoUploadSchema = z
  * Bulk admin edits, one schema per field so each stays a narrow,
  * single-purpose write (matches `upsertVenue`/`publishVenue`/etc.) rather
  * than a generic "patch any field" endpoint. Add a sibling schema here
- * (e.g. `bulkSetVeganFriendlySchema`) when a new bulk action is needed.
+ * when a new bulk action is needed.
  */
 export const bulkSetHalalSchema = z
   .object({
     ids: z.array(z.uuid()).min(1).max(200),
     isHalal: z.boolean(),
+  })
+  .strict();
+
+export const bulkSetVeganFriendlySchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(200),
+    isVeganFriendly: z.boolean(),
   })
   .strict();
 
