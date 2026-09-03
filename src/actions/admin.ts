@@ -1,14 +1,10 @@
 "use server";
 
-import { del, put } from "@vercel/blob";
+import { del } from "@vercel/blob";
 import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
-import {
-  ALLOWED_VENUE_IMAGE_TYPES,
-  MAX_VENUE_IMAGE_BYTES,
-  MAX_VENUE_PHOTOS,
-} from "@/config/site";
+import { MAX_VENUE_PHOTOS } from "@/config/site";
 import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import { blobBackedPhotoSource, canPublishVenuePhoto } from "@/lib/ratings";
@@ -38,6 +34,7 @@ import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
 import {
   bulkSetHalalSchema,
+  finalizeVenuePhotoUploadSchema,
   reorderVenuePhotosSchema,
   removeRatingSchema,
   resolveProblemReportSchema,
@@ -152,54 +149,38 @@ function toAdminPhoto(row: {
   return { id: row.id, url: row.url, alt: row.alt };
 }
 
-/** Admin: add a photo to a venue's gallery (up to MAX_VENUE_PHOTOS). */
-export async function uploadVenuePhoto(
-  formData: FormData,
+/**
+ * Admin: record a photo the browser already uploaded directly to Blob
+ * storage (see src/app/api/admin/photos/upload/route.ts, which issues the
+ * scoped upload token and is the only place this app uploads a photo file
+ * through the server — routing bytes through a server action here would
+ * mean every photo crosses the network twice: browser -> function ->
+ * Blob, instead of browser -> Blob directly). This action never sees the
+ * file; it just validates the resulting blob URL and writes the DB row.
+ */
+export async function finalizeVenuePhotoUpload(
+  raw: unknown,
 ): Promise<ActionResult<{ photo: AdminVenuePhoto }>> {
   try {
     await requireAdmin();
-    const id = formData.get("id");
-    const file = formData.get("file");
-
-    if (typeof id !== "string" || !id) {
-      return { ok: false, error: "Missing venue id" };
-    }
-    if (!(file instanceof File)) {
-      return { ok: false, error: "No image file provided" };
-    }
-    if (
-      !ALLOWED_VENUE_IMAGE_TYPES.includes(
-        file.type as (typeof ALLOWED_VENUE_IMAGE_TYPES)[number],
-      )
-    ) {
-      return { ok: false, error: "Image must be JPEG, PNG, or WebP" };
-    }
-    if (file.size > MAX_VENUE_IMAGE_BYTES) {
-      return { ok: false, error: "Image must be under 5 MB" };
-    }
+    const { id, url } = finalizeVenuePhotoUploadSchema.parse(raw);
 
     const existing = await getVenueById(id);
     if (!existing) {
       return { ok: false, error: "Venue not found" };
     }
 
-    const currentPhotos = await getVenuePhotosForAdmin(id);
-    if (currentPhotos.length >= MAX_VENUE_PHOTOS) {
+    const currentCount = await countPublishedVenuePhotos(id);
+    if (currentCount >= MAX_VENUE_PHOTOS) {
       return {
         ok: false,
         error: `This venue already has ${MAX_VENUE_PHOTOS} photos — remove one before adding another.`,
       };
     }
 
-    const extension = file.type.split("/")[1];
-    const blob = await put(`venues/${id}-${Date.now()}.${extension}`, file, {
-      access: "public",
-      addRandomSuffix: false,
-    });
-
     const photo = await insertVenuePhoto(id, {
-      url: blob.url,
-      alt: `${existing.name} photo ${currentPhotos.length + 1}`,
+      url,
+      alt: `${existing.name} photo ${currentCount + 1}`,
     });
 
     revalidateVenue(existing.slug);

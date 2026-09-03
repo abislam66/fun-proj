@@ -134,6 +134,26 @@ export const reorderVenuePhotosSchema = z
   .strict();
 
 /**
+ * Admin photo uploads go client -> Vercel Blob directly (see
+ * src/app/api/admin/photos/upload/route.ts) so this server action only
+ * records the already-uploaded blob's URL — it never receives the file
+ * itself. The regex pins `url` to our own Blob store's public host so a
+ * crafted request can't get an arbitrary external URL recorded as if it
+ * were a validated upload.
+ */
+export const finalizeVenuePhotoUploadSchema = z
+  .object({
+    id: z.uuid(),
+    url: z
+      .string()
+      .regex(
+        /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\/.+/,
+        "Invalid photo URL",
+      ),
+  })
+  .strict();
+
+/**
  * Bulk admin edits, one schema per field so each stays a narrow,
  * single-purpose write (matches `upsertVenue`/`publishVenue`/etc.) rather
  * than a generic "patch any field" endpoint. Add a sibling schema here

@@ -1,15 +1,16 @@
 "use client";
 
+import { upload } from "@vercel/blob/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import {
   deleteVenuePhoto,
+  finalizeVenuePhotoUpload,
   publishVenue,
   reorderVenuePhotos,
   retireVenue,
-  uploadVenuePhoto,
   upsertVenue,
   verifyVenue,
 } from "@/actions/admin";
@@ -18,7 +19,11 @@ import { VenueLocationPicker } from "@/components/admin/venue-location-picker";
 import { Button, Input } from "@/components/ui/primitives";
 import { CUISINES, type CuisineKey } from "@/config/cuisines";
 import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
-import { ALLOWED_VENUE_IMAGE_TYPES, MAX_VENUE_PHOTOS } from "@/config/site";
+import {
+  ALLOWED_VENUE_IMAGE_TYPES,
+  MAX_VENUE_IMAGE_BYTES,
+  MAX_VENUE_PHOTOS,
+} from "@/config/site";
 import { movePhoto, movePhotoToFront } from "@/lib/admin-photo-order";
 import type { AdminVenuePhoto } from "@/lib/db/queries";
 import type { VenueRow } from "@/lib/db/schema";
@@ -189,21 +194,58 @@ function VenueEditorForm({
 
   async function uploadPhoto(file: File) {
     if (!draft.id || atPhotoLimit) return;
-    setPhotoPending(true);
-    const formData = new FormData();
-    formData.set("id", draft.id);
-    formData.set("file", file);
-    const result = await uploadVenuePhoto(formData);
-    setPhotoPending(false);
+    const venueId = draft.id;
 
-    if (!result.ok) {
-      setNotice(result.error);
+    if (
+      !ALLOWED_VENUE_IMAGE_TYPES.includes(
+        file.type as (typeof ALLOWED_VENUE_IMAGE_TYPES)[number],
+      )
+    ) {
+      setNotice("Image must be JPEG, PNG, or WebP");
       setNoticeIsError(true);
       return;
     }
-    setPhotos((current) => [...current, result.data.photo]);
-    setNotice("Photo uploaded.");
-    setNoticeIsError(false);
+    if (file.size > MAX_VENUE_IMAGE_BYTES) {
+      setNotice("Image must be under 5 MB");
+      setNoticeIsError(true);
+      return;
+    }
+
+    setPhotoPending(true);
+    try {
+      // Uploads straight from the browser to Blob storage — the server
+      // only issues a scoped token (route below), it never proxies the
+      // file. See src/app/api/admin/photos/upload/route.ts.
+      const extension = file.type.split("/")[1];
+      const blob = await upload(
+        `venues/${venueId}-${Date.now()}.${extension}`,
+        file,
+        {
+          access: "public",
+          handleUploadUrl: "/api/admin/photos/upload",
+          clientPayload: JSON.stringify({ venueId }),
+        },
+      );
+
+      const result = await finalizeVenuePhotoUpload({
+        id: venueId,
+        url: blob.url,
+      });
+
+      if (!result.ok) {
+        setNotice(result.error);
+        setNoticeIsError(true);
+        return;
+      }
+      setPhotos((current) => [...current, result.data.photo]);
+      setNotice("Photo uploaded.");
+      setNoticeIsError(false);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Upload failed");
+      setNoticeIsError(true);
+    } finally {
+      setPhotoPending(false);
+    }
   }
 
   async function removePhoto(photoId: string) {
