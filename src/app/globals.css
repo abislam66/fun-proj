@@ -82,20 +82,21 @@
   --explorer-list-max: 42%;
   --explorer-list-wide: 30rem;
 
-  /* Mobile results sheet: single source of truth for the 3 snap heights,
-     as a fraction of the map area below the header (not the full
-     viewport — the header is separate chrome). Read by .mobile-sheet-*
-     below, by .map-controls' sheet-tracking rule, by mobile-sheet.tsx's
-     drag/snap math, and by venue-map.tsx's flyToZones inset. Default
-     gets a floor so short/landscape viewports still fit the handle +
-     search + filter chips. */
+  /* Mobile results sheet: snap heights as a fraction of the map area
+     below the header (collapsed is handle-only). Peek = map + search.
+     Expanded = the list. Preview hugs its content (phone only). There
+     is no half-and-half mid snap. Read by .mobile-sheet-*, .map-controls,
+     mobile-sheet.tsx, and venue-map.tsx's flyTo inset. */
   --sheet-header-h: 4.25rem;
+  --sheet-h-collapsed: calc(2.75rem + env(safe-area-inset-bottom, 0px));
   --sheet-h-default: max(
     9.5rem,
     calc((100dvh - var(--sheet-header-h)) * 0.325)
   );
-  --sheet-h-mid: calc((100dvh - var(--sheet-header-h)) * 0.5);
   --sheet-h-expanded: calc((100dvh - var(--sheet-header-h)) * 0.875);
+  /* Preview hugs its content; this token is the live measured height
+     (written by mobile-sheet.tsx) so map controls can sit above it. */
+  --sheet-h-preview: 14rem;
 }
 
 @theme inline {
@@ -557,17 +558,16 @@ button {
   transition: bottom var(--duration-medium) var(--ease-move);
 }
 
-/* Follow the sheet upward as it snaps to mid (MobileSheet mirrors its
-   snap onto <html data-sheet>; height comes from the shared --sheet-h-mid
-   token above, same source mobile-sheet.tsx reads for drag/snap math).
-   Scoped below the desktop breakpoint so these can't out-specificity the
-   desktop rule. At expanded there's only a ~12.5% sliver of map left
-   above the sheet — too little room for the button row without colliding
-   with the map's own HUD bar (zone name + coords), so it's hidden rather
-   than repositioned; the sheet covers the map anyway at that point. */
+/* Follow the sheet: collapsed rides just above the handle; peek uses
+   the base `bottom` above; expanded hides the row (only a ~12.5%
+   sliver of map left). Scoped below the desktop breakpoint so this
+   can't out-specificity the desktop corner-column rule. */
 @media (max-width: 63.9375rem) {
-  [data-sheet="mid"] .map-controls {
-    bottom: calc(var(--sheet-h-mid) + var(--spacing-md));
+  [data-sheet="collapsed"] .map-controls {
+    bottom: calc(var(--sheet-h-collapsed) + var(--spacing-md));
+  }
+  [data-sheet="preview"] .map-controls {
+    bottom: calc(var(--sheet-h-preview) + var(--spacing-md));
   }
   [data-sheet="full"] .map-controls {
     display: none;
@@ -901,6 +901,14 @@ button {
   transform: translate(-50%, calc(-100% - 4.25rem));
 }
 
+/* Phone uses the results sheet for the same preview — hide the floating
+   pin card so it can't cover the map or steal the tap. */
+@media (max-width: 63.9375rem) {
+  .map-mini-card-anchor {
+    display: none;
+  }
+}
+
 /* Pin too close to the top edge — open beneath the pin instead. */
 .map-mini-card-anchor-below {
   transform: translate(-50%, 0.75rem);
@@ -1178,16 +1186,29 @@ button {
   transition: height var(--duration-medium) var(--ease-move);
 }
 
+.mobile-sheet-collapsed {
+  height: var(--sheet-h-collapsed);
+}
+
 .mobile-sheet-peek {
   height: var(--sheet-h-default);
 }
 
-.mobile-sheet-mid {
-  height: var(--sheet-h-mid);
-}
-
 .mobile-sheet-full {
   height: var(--sheet-h-expanded);
+}
+
+.mobile-sheet-preview {
+  height: auto;
+}
+
+.mobile-sheet-preview .sheet-content {
+  height: auto;
+  overflow: visible;
+}
+
+.mobile-sheet-collapsed .sheet-content {
+  overflow: hidden;
 }
 
 .sheet-handle {
@@ -1230,6 +1251,7 @@ button {
    never sets [data-sheet] at all in practice but shouldn't depend on
    that to stay visible. */
 @media (max-width: 63.9375rem) {
+  [data-sheet="collapsed"] .results-intro,
   [data-sheet="peek"] .results-intro {
     display: none;
   }
@@ -1246,6 +1268,70 @@ button {
   font-size: 1.5rem;
   line-height: 1.05;
   letter-spacing: -0.035em;
+}
+
+.venue-preview {
+  position: relative;
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
+
+.venue-preview h2 {
+  margin: 0;
+  padding-right: 2.5rem;
+  font-family: var(--font-display), sans-serif;
+  font-size: var(--text-title);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.venue-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.venue-preview-price {
+  color: var(--color-ink);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+.venue-preview-cta {
+  display: grid;
+  width: 100%;
+  margin-top: var(--spacing-sm);
+  place-items: center;
+}
+
+.venue-preview-close {
+  position: absolute;
+  top: 0;
+  right: var(--spacing-sm);
+  z-index: 1;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.venue-preview-close:hover {
+  background: var(--color-cherry-soft);
+  color: var(--color-ink);
+}
+
+.venue-preview-close:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
 }
 
 .filter-area {

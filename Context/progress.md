@@ -43,6 +43,44 @@
 
 ---
 
+## 2026-09-04 — Venue preview sheet hugs its content
+
+The phone venue card was locked to ~40% of the viewport, which left a
+band of empty white under View details. Preview height is now `auto`
+(content + handle); map-control offset follows the live measured height.
+
+## 2026-09-04 — Phone venue preview is a sheet, not a map popup
+
+On phones, tapping a venue (pin or list row) no longer opens the
+pin-anchored mini-card. The results drawer swaps to a preview with the
+same facts (name, tags, open status, $12) and a **View details** button
+to `/eat/[slug]`. Close, empty-map tap, Escape, or dragging the preview
+down restores search/list. Desktop still uses the floating card.
+
+## 2026-09-04 — Zone tap no longer opens the search sheet
+
+Pulling the drawer down to map-only, then tapping a zone, used to snap
+the sheet back up to search. Zone taps now keep whatever snap you were
+in; the camera pads for that height so the zone still lands in view.
+
+## 2026-09-04 — Mobile sheet: pull down for a full-map view
+
+The results drawer already dropped the 50/50 mid stop (peek ↔ full).
+You can now drag it down past peek to a **collapsed** snap: handle only,
+map fills the screen. Peek (~33%, search/filters) stays the entry state;
+full (~87.5%) is still the list. Tap the handle to toggle peek ↔ full;
+map-only is a deliberate drag-down, not a tap through-stop. Map controls
+ride above the handle at collapsed. Desktop split is untouched.
+
+## 2026-09-04 — Mobile sheet: drop the half-and-half mid snap
+
+The results drawer had three rests (peek / mid / full). Mid was a 50/50
+split — map and list both half-visible, neither useful. It now snaps
+only to peek (~33%, map + search/filters) or full (~87.5%, the list).
+Tap the handle to toggle; drag snaps to whichever of the two is nearer.
+`--sheet-h-mid` and `.mobile-sheet-mid` are gone. Desktop split is
+untouched.
+
 ## 2026-09-04 — Mobile map: no HUD bar, no +/- zoom
 
 The extra zone header under the site marquee made the phone map a thin strip
