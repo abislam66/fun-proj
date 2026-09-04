@@ -68,7 +68,7 @@ in PostHog with `$ip`/`$geoip_*` absent, or whether a session recording
 actually appears — PostHog's bot filter (on by default) silently drops
 every `capture()` call from a browser it fingerprints as automated.
 Confirmed this is genuinely a detection issue, not a proxy/config bug: with
-Playwright's real user agent, spoofed `navigator.webdriver`, *and* a spoofed
+Playwright's real user agent, spoofed `navigator.webdriver`, _and_ a spoofed
 plain-Chrome user agent, config/extension scripts still loaded fine but
 zero capture requests were ever attempted, even monkey-patching
 `window.fetch`/XHR/`sendBeacon` before any page script ran. (The page's own
