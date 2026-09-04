@@ -32,7 +32,7 @@ describe("adminVenueZoneSortIndex", () => {
     expect(adminVenueZoneSortIndex("student-center")).toBeLessThan(
       adminVenueZoneSortIndex("cecil-b-moore"),
     );
-    expect(adminVenueZoneSortIndex("broad-st")).toBeLessThan(
+    expect(adminVenueZoneSortIndex("susquehanna")).toBeLessThan(
       adminVenueZoneSortIndex("other"),
     );
     expect(adminVenueZoneSortIndex("other")).toBeLessThan(
@@ -50,7 +50,7 @@ describe("filterAndSortAdminVenues", () => {
     }),
     row({
       name: "Alpha Cart",
-      mapZone: "broad-st",
+      mapZone: "susquehanna",
       updatedAt: new Date("2026-08-20T12:00:00Z"),
     }),
     row({

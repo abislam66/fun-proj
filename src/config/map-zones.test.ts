@@ -10,16 +10,18 @@ describe("MAP_ZONE_MARK", () => {
       "serc-trucks",
       "tyler-trucks",
       "cecil-b-moore",
-      "broad-st",
+      "susquehanna",
     ]);
   });
 
-  it("puts Vantage, The View, The Wall plaza, Richie's Cafe, and Liacouras Walk on buildingFill", () => {
+  it("puts Vantage, The View, The Wall plaza, Richie's Cafe, Liacouras Walk, Avery, and Morgan Hall on buildingFill", () => {
     expect(mapZoneKeysByMark(MAP_ZONE_MARK.buildingFill)).toEqual([
       "vantage-view",
       "the-wall",
       "richies-cafe",
       "liacouras-walk",
+      "avery",
+      "morgan-hall",
     ]);
   });
 });

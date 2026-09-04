@@ -1,27 +1,38 @@
 /**
  * Map-only campus zones — the single source of truth for venue zones as
- * of 2026-08-26 (`venues.map_zone` stores one of these keys, or the
+ * of 2026-09-04 (`venues.map_zone` stores one of these keys, or the
  * admin-only "other" sentinel from `lib/venues.ts`, which is deliberately
  * not a key here so it can't leak into the public filter bar).
  *
  * Two marks, used together on the campus overview:
  * - `MAP_ZONE_MARK.streetLine` — cherry corridor (Student Center, W Montgomery,
- *   SERC trucks, Tyler trucks, Cecil B. Moore Ave, N Broad St)
+ *   SERC trucks, Tyler trucks, Cecil B. Moore Ave, Susquehanna)
  * - `MAP_ZONE_MARK.buildingFill` — cherry wash (Vantage & The View buildings;
  *   The Wall plaza west of Anderson Hall — not Anderson itself;
  *   Richie's Cafe — that footprint only, not Facilities;
- *   Liacouras Walk — 1902–1938 stretch of the walk, not 1940 Residence Hall)
+ *   Liacouras Walk — 1902–1938 stretch of the walk, not 1940 Residence Hall;
+ *   Morgan Hall — the Broad St dining/retail cluster; Avery — the cluster
+ *   around The Avery apartments on Cecil B. Moore Ave)
  *
- * Cecil B. Moore Ave and N Broad St (added 2026-08-27) are approximate
- * straight-line corridors, not hand-traced like the original 8 — added
- * once enough real venues clustered along those streets to be worth their
- * own filter chip, with a known lower-precision street-line/label overlay
- * in map-zones.geojson (see that file's *-street features for these two).
+ * Cecil B. Moore Ave (added 2026-08-27) is an approximate straight-line
+ * corridor, not hand-traced like the original 8 — added once enough real
+ * venues clustered along the street to be worth its own filter chip, with
+ * a known lower-precision street-line/label overlay in map-zones.geojson
+ * (see that file's *-street features).
  *
  * Student Center, Liacouras Walk, Richie's Cafe, and Cecil B. Moore Ave
  * were all widened 2026-08-30 (see each zone's own description) after a
  * coordinate-correction pass revealed real venues sitting just outside
  * the original, narrower boundaries.
+ *
+ * 2026-09-04: N Broad St was removed and split into three zones — Morgan
+ * Hall and Susquehanna (its two real venue clusters), and Avery (carved
+ * out of Cecil B. Moore Ave's own territory, since The Avery apartments
+ * sit a block west of Broad St, near Cecil B. Moore Ave, not within N
+ * Broad St's old footprint at all). Cecil B. Moore Ave's polygon is now a
+ * bracket/staple shape wrapping around the Avery notch, since Avery's
+ * cluster sits in the middle of the corridor by longitude, not at either
+ * end — see Context/decisions.md for the full geometry writeup.
  */
 
 /** How a map zone is drawn at campus overview. */
@@ -41,8 +52,9 @@ export type MapZoneMark = (typeof MAP_ZONE_MARK)[keyof typeof MAP_ZONE_MARK];
  * which glyph `zone-label-icon.ts` bakes into the badge: "truck" for the
  * two food-truck corridors, "walk" for the pedestrian walk, "cap" for the
  * Student Center (campus-life hub), "binoculars" for Vantage & The View
- * ("the view"), "cup" for Richie's Cafe, "star" as the generic default
- * for the street corridors that don't have their own landmark glyph.
+ * ("the view"), "cup" for Richie's Cafe, "food" for Morgan Hall (Temple's
+ * own dining hall), "star" as the generic default for zones without their
+ * own landmark glyph.
  */
 export type MapZoneIcon =
   | "star"
@@ -250,37 +262,80 @@ export const MAP_ZONES = {
     icon: "star" as MapZoneIcon,
     description:
       "Cecil B. Moore Avenue between roughly 17th and 14th — approximate corridor, not hand-traced like the other zones. " +
-      "South edge pushed down 2026-08-30 to also reach Oh Brother and Tropical Smoothie Cafe, both just south of the original edge near the Broad St corner.",
+      "South edge pushed down 2026-08-30 to also reach Oh Brother and Tropical Smoothie Cafe, both just south of the original edge near the Broad St corner. " +
+      "Reshaped 2026-09-04 into a bracket/staple shape (west span, a notch, east span) when the Avery zone was carved out of its middle: Avery's real-world cluster (City View Pizza, OWL Breakfast & Lunch, Dunkin', The Peabody) sits at roughly the corridor's midpoint by longitude, not at either end, so a plain rectangle can't exclude it without also cutting into venues on both sides. The notch shares an exact boundary with Avery's own polygon (lng -75.1598/-75.1589, lat 39.9782) — zero gap, zero overlap by construction.",
     sort: 9,
     mark: MAP_ZONE_MARK.streetLine,
     padding: 64,
     membership: [
       [-75.1638, 39.9777],
       [-75.1638, 39.98],
+      [-75.1598, 39.98],
+      [-75.1598, 39.9782],
+      [-75.1589, 39.9782],
+      [-75.1589, 39.98],
       [-75.158, 39.98],
       [-75.158, 39.9777],
       [-75.1638, 39.9777],
     ] as LngLat[],
   },
-  "broad-st": {
-    key: "broad-st",
-    label: "N Broad St",
+  avery: {
+    key: "avery",
+    label: "Avery",
     color: "#9D2235",
     soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
-      "N Broad Street from roughly Cecil B. Moore north to Susquehanna — approximate corridor (interpolated between two real geocoded points, Morgan Hall at 1601 and the McDonald's at 2109), not hand-traced like the other zones. Narrower south of Diamond St (~39.984) because Broad runs close enough to the campus core there to threaten the deliberate gaps other zones carve out (e.g. between Klein Law and Student Center, and west of the 1940 Residence Hall); wider north of that where there's no such conflict.",
+      "The block immediately around The Avery apartments (1601 N 15th St / Cecil B. Moore Ave), carved out of Cecil B. Moore Ave's own territory 2026-09-04 rather than N Broad St — The Avery sits a block west of Broad, geocoding nowhere near the old N Broad St zone's footprint. Tight box around City View Pizza, OWL Breakfast & Lunch, Dunkin', and The Peabody; east edge sits ~9m from Hangry Joe's (nearest Cecil B. Moore Ave venue), the tightest clearance of this reorg — worth a real-world sanity check if a new venue ever geocodes near that edge.",
     sort: 10,
+    mark: MAP_ZONE_MARK.buildingFill,
+    padding: 56,
+    membership: [
+      [-75.1598, 39.9782],
+      [-75.1598, 39.98],
+      [-75.1589, 39.98],
+      [-75.1589, 39.9782],
+      [-75.1598, 39.9782],
+    ] as LngLat[],
+  },
+  "morgan-hall": {
+    key: "morgan-hall",
+    label: "Morgan Hall",
+    color: "#9D2235",
+    soft: "#F8ECEF",
+    icon: "food" as MapZoneIcon,
+    description:
+      "Temple's own Morgan Hall dining/retail cluster at 1601 N Broad St, plus Panera Bread two blocks north at 1800 N Broad — split out of the removed N Broad St zone 2026-09-04. Stepped (L-shaped) rather than a plain rectangle: reaching Panera's latitude at the same east edge as the tight lower cluster would clip into W Montgomery's actual (diagonal, non-axis-aligned) polygon, confirmed by interpolating its edges directly rather than just checking its bounding box — so the upper (Panera) portion steps its east edge in by ~90m to clear it.",
+    sort: 11,
+    mark: MAP_ZONE_MARK.buildingFill,
+    padding: 56,
+    membership: [
+      [-75.1579, 39.978],
+      [-75.1579, 39.9808],
+      [-75.1576, 39.9808],
+      [-75.1576, 39.9789],
+      [-75.157, 39.9789],
+      [-75.157, 39.978],
+      [-75.1579, 39.978],
+    ] as LngLat[],
+  },
+  susquehanna: {
+    key: "susquehanna",
+    label: "Susquehanna",
+    color: "#9D2235",
+    soft: "#F8ECEF",
+    icon: "star" as MapZoneIcon,
+    description:
+      "N Broad Street around the Susquehanna Ave crossing (~lat 39.9854-39.9858), plus Yummy Phở and retired Temple Star Chinese further south near Diamond St — split out of the removed N Broad St zone 2026-09-04. Comfortable clearance on every side: ~289m from Morgan Hall to the south, ~85m from Liacouras Walk to the southwest.",
+    sort: 12,
     mark: MAP_ZONE_MARK.streetLine,
     padding: 64,
     membership: [
-      [-75.158, 39.9784],
-      [-75.158, 39.988],
-      [-75.1548, 39.988],
-      [-75.1548, 39.984],
-      [-75.1568, 39.984],
-      [-75.1568, 39.9784],
-      [-75.158, 39.9784],
+      [-75.1576, 39.9834],
+      [-75.1576, 39.987],
+      [-75.1552, 39.987],
+      [-75.1552, 39.9834],
+      [-75.1576, 39.9834],
     ] as LngLat[],
   },
 } as const;

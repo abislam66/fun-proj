@@ -529,18 +529,22 @@
         "type": "Polygon",
         "coordinates": [
           [
-            [-75.1638, 39.9782],
+            [-75.1638, 39.9777],
             [-75.1638, 39.98],
+            [-75.1598, 39.98],
+            [-75.1598, 39.9782],
+            [-75.1589, 39.9782],
+            [-75.1589, 39.98],
             [-75.158, 39.98],
-            [-75.158, 39.9782],
-            [-75.1638, 39.9782]
+            [-75.158, 39.9777],
+            [-75.1638, 39.9777]
           ]
         ]
       }
     },
     {
       "type": "Feature",
-      "id": "cecil-b-moore-street",
+      "id": "cecil-b-moore-street-west",
       "properties": {
         "zoneKey": "cecil-b-moore",
         "role": "street-line",
@@ -552,7 +556,23 @@
           [-75.1633, 39.9793],
           [-75.162, 39.9792],
           [-75.16, 39.9789],
-          [-75.1585, 39.9787]
+          [-75.1598, 39.9788]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "cecil-b-moore-street-east",
+      "properties": {
+        "zoneKey": "cecil-b-moore",
+        "role": "street-line",
+        "label": "Cecil B. Moore Ave"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.1589, 39.9789],
+          [-75.1581, 39.9788]
         ]
       }
     },
@@ -572,60 +592,172 @@
     },
     {
       "type": "Feature",
-      "id": "broad-st-membership",
+      "id": "avery-membership",
       "properties": {
-        "zoneKey": "broad-st",
+        "zoneKey": "avery",
         "role": "membership",
-        "label": "N Broad St"
+        "label": "Avery"
       },
       "geometry": {
         "type": "Polygon",
         "coordinates": [
           [
-            [-75.158, 39.9784],
-            [-75.158, 39.988],
-            [-75.1548, 39.988],
-            [-75.1548, 39.984],
-            [-75.1568, 39.984],
-            [-75.1568, 39.9784],
-            [-75.158, 39.9784]
+            [-75.1598, 39.9782],
+            [-75.1598, 39.98],
+            [-75.1589, 39.98],
+            [-75.1589, 39.9782],
+            [-75.1598, 39.9782]
           ]
         ]
       }
     },
     {
       "type": "Feature",
-      "id": "broad-st-street",
+      "id": "avery-building-fill",
       "properties": {
-        "zoneKey": "broad-st",
-        "role": "street-line",
-        "label": "N Broad St"
+        "zoneKey": "avery",
+        "role": "building-fill",
+        "label": "Avery"
       },
       "geometry": {
-        "type": "LineString",
+        "type": "Polygon",
         "coordinates": [
-          [-75.1575, 39.9785],
-          [-75.1572, 39.9799],
-          [-75.1569, 39.9811],
-          [-75.156, 39.9843],
-          [-75.156, 39.9852],
-          [-75.1559, 39.9864],
-          [-75.1559, 39.9877]
+          [
+            [-75.1598, 39.9782],
+            [-75.1598, 39.98],
+            [-75.1589, 39.98],
+            [-75.1589, 39.9782],
+            [-75.1598, 39.9782]
+          ]
         ]
       }
     },
     {
       "type": "Feature",
-      "id": "broad-st-label",
+      "id": "avery-label",
       "properties": {
-        "zoneKey": "broad-st",
+        "zoneKey": "avery",
         "role": "label",
-        "label": "N Broad St",
+        "label": "Avery",
         "sort": 10
       },
       "geometry": {
         "type": "Point",
-        "coordinates": [-75.1559, 39.986]
+        "coordinates": [-75.1593, 39.9791]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "morgan-hall-membership",
+      "properties": {
+        "zoneKey": "morgan-hall",
+        "role": "membership",
+        "label": "Morgan Hall"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1579, 39.978],
+            [-75.1579, 39.9808],
+            [-75.1576, 39.9808],
+            [-75.1576, 39.9789],
+            [-75.157, 39.9789],
+            [-75.157, 39.978],
+            [-75.1579, 39.978]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "morgan-hall-building-fill",
+      "properties": {
+        "zoneKey": "morgan-hall",
+        "role": "building-fill",
+        "label": "Morgan Hall"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1579, 39.978],
+            [-75.1579, 39.9808],
+            [-75.1576, 39.9808],
+            [-75.1576, 39.9789],
+            [-75.157, 39.9789],
+            [-75.157, 39.978],
+            [-75.1579, 39.978]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "morgan-hall-label",
+      "properties": {
+        "zoneKey": "morgan-hall",
+        "role": "label",
+        "label": "Morgan Hall",
+        "sort": 11
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.1574, 39.9784]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "susquehanna-membership",
+      "properties": {
+        "zoneKey": "susquehanna",
+        "role": "membership",
+        "label": "Susquehanna"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.1576, 39.9834],
+            [-75.1576, 39.987],
+            [-75.1552, 39.987],
+            [-75.1552, 39.9834],
+            [-75.1576, 39.9834]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "susquehanna-street",
+      "properties": {
+        "zoneKey": "susquehanna",
+        "role": "street-line",
+        "label": "Susquehanna"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-75.1571, 39.9838],
+          [-75.1565, 39.985],
+          [-75.156, 39.9858],
+          [-75.1559, 39.9865],
+          [-75.1558, 39.987]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "susquehanna-label",
+      "properties": {
+        "zoneKey": "susquehanna",
+        "role": "label",
+        "label": "Susquehanna",
+        "sort": 12
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.1562, 39.986]
       }
     }
   ]

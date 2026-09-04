@@ -26,6 +26,7 @@
 - **Member accounts + a login-wall on venue pages, as of 2026-08-28.** A real reversal of two previously-explicit rules in `Specs/auth-security.md` ("no login-walling," "no social login") — the site owner asked for it directly, I flagged the conflict, they chose to override the specs, so the specs (and `CLAUDE.md`) were updated to match rather than left describing a rule the code now breaks. Google OAuth via Supabase Auth, self-service, any Google account (no `@temple.edu` gate) — auto-creates a `profiles` row (`role: "member"`, never `admin`) on first sign-in through the one route handler in the app, `src/app/auth/callback/route.ts`. `/eat/[slug]` requires a session, checked server-side in the page component; the map/list/search stay fully anonymous. Full rationale and what changed: `Context/decisions.md` 2026-08-28.
 - **Member ratings/reviews + photo queue as of 2026-09-01 (TUE-12).** Signed-in members can leave a 1–5 star rating with optional review text (one row per user per venue) and submit gallery photos that stay pending until an admin approves them. Public strip still shows published photos only. Storage is still Vercel Blob; no Supabase Storage. Venue proposals and Google snapshots are still out of this slice. Forms cannot be used in production until Google OAuth dashboard config is finished (same blocker as 2026-08-28).
 - **Zone overlays removed from the public map + admin bulk cuisine editing, as of 2026-09-04.** The overview map no longer draws zone fill/outline/dashed corridor lines — only the invisible click-hit polygon and the badge/label plate remain (zone geometry, filtering, and badge counts unchanged). Admin's bulk-selection bar can now add/remove a single cuisine tag across many venues at once (Halal/Vegan Friendly bulk-editing already existed; this generalizes it to any `CUISINES` key, including "Cafe" — which coexists with, and is independent of, the `venue.type === "cafe"` filter). On branch `feat/zone-overlay-cleanup-and-bulk-cuisine`, not yet pushed. See this date's decisions.md entry and the changelog entry below.
+- **N Broad St zone split into Avery, Morgan Hall, and Susquehanna, as of 2026-09-04.** 16 venues reassigned. Originally committed on its own unmerged branch (`feat/zone-reorg-avery-morgan-susquehanna`) while its DB update went live independently — leaving every other branch's `MAP_ZONES` missing these three keys despite the DB already using them, which crashed `venueLocationText` for those 16 venues. Cherry-picked (`1c5b586`) onto `feat/zone-overlay-cleanup-and-bulk-cuisine` to fix that. See this date's changelog entry above and `Context/decisions.md`.
 - **Not yet done: the manual Google Cloud + Supabase dashboard configuration this depends on.** Code is implemented, typechecked, linted, tested (86/86), and builds clean, but Google sign-in will not actually work until the site owner: (1) creates a Google Cloud OAuth Client ID and configures the consent screen, (2) enables the Google provider in Supabase (Authentication → Providers) with that Client ID/Secret, and (3) adds `https://tueats.co/auth/callback` and `http://localhost:3000/auth/callback` to Supabase's redirect allow-list. See the conversation record for the exact steps. Not pushed/deployed pending that + the site owner's review.
 - **Next up:**
   1. Run migration `0010_wild_frightful_four.sql` (`pnpm db:migrate` with `DIRECT_DATABASE_URL`) on the live DB **before** deploying `feature/member-account-profile` — `/account` and member sign-in insert usernames. Migration `0009` (ratings) must already be applied.
@@ -66,6 +67,42 @@ Three independent changes, one branch (`feat/zone-overlay-cleanup-and-bulk-cuisi
 3. **Public cuisine filter audited, not changed.** Traced the full pipeline — DB read (`toVenue`'s cuisines filter) → `filterVenues` matching → URL parse/serialize (`parseVenueFilters`/`serializeVenueFilters`) → `FilterBar`'s rendered chip list — and every layer already derives its allowlist from `CUISINE_KEYS` directly (no stale hardcoded list anywhere, confirmed via `Grep`). This is the fix for a real past bug (see `venues.test.ts`'s "round-trips every real cuisine key, including ones the old hardcoded allowlist silently dropped"), already merged before this session — so all 14 `CUISINES` entries are already live in the customer filter with no code change needed. Verified locally in a real browser too, not just by reading code.
 
 `typecheck`/`lint`/`test` (167/167) all clean; `format:check` still fails on 384 pre-existing files unrelated to this branch (confirmed identical on a clean `main` via `git stash`) — a pre-existing repo-wide drift, not introduced here.
+
+## 2026-09-04 — N Broad St map zone split into Avery, Morgan Hall, Susquehanna
+
+Removed the `broad-st` zone (`src/config/map-zones.ts`), replaced with
+`morgan-hall` (5 venues: honeygrow, Insomnia Cookies, Panda Express,
+Chick-fil-A (Morgan Hall), Panera Bread) and `susquehanna` (7: McDonald's,
+Pinky Fresh, Temple Rainbow, Crown Chicken & Grill, Asia Bite, Yummy Phở,
+retired Temple Star Chinese). Added `avery` (4: City View Pizza, OWL
+Breakfast & Lunch, Dunkin', The Peabody) carved out of `cecil-b-moore`'s
+own territory instead — The Avery apartments sit near Cecil B. Moore Ave,
+not N Broad St. `cecil-b-moore` is now a bracket-shaped polygon (15
+venues remain, down from 19) wrapping around the Avery notch. Updated
+both `src/config/map-zones.ts` and `public/maps/map-zones.geojson` (the
+latter carries a separate visual overlay — street lines, building fills,
+label points — independent of the point-in-polygon `membership` rings).
+
+Verified exhaustively before and after the DB update: a script computed
+`mapZoneContaining(lng, lat)` for all 114 venues and diffed against each
+one's stored `map_zone` — exactly the 16 intended venues came back
+changed, zero unexpected mismatches anywhere else, both before applying
+the 16 updates and again after. Full rationale, the two non-obvious
+geometry conflicts this hit (Avery sitting mid-corridor forcing a
+staple-shaped Cecil B. Moore Ave; Morgan Hall's Panera extension nearly
+overlapping W Montgomery's actual tilted-parallelogram polygon), and the
+tightest clearance (~9m, Avery/Hangry Joe's) are all in
+`Context/decisions.md`'s same-day entry.
+
+Originally committed on its own branch (`feat/zone-reorg-avery-morgan-susquehanna`,
+`1c5b586`) and never merged — the DB reassignment above went live against
+`tueats-dev` independent of git, but the branch's code sat unmerged, so
+every other branch's `MAP_ZONES` was missing these three keys while the
+DB already used them. Cherry-picked onto
+`feat/zone-overlay-cleanup-and-bulk-cuisine` today after the site owner
+noticed the split wasn't showing up; see `Context/decisions.md` for why
+that was actually a live crash (`venueLocationText`'s unguarded
+`MAP_ZONES[venue.mapZone]`), not just a missing feature.
 
 ## 2026-09-04 — Venue preview sheet hugs its content
 

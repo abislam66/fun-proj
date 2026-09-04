@@ -67,6 +67,89 @@ in the same turn rather than silently guessing which behavior they meant.
 If bulk venue-type retyping is actually wanted, that's a distinct feature
 with its own confirmation step, not a variant of this one.
 
+## 2026-09-04 — N Broad St split into Avery, Morgan Hall, Susquehanna
+
+Removed the `broad-st` map zone and replaced it with three: `morgan-hall`
+and `susquehanna` (its two real venue clusters), and `avery` — carved out
+of `cecil-b-moore`'s own territory instead, since The Avery apartments
+(1601 N 15th St) sit a block west of N Broad St, near Cecil B. Moore Ave,
+not anywhere within N Broad St's old footprint. Confirmed via direct
+Nominatim geocoding before committing to that call — it wasn't just an
+assumption from the name.
+
+Two non-obvious geometry problems came up, both solved with non-convex
+"notch" polygons rather than by adjusting scope:
+
+1. **Avery sits in the middle of Cecil B. Moore Ave's corridor by
+   longitude**, not at either end, so carving it out splits the remaining
+   zone into a west group and an east group. Represented as one bracket/
+   staple-shaped ring (west span → notch → east span) rather than two
+   separate zone keys, since `pointInMapZone`/`pointInRing` (the actual
+   ray-casting logic, `src/lib/map/point-in-polygon.ts`) has no concept
+   of holes or multi-part zones beyond what a single simple ring can
+   express — a staple shape is a simple ring, so this fits without any
+   code change. Avery's box and the notch share an *exact* boundary
+   (lng -75.1598/-75.1589, lat 39.9782) — zero gap, zero overlap by
+   construction, not by careful tuning.
+2. **Morgan Hall's north extension (to reach Panera Bread, added at the
+   site owner's request after the initial proposal) collides with W
+   Montgomery's actual polygon**, which is a tilted parallelogram, not an
+   axis-aligned rectangle — a bounding-box check said "safe," but
+   interpolating W Montgomery's real edges at the relevant longitude
+   showed real overlap. Fixed with a stepped (L-shaped) polygon: the
+   lower cluster keeps its needed east edge (`-75.157`, for Insomnia
+   Cookies), the upper Panera lobe steps its east edge in by ~90m
+   (`-75.1576`) to clear W Montgomery. **Lesson for future zone edits:
+   always check a new boundary against a neighbor's actual polygon edges,
+   not just its bounding box** — W Montgomery, in particular, is not a
+   rectangle.
+
+Went through two rounds with the site owner: the first proposal correctly
+identified Morgan Hall and Susquehanna from within the old N Broad St
+zone, but flagged that Panera Bread, Yummy Phở, and retired Temple Star
+Chinese didn't fit either cluster and would fall back to "other" — the
+site owner asked for them to be folded in instead (Panera → Morgan Hall,
+the other two → Susquehanna), which is what triggered the W Montgomery
+collision above.
+
+**Verification, not just spot-checks:** wrote a script comparing every
+one of the then-114 venues' stored `map_zone` against
+`mapZoneContaining(lng, lat)` computed fresh from the new polygons —
+before touching the database, then again after. First pass: exactly the
+16 intended venues (5 Morgan Hall, 7 Susquehanna, 4 Avery) came back
+mismatched, zero unexpected ones anywhere else in the database. Applied
+the 16 updates, re-ran the same check: zero mismatches anywhere. This is
+the same regression-check pattern as the 2026-08-27 zone-widening work,
+just against a full DB query instead of a hand-picked venue list — worth
+reusing again for any future zone boundary change.
+
+One clearance is genuinely tight and worth a real-world sanity check if a
+new venue ever geocodes near it: Avery's east edge sits only ~9m from
+Hangry Joe's (nearest Cecil B. Moore Ave venue) — the real-world gap
+between the two buildings is only ~18m, so there isn't much room to work
+with regardless of where exactly the line is drawn.
+
+`public/maps/map-zones.geojson` needed matching updates alongside
+`src/config/map-zones.ts` — it carries a separate, purely-visual overlay
+(street-line paths, building-fill polygons, label anchor points) decoupled
+from the `membership` ring used for actual point-in-polygon computation.
+Also fixed a latent staleness there in passing: its `cecil-b-moore`
+membership feature still had the zone's *pre*-2026-08-30 south edge
+(39.9782, not 39.9777) — harmless since that GeoJSON feature is only used
+for the invisible click-hit layer, not detection logic, but now corrected
+as part of rewriting that feature anyway.
+
+**Cherry-picked onto `feat/zone-overlay-cleanup-and-bulk-cuisine`** from its
+original branch (`feat/zone-reorg-avery-morgan-susquehanna`, commit
+`1c5b586`) after the site owner noticed the split's zones weren't showing
+up — that branch had been left unmerged, but its DB update (the 16
+`map_zone` reassignments above) had already been applied directly against
+`tueats-dev`, independent of git. That meant `MAP_ZONES[venue.mapZone]`
+(`src/lib/venues.ts`'s `venueLocationText`, unguarded) was throwing for
+those 16 venues on every branch that didn't have this commit's config
+changes — this cherry-pick fixes that mismatch, not just the missing
+zones.
+
 ## 2026-09-04 — Phone: venue facts in the sheet, explicit View details
 
 The map mini-card was a floating popup whose entire body was a link to

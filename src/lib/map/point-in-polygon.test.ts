@@ -98,10 +98,6 @@ describe("mapZoneContaining", () => {
     expect(mapZoneContaining(-75.148, 39.975)).toBeNull();
   });
 
-  it("places a real N Broad St point (Wendy's, corrected coords) in broad-st", () => {
-    expect(mapZoneContaining(-75.1571629, 39.9798944)).toBe("broad-st");
-  });
-
   it("places a real Cecil B. Moore Ave point (Fancy Halal Grill) in cecil-b-moore", () => {
     expect(mapZoneContaining(-75.1627803, 39.9794942)).toBe("cecil-b-moore");
   });
@@ -114,6 +110,58 @@ describe("mapZoneContaining", () => {
 
   it("places Tropical Smoothie Cafe (stored coords, never flagged for correction) in cecil-b-moore", () => {
     expect(mapZoneContaining(-75.1584827, 39.9778398)).toBe("cecil-b-moore");
+  });
+
+  // 2026-09-04: N Broad St removed, replaced by avery/morgan-hall/
+  // susquehanna; Avery carved out of cecil-b-moore's own middle (Avery's
+  // real cluster sits a block west of Broad, near Cecil B. Moore Ave, not
+  // within N Broad St's old footprint at all).
+  it("places Wendy's (stored coords, 1708 N Broad St) in cecil-b-moore, not morgan-hall", () => {
+    expect(mapZoneContaining(-75.1580982, 39.9790933)).toBe("cecil-b-moore");
+  });
+
+  it("places City View Pizza (stored coords) in avery", () => {
+    expect(mapZoneContaining(-75.159476, 39.978735)).toBe("avery");
+  });
+
+  it("places The Peabody (stored coords) in avery", () => {
+    expect(mapZoneContaining(-75.159, 39.979)).toBe("avery");
+  });
+
+  it("leaves Hangry Joe's — avery's tightest clearance (~9m) — in cecil-b-moore, not avery", () => {
+    expect(mapZoneContaining(-75.158796, 39.978687)).toBe("cecil-b-moore");
+  });
+
+  it("leaves Maple Star, just west of the avery notch, in cecil-b-moore", () => {
+    expect(mapZoneContaining(-75.1603996, 39.9792368)).toBe("cecil-b-moore");
+  });
+
+  it("places honeygrow (Morgan Hall dining cluster, stored coords) in morgan-hall", () => {
+    expect(mapZoneContaining(-75.1573499, 39.9784134)).toBe("morgan-hall");
+  });
+
+  it("places Panera Bread (1800 N Broad, stored coords) in morgan-hall via the stepped upper lobe", () => {
+    expect(mapZoneContaining(-75.15766, 39.980358)).toBe("morgan-hall");
+  });
+
+  it("leaves Royal Tea (w-montgomery, stored coords) out of morgan-hall's stepped-in upper edge", () => {
+    expect(mapZoneContaining(-75.1572816, 39.980161)).toBe("w-montgomery");
+  });
+
+  it("places McDonald's (2109 N Broad, stored coords) in susquehanna", () => {
+    expect(mapZoneContaining(-75.156029, 39.985224)).toBe("susquehanna");
+  });
+
+  it("places Yummy Phở (near Diamond St, stored coords) in susquehanna", () => {
+    expect(mapZoneContaining(-75.1571412, 39.9837643)).toBe("susquehanna");
+  });
+
+  it("places retired Temple Star Chinese (stored coords) in susquehanna", () => {
+    expect(mapZoneContaining(-75.1572022, 39.9847037)).toBe("susquehanna");
+  });
+
+  it("returns null for the middle of the old (now-removed) N Broad St corridor", () => {
+    expect(mapZoneContaining(-75.1565, 39.981)).toBeNull();
   });
 
   // Student Center widened 2026-08-30: the old notch cut off the food
