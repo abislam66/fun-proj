@@ -590,13 +590,6 @@ export function VenueMap({
             </span>
             Multiple spots
           </li>
-          <li>
-            <span
-              aria-hidden="true"
-              className="map-legend-icon map-legend-icon-zone"
-            />
-            Zone area
-          </li>
         </ul>
       </div>
 

@@ -883,11 +883,6 @@ button {
   background: var(--color-cherry-deep);
 }
 
-.map-legend-icon-zone {
-  border-radius: var(--radius-pixel);
-  background: var(--color-cherry-soft);
-}
-
 .map-mini-card-anchor {
   position: absolute;
   /* left/top are written by venue-map.tsx from the selected pin's
