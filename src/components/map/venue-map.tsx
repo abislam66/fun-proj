@@ -429,9 +429,9 @@ export function VenueMap({
       <p className="sr-only" id="venue-map-usage">
         Interactive map of food venues around Temple University&apos;s main
         campus. At campus zoom, tap a named zone to fly in and see the trucks
-        there. Use All zones or zoom out to return to the campus overview. Focus
-        the map, then pan with the arrow keys and zoom with the plus and minus
-        keys. Every venue on the map is also in the venue list.
+        there. Use All zones or pinch/zoom out to return to the campus overview.
+        Focus the map, then pan with the arrow keys and zoom with the plus and
+        minus keys. Every venue on the map is also in the venue list.
       </p>
       <p aria-live="polite" className="sr-only">
         {selectedVenue
@@ -456,7 +456,7 @@ export function VenueMap({
       <div className="map-controls">
         <button
           aria-label="Zoom in"
-          className="map-control-button"
+          className="map-control-button map-control-zoom"
           disabled={!ready}
           onClick={() => zoomBy(0.75)}
           type="button"
@@ -465,7 +465,7 @@ export function VenueMap({
         </button>
         <button
           aria-label="Zoom out"
-          className="map-control-button"
+          className="map-control-button map-control-zoom"
           disabled={!ready}
           onClick={() => zoomBy(-0.75)}
           type="button"
@@ -498,6 +498,14 @@ export function VenueMap({
         </button>
         <LocateControl map={map} />
       </div>
+
+      {zonesActive ? (
+        <p className="map-zone-label">
+          {selectedZones.length === 1
+            ? MAP_ZONES[selectedZones[0]!].label
+            : `${selectedZones.length} zones`}
+        </p>
+      ) : null}
 
       <div className="map-hud-bar">
         <span className="map-hud-location">

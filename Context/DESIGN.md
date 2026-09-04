@@ -87,11 +87,11 @@
 
 ### Home (`/`) — mobile
 
-Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). Compact search/filter strip. Non-modal bottom sheet: peek ~28%, mid ~55%, full ~92%. No marketing hero.
+Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). Compact search/filter strip. Non-modal bottom sheet: peek ~28%, mid ~55%, full ~92%. No marketing hero. No second map HUD bar — it ate the map. Zoom +/- stay off the phone control row.
 
 ### Home (`/`) — desktop (portfolio surface)
 
-- **Split composition from first paint:** list + filters + search on the left; MapLibre on the right filling remaining height (under a slim top bar with wordmark + about/account).
+- **Split composition from first paint:** list + filters + search on the left; MapLibre on the right filling remaining height (under a slim top bar with wordmark + about/account). On desktop (≥1024) the map HUD bar is the same 4.75rem marquee as the list header (3px cherry edge) so the two top bars read as one band. On mobile the HUD is omitted — zone names live on the map plates; after a zone is selected a thin name-only label floats on the map. Phone also hides +/- zoom (pinch is enough); reset-view and locate stay.
 - **Shared state:** Same URL searchParams and payload as mobile — filter/search/selection stay in sync across panes. Hovering or focusing a list row highlights the matching cuisine pill on the map; selecting a pin scrolls/focuses the list row.
 - **Rows select, never navigate:** Clicking a list row (desktop pane or mobile sheet) selects the venue on the map — fly-to plus anchored mini-card; on mobile the sheet tucks to peek so the map is visible. The mini-card's "View details" is the only path from the explorer to `/eat/[slug]`. The map is the primary surface — list rows feed it.
 - **Staged arrival:** The mini-card never pops while the camera is still traveling. Selection sequences like a user would move: fly into the host zone (or ease a zone-less venue to street zoom ~16), and only on arrival does the popup appear over the pill. No movement needed → instant pop.
@@ -189,6 +189,8 @@ Maps to `Specs/architecture-planning.md`:
 
 ## Decisions Log
 
+| 2026-09-04 | Mobile: drop map HUD + +/- zoom; thin in-zone name label | The zone status bar stacked under the site header and squeezed the map. Zone plates already name places; a slim name-only label appears after a zone is selected. Reset-view still returns to campus. Pinch zoom replaces +/-. |
+| 2026-09-04 | Desktop map HUD matches list-header height (4.75rem, 3px cherry edge) | The thinner map bar sat above the list header’s bottom edge and looked like two different chrome systems. |
 | 2026-09-04 | Sign out lives only at the bottom of `/account` (full-width white button) | Header stays About + profile icon on every viewport. Signing out is an account action, not chrome. |
 | 2026-09-04 | Header profile icon (always) + decade-grid class-year picker | Native 50-row year `<select>` was ugly on mobile. Decade chips match filter pills (cherry selected, data typeface, inline expand). Profile icon sits beside About so `/account` is one tap from every page; signed-out still hits the existing gate. Display name is no longer a header link. |
 | 2026-09-01 | No search overlay on the map — search/filters live only in the left pane (desktop) and the mobile sheet | The floating SEARCH window duplicated FilterBar and covered pins. DESIGN already places search on the list side; the map keeps HUD, legend, and controls. |

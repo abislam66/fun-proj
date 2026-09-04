@@ -43,6 +43,19 @@
 
 ---
 
+## 2026-09-04 — Mobile map: no HUD bar, no +/- zoom
+
+The extra zone header under the site marquee made the phone map a thin strip
+above the sheet. Mobile now skips that bar (desktop HUD stays). Pinch zoom
+replaces the +/- buttons. After tapping a zone, a thin name-only label
+floats on the map (no All zones button — the reset-view control still
+returns to campus).
+
+## 2026-09-04 — Desktop map HUD matches list header height
+
+On ≥64rem the map’s dark status bar is now the same 4.75rem (and 3px cherry
+edge) as the list-side site header, so the two marquees line up as one band.
+
 ## 2026-09-04 — Mobile bottom sheet: real drag-follow + resized snap states
 
 The mobile map/results page already had a 3-state sheet (peek/mid/full)

@@ -612,6 +612,10 @@ button {
   cursor: not-allowed;
 }
 
+.map-zone-label {
+  display: none;
+}
+
 .map-control-button-active {
   border-color: var(--color-cherry);
   background: var(--color-cherry-soft);
@@ -748,6 +752,42 @@ button {
 .map-hud-reset:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+@media (max-width: 63.9375rem) {
+  .map-control-button.map-control-zoom {
+    display: none;
+  }
+
+  .map-hud-bar {
+    display: none;
+  }
+
+  .map-zone-label {
+    position: absolute;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    z-index: 4;
+    display: block;
+    max-width: calc(100% - 2 * var(--spacing-sm));
+    margin: 0;
+    overflow: hidden;
+    padding: 0.28rem 0.55rem;
+    border: 1.5px solid var(--color-marquee);
+    border-radius: var(--radius-pixel);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-pixel-sm);
+    color: var(--color-ink);
+    font-family: var(--font-data), monospace;
+    font-size: var(--text-micro);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
 }
 
 .map-attribution {
@@ -2197,7 +2237,10 @@ button {
   }
 
   .map-hud-bar {
-    padding: 0.6rem var(--spacing-xl);
+    height: 4.75rem;
+    padding: 0 var(--spacing-xl);
+    border-bottom-width: 3px;
+    box-shadow: 0 2px 24px rgba(157, 34, 53, 0.45);
   }
 
   .map-attribution {
