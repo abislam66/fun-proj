@@ -1,6 +1,7 @@
 /** Curated cuisine tag vocabulary — venues store values as text[]. */
 export const CUISINES = {
   american: { key: "american", label: "American", pinLabel: "Amer" },
+  cafe: { key: "cafe", label: "Cafe", pinLabel: "Cafe" },
   caribbean: { key: "caribbean", label: "Caribbean", pinLabel: "Carib" },
   chinese: { key: "chinese", label: "Chinese", pinLabel: "Chin" },
   fruit: { key: "fruit", label: "Fruit & smoothies", pinLabel: "Fruit" },
