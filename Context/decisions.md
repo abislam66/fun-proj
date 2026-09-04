@@ -9,8 +9,8 @@
 
 ## 2026-09-04 — "Cafe" cuisine tag reverted; one cafe filter, not two
 
-PR #17 (merged earlier the same day) added `cafe` as a separate *cuisine
-tag* in `src/config/cuisines.ts`, deliberately kept independent from the
+PR #17 (merged earlier the same day) added `cafe` as a separate _cuisine
+tag_ in `src/config/cuisines.ts`, deliberately kept independent from the
 pre-existing `venue.type === "cafe"` filter (the "Café" chip on the public
 filter bar, backed by `VenueFilters.isCafe`) — that separation was
 explicitly requested at the time.
