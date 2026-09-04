@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AnalyticsBeacon } from "@/components/analytics/analytics-beacon";
 import { SiteHeader } from "@/components/layout/site-header";
 import {
   VenueReviews,
@@ -15,6 +16,7 @@ import {
   PaymentTag,
 } from "@/components/venues/venue-bits";
 import { VenuePhotoGallery } from "@/components/venues/venue-photo-gallery";
+import { AnalyticsEvent } from "@/lib/analytics";
 import { WEEKDAY_KEYS, type VenueHours } from "@/lib/hours";
 import { googleMapsDirectionsUrl } from "@/lib/maps";
 import { venueLocationText, type Venue } from "@/lib/venues";
@@ -95,6 +97,10 @@ export function VenueDetail({
 
   return (
     <div className="public-page">
+      <AnalyticsBeacon
+        event={AnalyticsEvent.VenueDetailViewed}
+        properties={{ venue_id: venue.id, venue_type: venue.type }}
+      />
       <SiteHeader user={user} />
       <main className="detail-page">
         <Link className="back-link" href={backPath}>

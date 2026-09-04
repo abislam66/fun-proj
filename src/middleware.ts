@@ -78,9 +78,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Excludes static assets, images, fonts, and the OAuth callback itself
-  // (which establishes its own session and doesn't need a pre-existing one).
+  // Excludes static assets, images, fonts, the OAuth callback itself (which
+  // establishes its own session and doesn't need a pre-existing one), and
+  // the PostHog analytics proxy (next.config.ts rewrites `/ingest/*` to
+  // PostHog — every pageview/event beacon would otherwise trigger a real
+  // Supabase Auth network call here for no reason).
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|fonts/|auth/callback).*)",
+    "/((?!_next/static|_next/image|favicon.ico|fonts/|auth/callback|ingest/).*)",
   ],
 };

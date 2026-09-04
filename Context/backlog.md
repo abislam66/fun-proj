@@ -5,7 +5,6 @@
 
 | Item | Context / why deferred | Revisit when |
 |------|------------------------|--------------|
-| **Adoption measurement** | The overview's goal (200+ unique weekly visitors) has **no measurement mechanism specced** — v1 ships with no analytics, and the privacy disclosure promises none without updating it first. | Before public launch (end of features Phase 2) — pick a privacy-friendly, first-party option and update `auth-security.md` disclosure. |
 | `zoneKey` curation for 26 venues | Cuisine/hours enrichment finished 2026-08-21 for the active venue set; `zoneKey` deliberately wasn't — an automated lat/lng rule was tested and rejected (23% mismatch against already-curated zones, see `Context/decisions.md`). Needs a human with local knowledge of the truck-corridor boundaries. | Whenever there's time to sit with `/admin` and assign zones one at a time. |
 | Vegan Tree possibly closed | Current Yelp (checked 2026-08-21) shows this venue as CLOSED at both known locations. Left un-enriched rather than backfilled with stale data. | Confirm on the ground or via a fresher source, then either enrich normally or retire it via `/admin`. |
 | Pretzel Dough identity unconfirmed | Web research (2026-08-21) couldn't confirm a business by this name operates near campus — possibly a stale/mislabeled seed row. | Verify against the original data source or on the ground; correct the name or retire the row. |
@@ -25,3 +24,4 @@
 | Denormalized rating aggregates | Aggregates computed at query time (AVG/COUNT) — fine at campus scale by design. | Measured query slowness, not speculation. |
 | Supabase CLI local stack (Docker) | Cloud `tueats-dev` chosen for zero moving parts; CLI stack would allow offline dev. | Offline development becomes a real need. |
 | AI features | Not really backlog — governed by the four-condition activation gate in `Specs/llm-integration.md` (includes a budget amendment). | All four gate conditions met. |
+| `ReportProblemForm` doesn't persist reports | Noticed 2026-09-04 while instrumenting PostHog: the submit handler (`src/components/venues/report-problem-form.tsx`) only flips local state to "submitted" — no server action is called, so nothing is actually saved or seen by an admin today. | Whenever report moderation (Feature 11, public review reports) gets built — likely the same slice, same table shape. |

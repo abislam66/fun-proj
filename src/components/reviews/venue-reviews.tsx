@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 import { deleteRating, submitRating } from "@/actions/ratings";
 import { hideRating } from "@/actions/admin";
 import { StarRating } from "@/components/reviews/star-rating";
 import { Button } from "@/components/ui/primitives";
 import { MAX_REVIEW_TEXT_LENGTH } from "@/config/site";
+import { AnalyticsEvent } from "@/lib/analytics";
 import { formatStudentRating, type StudentRatingSummary } from "@/lib/ratings";
 import { formatRelativeDate } from "@/lib/relative-time";
 
@@ -106,6 +108,7 @@ function ReviewComposer({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const router = useRouter();
+  const posthog = usePostHog();
 
   async function save() {
     if (stars < 1) {
@@ -124,6 +127,12 @@ function ReviewComposer({
       setError(result.error);
       return;
     }
+    posthog.capture(AnalyticsEvent.RatingSubmitted, {
+      venue_id: venueId,
+      stars,
+      has_review_text: text.trim().length > 0,
+      is_update: Boolean(initial),
+    });
     setNotice(initial ? "Updated." : "Saved.");
     router.refresh();
   }
@@ -137,6 +146,7 @@ function ReviewComposer({
       setError(result.error);
       return;
     }
+    posthog.capture(AnalyticsEvent.RatingRemoved, { venue_id: venueId });
     setStars(0);
     setText("");
     setNotice("Removed.");

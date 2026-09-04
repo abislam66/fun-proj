@@ -37,6 +37,60 @@
   10. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   11. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
   12. Manually verify, through a real authenticated browser session: the multi-photo admin UI, the map-zone picker/dropdown/warning UI, the photo-upload flow, and the new Halal/Vegan Friendly checkboxes — all verified at the data/logic layer this session or earlier, never through a real `/admin` click-through.
+  13. PostHog (2026-09-04): confirm all three manual dashboard settings are on (discard raw IP, disable IP geolocation, record user sessions) and check one real production event/recording for an absent `$ip`/`$geoip_*` and genuinely masked replay inputs — see `Context/decisions.md` 2026-09-04.
+
+---
+
+## 2026-09-04 — PostHog widened to full product analytics
+
+Turned on what 2026-09-03 deliberately left off: `autocapture: true`,
+masked session replay (`disable_session_recording: false`,
+`session_recording.maskAllInputs: true`), and eleven hand-instrumented
+TuEats events (venue selection, filters, debounced search, sign-in funnel,
+ratings, photos, problem reports) in a new `src/lib/analytics.ts`. Moved
+`PostHogAnalyticsProvider` out of the root layout into a new
+`src/app/(public)/layout.tsx` so `/admin` gets zero PostHog footprint
+structurally rather than via a runtime pathname check. `/about` and
+`Specs/auth-security.md`'s disclosure both rewritten in the same change to
+match exactly what's now collected. Full rationale: `Context/decisions.md`
+2026-09-04. Three manual PostHog dashboard steps remain (IP discard, IP
+geolocation off, record-sessions toggle) — not yet independently confirmed,
+tracked in "Next up" below.
+
+---
+
+## 2026-09-03 — Mobile results sheet rests lower so more map shows on load
+
+The mobile `MobileSheet` still opens at the `mid` snap, but that snap is shorter now:
+`.mobile-sheet-mid` went from `min(57dvh, 34rem)` to `min(48dvh, 30rem)` in
+`src/app/globals.css`, and the coupled `[data-sheet="mid"] .map-controls` bottom
+offset was updated to match (the comment there requires the two stay in sync). The
+mobile `.results-intro` was also tightened — h1 `1.75rem → 1.5rem`, top/bottom padding
+down one step — so the search field and filter chips still clear the fold at the
+shorter height. Desktop is untouched (its own overrides in the `max-width: 63.9375rem`
+media query win). Peek and full snaps unchanged.
+
+## 2026-09-03 — PostHog analytics added, disclosure updated alongside it
+
+Added PostHog product analytics next to the existing Vercel Web Analytics, resolving
+the `Context/backlog.md` "Adoption measurement" item (the overview's 200+ weekly
+visitors goal had no measurement mechanism). Proxied same-origin through `/ingest`
+(`next.config.ts` rewrites — no new CSP surface needed), `localStorage`-only
+persistence (no cookie), autocapture and session recording both off (pageviews only,
+via `capture_pageview: "history_change"`), and no `posthog.identify()` anywhere — every
+visitor stays anonymous, no account data ever reaches it. `src/middleware.ts`'s
+matcher excludes `ingest/` so the Supabase session-refresh call doesn't run on every
+analytics beacon. `NEXT_PUBLIC_POSTHOG_KEY` is set only in Vercel Production —
+Preview and local dev never send events, no second PostHog project needed.
+
+Updated `Specs/auth-security.md`'s privacy disclosure and the `/about` page copy in
+this same change (last time, Vercel Analytics shipped without that update and the gap
+was only caught a day later — see `Context/decisions.md` 2026-09-03 and 2026-08-28).
+
+**Not yet independently verified:** two PostHog dashboard settings (IP discard, IP
+geolocation enrichment) still need to be confirmed enabled, and one real event should
+be checked in the PostHog UI for an absent `$ip`/`$geoip_*` before calling this fully
+closed — see `Context/decisions.md` for exactly what to check.
 
 ---
 

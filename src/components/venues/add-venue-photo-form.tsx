@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 import { submitVenuePhoto } from "@/actions/photos";
 import { Button } from "@/components/ui/primitives";
@@ -9,6 +10,7 @@ import {
   ALLOWED_VENUE_IMAGE_TYPES,
   MAX_VENUE_IMAGE_BYTES,
 } from "@/config/site";
+import { AnalyticsEvent } from "@/lib/analytics";
 
 export function AddVenuePhotoForm({ venueId }: { venueId: string }) {
   const [open, setOpen] = useState(false);
@@ -16,6 +18,7 @@ export function AddVenuePhotoForm({ venueId }: { venueId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const router = useRouter();
+  const posthog = usePostHog();
 
   if (notice) {
     return (
@@ -60,6 +63,7 @@ export function AddVenuePhotoForm({ venueId }: { venueId: string }) {
             setError(result.error);
             return;
           }
+          posthog.capture(AnalyticsEvent.PhotoSubmitted, { venue_id: venueId });
           setNotice("Thanks — we’ll review this photo before it goes live.");
           router.refresh();
         });

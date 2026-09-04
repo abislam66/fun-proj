@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 import { CUISINES, CUISINE_KEYS, type CuisineKey } from "@/config/cuisines";
 import {
@@ -9,6 +10,7 @@ import {
   type MapZoneKey,
 } from "@/config/map-zones";
 import { Chip, Input } from "@/components/ui/primitives";
+import { AnalyticsEvent } from "@/lib/analytics";
 import type { VenueFilters } from "@/lib/venues";
 
 type FilterMenuKey = "cuisine" | "zone";
@@ -33,12 +35,24 @@ export function FilterBar({
   // animates instead of snapping empty.
   const [renderedMenu, setRenderedMenu] = useState<FilterMenuKey>("cuisine");
   const drawerId = useId();
+  const posthog = usePostHog();
 
   function update<K extends keyof VenueFilters>(
     key: K,
     value: VenueFilters[K],
   ) {
     onChange({ ...filters, [key]: value });
+  }
+
+  // Boolean chips only — search ("query") gets its own debounced "search
+  // performed" event in VenueExplorer, and cuisine/zone tags capture
+  // themselves below (their "value" is the tag, not a boolean).
+  function toggleBoolean(
+    key: "openNow" | "isHalal" | "isVeganFriendly" | "isCafe",
+  ) {
+    const value = !filters[key];
+    posthog.capture(AnalyticsEvent.FilterApplied, { filter: key, value });
+    update(key, value);
   }
 
   function toggleMenu(menu: FilterMenuKey) {
@@ -67,28 +81,19 @@ export function FilterBar({
         />
       </label>
       <div className="filter-scroll" aria-label="Venue filters">
-        <Chip
-          active={filters.openNow}
-          onClick={() => update("openNow", !filters.openNow)}
-        >
+        <Chip active={filters.openNow} onClick={() => toggleBoolean("openNow")}>
           Open now
         </Chip>
-        <Chip
-          active={filters.isHalal}
-          onClick={() => update("isHalal", !filters.isHalal)}
-        >
+        <Chip active={filters.isHalal} onClick={() => toggleBoolean("isHalal")}>
           Halal
         </Chip>
         <Chip
           active={filters.isVeganFriendly}
-          onClick={() => update("isVeganFriendly", !filters.isVeganFriendly)}
+          onClick={() => toggleBoolean("isVeganFriendly")}
         >
           Vegan Friendly
         </Chip>
-        <Chip
-          active={filters.isCafe}
-          onClick={() => update("isCafe", !filters.isCafe)}
-        >
+        <Chip active={filters.isCafe} onClick={() => toggleBoolean("isCafe")}>
           Café
         </Chip>
         <button
@@ -133,12 +138,17 @@ export function FilterBar({
                           : "filter-option"
                       }
                       key={key}
-                      onClick={() =>
+                      onClick={() => {
+                        posthog.capture(AnalyticsEvent.FilterApplied, {
+                          filter: "cuisine",
+                          value: key,
+                          active: !selected,
+                        });
                         update(
                           "cuisines",
                           toggle<CuisineKey>(filters.cuisines, key),
-                        )
-                      }
+                        );
+                      }}
                       type="button"
                     >
                       {CUISINES[key].label}
@@ -156,9 +166,14 @@ export function FilterBar({
                           : "filter-option"
                       }
                       key={key}
-                      onClick={() =>
-                        update("zones", toggle<MapZoneKey>(filters.zones, key))
-                      }
+                      onClick={() => {
+                        posthog.capture(AnalyticsEvent.FilterApplied, {
+                          filter: "zone",
+                          value: key,
+                          active: !selected,
+                        });
+                        update("zones", toggle<MapZoneKey>(filters.zones, key));
+                      }}
                       type="button"
                     >
                       {MAP_ZONES[key].label}
