@@ -43,23 +43,18 @@
 
 ---
 
-## 2026-09-04 — Sign out moved off the header
+## 2026-09-04 — "Cafe" cuisine tag reverted; back to one cafe filter
 
-Sign out is no longer in the site header on any viewport. It sits at the
-bottom of `/account` as a full-width white button, after the ratings list.
+PR #17 added `cafe` as its own cuisine tag (separate from the existing
+`venue.type === "cafe"` "Café" filter chip). Same day, reversed that call:
+the site owner wants exactly one cafe concept — admin sets a venue's Type
+to "Cafe," and the one existing "Café" chip is the filter that reflects it.
+Removed the `cafe` entry from `src/config/cuisines.ts` (one line); confirmed
+first via a direct dev-DB query that no venue had ever actually been tagged
+with the cuisine key, so no data cleanup was needed. See `Context/decisions.md`
+2026-09-04 for the full rationale.
 
-## 2026-09-04 — Class-year picker + header profile icon
-
-Replaced the native 50-row year `<select>` with an inline decade-grid picker
-(5-column year chips, cherry selected, decade arrows). Header now has a
-person-in-circle icon next to About linking to `/account` (always shown;
-signed-out hits the existing gate). Display name is no longer a header link;
-Sign out stays in the header on wider screens and on the account page for
-phones.
-
-## 2026-09-04 — Private member account page (name, username, class year, own reviews)
-
-Added `/account` as a signed-in-only page: edit display name and unique username, set class year, and see every rating/review the member has submitted (including star-only and removed). Header name links here. No profile photos (stakeholder skipped). Specs updated to match: still no public profiles. Migration `0010_wild_frightful_four.sql` backfills usernames for existing `profiles` rows. Details: `Context/decisions.md` 2026-09-04.
+---
 
 ## 2026-09-04 — PostHog merged to main and verified live on tueats.co
 
@@ -88,7 +83,7 @@ in PostHog with `$ip`/`$geoip_*` absent, or whether a session recording
 actually appears — PostHog's bot filter (on by default) silently drops
 every `capture()` call from a browser it fingerprints as automated.
 Confirmed this is genuinely a detection issue, not a proxy/config bug: with
-Playwright's real user agent, spoofed `navigator.webdriver`, *and* a spoofed
+Playwright's real user agent, spoofed `navigator.webdriver`, _and_ a spoofed
 plain-Chrome user agent, config/extension scripts still loaded fine but
 zero capture requests were ever attempted, even monkey-patching
 `window.fetch`/XHR/`sendBeacon` before any page script ran. (The page's own

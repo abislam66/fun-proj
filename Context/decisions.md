@@ -7,46 +7,28 @@
 
 ---
 
-## 2026-09-04 — Sign out only on /account, never in the header
+## 2026-09-04 — "Cafe" cuisine tag reverted; one cafe filter, not two
 
-Signing out is an account action. The marquee stays compact on every viewport
-(About + profile icon). The control is a full-width white button at the bottom
-of `/account`, after the review list — not a header text link and not next to
-the name.
+PR #17 (merged earlier the same day) added `cafe` as a separate _cuisine
+tag_ in `src/config/cuisines.ts`, deliberately kept independent from the
+pre-existing `venue.type === "cafe"` filter (the "Café" chip on the public
+filter bar, backed by `VenueFilters.isCafe`) — that separation was
+explicitly requested at the time.
 
-## 2026-09-04 — Header profile icon always shown (even signed out)
+The site owner reversed that call the same day: two independently-settable
+"cafe" concepts is the wrong model — an admin could tag a truck with the
+cuisine "Cafe" without setting its Type to Cafe, or vice versa, and the
+public "Café" chip and "Cuisine → Cafe" filter would silently disagree
+about which venues matched. The correct model is one: admin sets a venue's
+**Type** to "Cafe" once, and the single existing "Café" chip
+(`venue.type === "cafe"`) is the one filter that reflects it.
 
-The account page is the one place for name/username/year and “Sign out” on
-phones. Putting a person-in-circle icon next to About on every page is the
-discovery path — signed-out visitors hit the existing `/account` sign-in gate
-instead of hiding the control. The display-name-as-header-link went away so
-the marquee stays compact (About + icon; Sign out text only on wider screens).
-
-## 2026-09-04 — Private /account page; username + class year; no avatars
-
-The site owner asked for a profile: change name, change username, show class
-year, and list every review. Specs already reserved `/account` for "my ratings
-& reviews" (Feature 9) and explicitly banned public profiles. This slice
-implements that private page and adds two fields the specs didn't have yet
-(`username`, `graduation_year`), with the SDD updated to match (explicit
-instruction).
-
-- **Private, not public.** `/account` requires a session and only loads
-  `user_id = session.id`. No `/u/[username]`, no directory of people. Reviews
-  still show display name only. Username is a unique handle on the account
-  page so two "Alex" names can still be distinct at the account layer without
-  turning the site into a social graph.
-- **No avatars.** A nullable `avatar_url` would be a small schema add; the
-  product cost (Blob upload, moderation, a new PII surface) is not. Stakeholder
-  chose skip.
-- **Identity cooldown.** Display-name and username changes share a 24-hour
-  window (`identity_changed_at`) so people can't hop identities to dodge
-  moderation. Class year can change without that cooldown.
-- **Class year is one number.** "Class of 2027" covers both alumni and current
-  students. Optional until they set it. CHECK 1990–2040.
-- **Existing rows.** Migration backfills `username` from a slug of
-  `display_name`, falling back to `u` + an id fragment on collision/reserved
-  names, so the NOT NULL unique constraint can land without a default.
+Fix was a clean one-line revert of the `cafe` entry in `CUISINES` — checked
+the dev DB first and confirmed zero venues had ever actually been tagged
+with the cuisine key (all `type = "cafe"` venues carried other cuisine tags
+like `other`/`american`/`chinese`/`fruit`), so no data cleanup was needed.
+Every consumer already reads `CUISINE_KEYS`/`CUISINES` dynamically, so no
+other file needed to change.
 
 ---
 
