@@ -7,6 +7,29 @@
 
 ---
 
+## 2026-09-04 — PostHog silently drops captures from automated/headless browsers (not a bug)
+
+Recorded so a future session doesn't burn time re-diagnosing this: testing
+PostHog against a real project key via Playwright, `posthog.capture()`
+never sends a network request — not `$pageview`, not autocapture, not a
+manual test event — even though `posthog.init()` clearly succeeds (remote
+config fetches fine, session-recording/surveys/dead-click extension scripts
+all load). Confirmed exhaustively this is PostHog's bot filter
+(`opt_out_useragent_filter`, on by default) doing its job, not a proxy or
+config bug: same result with Playwright's default `HeadlessChrome` UA, with
+`navigator.webdriver` spoofed false, and with a fully spoofed plain-Chrome
+UA string — and confirmed at the lowest level by monkey-patching
+`window.fetch`/`XMLHttpRequest`/`sendBeacon` before any page script runs:
+zero attempts, not just zero successes. The page's own console warns about
+"Automatic fallback to software WebGL," which is likely a big part of what
+PostHog is keying off — a software GPU renderer is a strong, hard-to-spoof
+automated-browser signal. **Practical upshot:** you cannot verify a real
+PostHog event or session recording landed by scripting a browser against
+this site, automated or not. That check is inherently manual — open the
+site in a real browser yourself, then look in the PostHog UI.
+
+---
+
 ## 2026-09-04 — PostHog widened to full product analytics (autocapture + masked replay + custom events)
 
 The site owner asked for "maximum useful product analytics," reopening the

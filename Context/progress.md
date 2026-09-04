@@ -37,9 +37,46 @@
   10. Fix `tests/e2e/home.spec.ts` — still asserts against pre-migration mock venue names; deferred by explicit scope choice.
   11. Continue frontend polish against `DESIGN.md` where needed (optional Maputnik Positron fork; per-building hero tints).
   12. Manually verify, through a real authenticated browser session: the multi-photo admin UI, the map-zone picker/dropdown/warning UI, the photo-upload flow, and the new Halal/Vegan Friendly checkboxes — all verified at the data/logic layer this session or earlier, never through a real `/admin` click-through.
-  13. PostHog (2026-09-04): confirm all three manual dashboard settings are on (discard raw IP, disable IP geolocation, record user sessions) and check one real production event/recording for an absent `$ip`/`$geoip_*` and genuinely masked replay inputs — see `Context/decisions.md` 2026-09-04.
+  13. PostHog (2026-09-04, updated after merge): session recording being live is now confirmed (remote config returns a real `sessionRecording` object, not `false`). Still needs a human: browse tueats.co normally for a few seconds, then in the PostHog UI check that one real event has no `$ip`/`$geoip_*` properties and that a session recording appears with masked inputs — automated (Playwright) verification can't do this because PostHog's bot filter correctly drops every capture from a detectably-automated browser, see `Context/decisions.md` 2026-09-04 (post-merge entry).
 
 ---
+
+## 2026-09-04 — PostHog merged to main and verified live on tueats.co
+
+PR #16 merged (`2df8310`); production redeployed automatically and confirmed
+`● Ready`. Verified against the live site with the real
+`NEXT_PUBLIC_POSTHOG_KEY` now configured in Vercel Production:
+
+- Remote config fetch succeeds and returns a real `sessionRecording` object
+  (masking, endpoint, recorder version) rather than `false` — confirms the
+  site owner's "record user sessions" project toggle is genuinely on, without
+  needing an actual recording to inspect.
+- `posthog-recorder.js`, `surveys.js`, `dead-clicks-autocapture.js`,
+  `exception-autocapture.js` all load 200 through `/ingest/static/*` —
+  proxy routing still correct against the real project, not just the fake
+  key tested pre-merge.
+- No `ph_*` cookie, only a `localStorage` key — persistence config holds in
+  production.
+- `/admin/sign-in`, checked in a fresh isolated browser context (no shared
+  storage from a prior page): zero `/ingest` requests, zero `ph_`
+  localStorage keys, zero cookies, `window.posthog` undefined — the
+  route-group exclusion holds in production, not just locally.
+- `/about`'s disclosure copy renders correctly (screenshot-checked).
+
+**Could not verify via automation:** whether an actual event/pageview lands
+in PostHog with `$ip`/`$geoip_*` absent, or whether a session recording
+actually appears — PostHog's bot filter (on by default) silently drops
+every `capture()` call from a browser it fingerprints as automated.
+Confirmed this is genuinely a detection issue, not a proxy/config bug: with
+Playwright's real user agent, spoofed `navigator.webdriver`, *and* a spoofed
+plain-Chrome user agent, config/extension scripts still loaded fine but
+zero capture requests were ever attempted, even monkey-patching
+`window.fetch`/XHR/`sendBeacon` before any page script ran. (The page's own
+console flags "Automatic fallback to software WebGL" — a software renderer
+is a very hard automated-browser tell that's essentially unspoofable.) This
+is PostHog correctly doing its job, not a defect — but it means the last
+20% of verification (an actual event's properties, an actual recording)
+needs a genuine human visit. See `Context/progress.md`'s "Next up" #13.
 
 ## 2026-09-04 — PostHog widened to full product analytics
 
