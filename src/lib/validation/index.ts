@@ -10,6 +10,7 @@ export {
   finalizeVenuePhotoUploadSchema,
   bulkSetHalalSchema,
   bulkSetVeganFriendlySchema,
+  bulkSetCuisineSchema,
   problemKindSchema,
   reportProblemSchema,
   resolveProblemReportSchema,

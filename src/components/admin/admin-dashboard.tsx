@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Fragment, useMemo, useState } from "react";
 
 import {
+  bulkSetVenueCuisine,
   bulkSetVenueHalal,
   bulkSetVenueVeganFriendly,
   resolveProblemReport,
@@ -12,7 +13,7 @@ import {
 } from "@/actions/admin";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Button, Chip, Input } from "@/components/ui/primitives";
-import { CUISINE_KEYS, CUISINES } from "@/config/cuisines";
+import { CUISINE_KEYS, CUISINES, type CuisineKey } from "@/config/cuisines";
 import { MAP_ZONE_KEYS_SORTED, MAP_ZONES } from "@/config/map-zones";
 import {
   adminVenueZoneLabel,
@@ -108,6 +109,9 @@ export function AdminDashboard({
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkNotice, setBulkNotice] = useState("");
   const [bulkNoticeIsError, setBulkNoticeIsError] = useState(false);
+  const [bulkCuisine, setBulkCuisine] = useState<CuisineKey>(
+    CUISINE_KEYS[0] ?? "other",
+  );
 
   function toggleCompletenessFlag(flag: CompletenessFlag) {
     setCompletenessFlags((current) => {
@@ -285,6 +289,55 @@ export function AdminDashboard({
       current.map((venue) =>
         updated.has(venue.id) ? { ...venue, [field.key]: value } : venue,
       ),
+    );
+    setBulkNoticeIsError(false);
+    setBulkNotice(
+      `Updated ${result.data.updatedIds.length} venue${result.data.updatedIds.length === 1 ? "" : "s"}.`,
+    );
+    clearSelection();
+  }
+
+  /**
+   * Bulk-add or bulk-remove one cuisine tag on the selected venues. Unlike
+   * `applyBulkBoolean` this can't just set the picked field to a shared
+   * value locally — each venue keeps its own other cuisines — so the
+   * local state update adds/removes only the one tag per venue instead of
+   * overwriting the array.
+   */
+  async function applyBulkCuisine(action: "add" | "remove") {
+    const ids = [...selectedIds];
+    const cuisine = bulkCuisine;
+    const label = CUISINES[cuisine].label;
+    const confirmed = window.confirm(
+      action === "add"
+        ? `Add "${label}" to ${ids.length} selected venue${ids.length === 1 ? "" : "s"}? Their other cuisines won't change.`
+        : `Remove "${label}" from ${ids.length} selected venue${ids.length === 1 ? "" : "s"}? Their other cuisines won't change.`,
+    );
+    if (!confirmed) return;
+
+    setBulkPending(true);
+    setBulkNotice("");
+    const result = await bulkSetVenueCuisine({ ids, cuisine, action });
+    setBulkPending(false);
+
+    if (!result.ok) {
+      setBulkNoticeIsError(true);
+      setBulkNotice(result.error);
+      return;
+    }
+
+    const updated = new Set(result.data.updatedIds);
+    setVenues((current) =>
+      current.map((venue) => {
+        if (!updated.has(venue.id)) return venue;
+        const cuisines =
+          action === "add"
+            ? venue.cuisines.includes(cuisine)
+              ? venue.cuisines
+              : [...venue.cuisines, cuisine]
+            : venue.cuisines.filter((item) => item !== cuisine);
+        return { ...venue, cuisines };
+      }),
     );
     setBulkNoticeIsError(false);
     setBulkNotice(
@@ -513,6 +566,37 @@ export function AdminDashboard({
                 </Button>
               </Fragment>
             ))}
+            <span aria-hidden="true" className="admin-bulk-divider" />
+            <label>
+              <span className="sr-only">Cuisine to add or remove</span>
+              <select
+                className="admin-select"
+                onChange={(event) =>
+                  setBulkCuisine(event.target.value as CuisineKey)
+                }
+                value={bulkCuisine}
+              >
+                {CUISINE_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {CUISINES[key].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              disabled={bulkPending}
+              onClick={() => void applyBulkCuisine("add")}
+              variant="secondary"
+            >
+              Add cuisine
+            </Button>
+            <Button
+              disabled={bulkPending}
+              onClick={() => void applyBulkCuisine("remove")}
+              variant="secondary"
+            >
+              Remove cuisine
+            </Button>
           </div>
         ) : null}
 

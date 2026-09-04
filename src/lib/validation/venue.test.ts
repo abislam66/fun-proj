@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CAMPUS_BOUNDS } from "@/config/site";
 import {
+  bulkSetCuisineSchema,
   bulkSetHalalSchema,
   bulkSetVeganFriendlySchema,
   reportProblemSchema,
@@ -128,6 +129,65 @@ describe("bulkSetVeganFriendlySchema", () => {
       bulkSetVeganFriendlySchema.parse({
         ids,
         isVeganFriendly: true,
+        status: "published",
+      }),
+    ).toThrow();
+  });
+});
+
+describe("bulkSetCuisineSchema", () => {
+  const ids = [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+  ];
+
+  it("accepts a list of venue ids, a real cuisine key, and add/remove", () => {
+    expect(
+      bulkSetCuisineSchema.parse({ ids, cuisine: "halal", action: "add" }),
+    ).toEqual({ ids, cuisine: "halal", action: "add" });
+    expect(
+      bulkSetCuisineSchema.parse({ ids, cuisine: "halal", action: "remove" }),
+    ).toEqual({ ids, cuisine: "halal", action: "remove" });
+  });
+
+  it("rejects an empty id list", () => {
+    expect(() =>
+      bulkSetCuisineSchema.parse({ ids: [], cuisine: "halal", action: "add" }),
+    ).toThrow();
+  });
+
+  it("rejects non-uuid ids", () => {
+    expect(() =>
+      bulkSetCuisineSchema.parse({
+        ids: ["not-a-uuid"],
+        cuisine: "halal",
+        action: "add",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a cuisine key that isn't in CUISINES", () => {
+    expect(() =>
+      bulkSetCuisineSchema.parse({ ids, cuisine: "cafe", action: "add" }),
+    ).toThrow();
+  });
+
+  it("rejects an action other than add/remove", () => {
+    expect(() =>
+      bulkSetCuisineSchema.parse({
+        ids,
+        cuisine: "halal",
+        action: "overwrite",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects unknown keys (strict)", () => {
+    expect(() =>
+      bulkSetCuisineSchema.parse({
+        ids,
+        cuisine: "halal",
+        action: "add",
         status: "published",
       }),
     ).toThrow();

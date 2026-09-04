@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { and, desc, eq, getTableColumns, inArray, ne, sql } from "drizzle-orm";
 
-import { CUISINE_KEYS } from "@/config/cuisines";
+import { CUISINE_KEYS, type CuisineKey } from "@/config/cuisines";
 import { MAP_ZONE_KEYS } from "@/config/map-zones";
 import { db } from "@/lib/db";
 import {
@@ -208,6 +208,44 @@ export async function bulkUpdateVenueVeganFriendly(
   return db
     .update(venues)
     .set({ isVeganFriendly, updatedAt: new Date() })
+    .where(inArray(venues.id, ids))
+    .returning();
+}
+
+/**
+ * Bulk admin edit: adds one cuisine tag to many venues' `cuisines` array —
+ * a no-op (not a duplicate) on any row that already has it, and every
+ * other cuisine already on a row is untouched.
+ */
+export async function bulkAddVenueCuisine(
+  ids: string[],
+  cuisine: CuisineKey,
+): Promise<VenueRow[]> {
+  return db
+    .update(venues)
+    .set({
+      cuisines: sql`case when ${cuisine} = any(${venues.cuisines}) then ${venues.cuisines} else array_append(${venues.cuisines}, ${cuisine}) end`,
+      updatedAt: new Date(),
+    })
+    .where(inArray(venues.id, ids))
+    .returning();
+}
+
+/**
+ * Bulk admin edit: removes one cuisine tag from many venues' `cuisines`
+ * array — a no-op on any row that doesn't have it, and every other
+ * cuisine already on a row is untouched.
+ */
+export async function bulkRemoveVenueCuisine(
+  ids: string[],
+  cuisine: CuisineKey,
+): Promise<VenueRow[]> {
+  return db
+    .update(venues)
+    .set({
+      cuisines: sql`array_remove(${venues.cuisines}, ${cuisine})`,
+      updatedAt: new Date(),
+    })
     .where(inArray(venues.id, ids))
     .returning();
 }

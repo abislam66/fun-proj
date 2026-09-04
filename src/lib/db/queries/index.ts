@@ -8,6 +8,8 @@ export {
   updateVenue,
   bulkUpdateVenueHalal,
   bulkUpdateVenueVeganFriendly,
+  bulkAddVenueCuisine,
+  bulkRemoveVenueCuisine,
   insertProblemReport,
   listProblemReports,
   updateProblemReportStatus,

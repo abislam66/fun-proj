@@ -9,6 +9,8 @@ import { requireAdmin } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import { blobBackedPhotoSource, canPublishVenuePhoto } from "@/lib/ratings";
 import {
+  bulkAddVenueCuisine,
+  bulkRemoveVenueCuisine,
   bulkUpdateVenueHalal,
   bulkUpdateVenueVeganFriendly,
   countPublishedVenuePhotos,
@@ -34,6 +36,7 @@ import {
 import { RateLimitError } from "@/lib/ratelimit";
 import { uniqueSlug } from "@/lib/slug";
 import {
+  bulkSetCuisineSchema,
   bulkSetHalalSchema,
   bulkSetVeganFriendlySchema,
   finalizeVenuePhotoUploadSchema,
@@ -353,6 +356,32 @@ export async function bulkSetVenueVeganFriendly(
     await requireAdmin();
     const { ids, isVeganFriendly } = bulkSetVeganFriendlySchema.parse(raw);
     const updated = await bulkUpdateVenueVeganFriendly(ids, isVeganFriendly);
+
+    revalidateTag("venues");
+    for (const row of updated) revalidateTag(`venue:${row.slug}`);
+
+    return { ok: true, data: { updatedIds: updated.map((row) => row.id) } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/**
+ * Admin: bulk-add or bulk-remove one cuisine tag across many venues (used
+ * by the admin list's bulk selection). Never overwrites the `cuisines`
+ * array wholesale — the query layer only adds/removes the one named tag,
+ * so every other cuisine already on a row survives untouched.
+ */
+export async function bulkSetVenueCuisine(
+  raw: unknown,
+): Promise<ActionResult<{ updatedIds: string[] }>> {
+  try {
+    await requireAdmin();
+    const { ids, cuisine, action } = bulkSetCuisineSchema.parse(raw);
+    const updated =
+      action === "add"
+        ? await bulkAddVenueCuisine(ids, cuisine)
+        : await bulkRemoveVenueCuisine(ids, cuisine);
 
     revalidateTag("venues");
     for (const row of updated) revalidateTag(`venue:${row.slug}`);

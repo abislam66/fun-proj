@@ -173,6 +173,21 @@ export const bulkSetVeganFriendlySchema = z
   })
   .strict();
 
+/**
+ * Bulk-add or bulk-remove a single cuisine tag across many venues. Unlike
+ * the boolean fields above this touches an array column, so the write
+ * itself (see `bulkAddVenueCuisine`/`bulkRemoveVenueCuisine`) must only
+ * ever add/remove the one named tag — every other cuisine already on a
+ * row is untouched.
+ */
+export const bulkSetCuisineSchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(200),
+    cuisine: z.enum(CUISINE_KEYS),
+    action: z.enum(["add", "remove"]),
+  })
+  .strict();
+
 export const problemKindSchema = z.enum([
   "closed",
   "moved",
