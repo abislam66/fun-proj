@@ -34,7 +34,4 @@ export {
   type SubmitRatingInput,
 } from "./rating";
 
-export {
-  updateOwnProfileSchema,
-  type UpdateOwnProfileInput,
-} from "./profile";
+export { updateOwnProfileSchema, type UpdateOwnProfileInput } from "./profile";
