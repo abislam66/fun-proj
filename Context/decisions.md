@@ -7,6 +7,58 @@
 
 ---
 
+## 2026-09-04 — Mobile results sheet: drag-follow + sizing decisions
+
+Reworked the mobile map/results bottom sheet (`src/components/ui/mobile-sheet.tsx`)
+from release-only jump-to-snap into real live drag-follow, and resized its
+3 states so the default (entry) state prioritizes search/filters with the
+map dominant, rather than starting at a half-map/half-list "mid" view.
+Two choices worth recording so they aren't silently reversed:
+
+1. **Snap ratios are computed against the map area below the header**
+   (`100dvh - 4.25rem`), not the full viewport — the header is separate
+   chrome, not "map." Default = 32.5% sheet / 67.5% map, mid = 50/50,
+   expanded = 87.5% sheet / 12.5% map — all shared as CSS custom
+   properties (`--sheet-h-default/mid/expanded`) so `.mobile-sheet-*`,
+   `.map-controls`' positioning, and the JS drag/snap math all read the
+   same numbers instead of three hand-copied ones drifting apart (the
+   old code's failure mode — `.map-controls` and `MOBILE_SHEET_PEEK_PX`
+   in `venue-map.tsx` each had their own copy of "10.25rem").
+2. **Plain pointer events were kept over introducing Framer Motion**,
+   despite `Context/DESIGN.md` naming it as the intended library for
+   "sheet snap (mobile)" — the shipped sheet has always used hand-rolled
+   pointer events for this, and switching libraries mid-fix would have
+   been a bigger, riskier diff than the ask called for. This is a
+   pre-existing doc/code gap, not something this change closes.
+
+**Non-obvious implementation gotcha, worth remembering:** reading a CSS
+custom property via `getComputedStyle(el).getPropertyValue("--foo")`
+returns its *unresolved token text* (e.g. `"calc((100dvh - 4.25rem) *
+0.5)"`), never a resolved pixel number — custom properties don't get
+`calc()`/`dvh` resolution the way real layout properties do. Getting an
+actual px value requires laying out a real element with the real class
+and measuring it. `src/lib/mobile-sheet-heights.ts` does this via a
+hidden, off-screen probe div that gets the sheet's own classes applied
+to it — shared by both `mobile-sheet.tsx` (drag/snap targets) and
+`venue-map.tsx` (`flyToZones`' bottom inset, previously a hardcoded
+`MOBILE_SHEET_PEEK_PX = 164` magic number). The probe also needs its
+`transition` explicitly disabled — it inherits `.mobile-sheet`'s
+`transition: height`, and three back-to-back synchronous measurements
+(peek, then mid, then full) would otherwise all sample mid-transition
+instead of the settled value, since no time elapses between them.
+
+Also: at the expanded state, only a ~12.5% sliver of map area shows
+above the sheet — too little room for the floating map-control button
+row (`.map-controls`) without it colliding with the map's own HUD bar
+(zone name + live coords). Rather than fight for the space, the buttons
+are hidden at `[data-sheet="full"]` on mobile — the pre-existing CSS
+comment already said "at full the sheet covers the map anyway," which
+is now genuinely true instead of incidentally true (the old "full"
+state reused mid's much-lower button offset, which happened to avoid
+this collision by never actually tracking to where "full" really was).
+
+---
+
 ## 2026-09-04 — "Cafe" cuisine tag reverted; one cafe filter, not two
 
 PR #17 (merged earlier the same day) added `cafe` as a separate _cuisine

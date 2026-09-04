@@ -38,6 +38,7 @@ import {
 } from "@/config/site";
 import { getOpenStatus } from "@/lib/hours";
 import { mapZoneContaining } from "@/lib/map/point-in-polygon";
+import { measureMobileSheetHeightPx } from "@/lib/mobile-sheet-heights";
 import type { Venue } from "@/lib/venues";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -56,10 +57,12 @@ const VENUE_STREET_ZOOM = 16;
 const PLACEHOLDER_PRICE_RANGE = "$12";
 
 // Below the desktop breakpoint the results sheet overlays the bottom of
-// the map canvas; zone flights pad for its tucked height so the zone
-// centers in the visible strip, not the half-covered full canvas. Keep in
-// sync with .mobile-sheet-peek (10.25rem) and the 64rem breakpoint.
-const MOBILE_SHEET_PEEK_PX = 164;
+// the map canvas; zone flights pad for its tucked (default-snap) height
+// so the zone centers in the visible strip, not the half-covered full
+// canvas. Measured live via the same probe mobile-sheet.tsx's drag/snap
+// math uses (see mobile-sheet-heights.ts for why a plain CSS var read
+// doesn't work) rather than a hardcoded px value, since that height is
+// viewport-dependent.
 const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 
 export function VenueMap({
@@ -697,7 +700,7 @@ function flyToZones(
   const pad = Math.max(...keys.map((key) => MAP_ZONES[key].padding));
   const bottomInset = window.matchMedia(DESKTOP_MEDIA_QUERY).matches
     ? 0
-    : MOBILE_SHEET_PEEK_PX;
+    : measureMobileSheetHeightPx("peek");
   map.fitBounds(
     [
       [bounds.west, bounds.south],

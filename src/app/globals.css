@@ -81,6 +81,21 @@
   --explorer-list-min: 38%;
   --explorer-list-max: 42%;
   --explorer-list-wide: 30rem;
+
+  /* Mobile results sheet: single source of truth for the 3 snap heights,
+     as a fraction of the map area below the header (not the full
+     viewport — the header is separate chrome). Read by .mobile-sheet-*
+     below, by .map-controls' sheet-tracking rule, by mobile-sheet.tsx's
+     drag/snap math, and by venue-map.tsx's flyToZones inset. Default
+     gets a floor so short/landscape viewports still fit the handle +
+     search + filter chips. */
+  --sheet-header-h: 4.25rem;
+  --sheet-h-default: max(
+    9.5rem,
+    calc((100dvh - var(--sheet-header-h)) * 0.325)
+  );
+  --sheet-h-mid: calc((100dvh - var(--sheet-header-h)) * 0.5);
+  --sheet-h-expanded: calc((100dvh - var(--sheet-header-h)) * 0.875);
 }
 
 @theme inline {
@@ -505,10 +520,10 @@ button {
 .map-controls {
   position: absolute;
   right: var(--spacing-md);
-  /* Mobile-first: a horizontal row riding above the results sheet's peek
-     snap (10.25rem) — the fixed sheet overlays the map pane, and a
-     column tucked behind it loses half its buttons. */
-  bottom: calc(10.25rem + var(--spacing-md));
+  /* Mobile-first: a horizontal row riding above the results sheet's
+     default snap — the fixed sheet overlays the map pane, and a column
+     tucked behind it loses half its buttons. */
+  bottom: calc(var(--sheet-h-default) + var(--spacing-md));
   z-index: 4;
   display: flex;
   flex-direction: row;
@@ -516,14 +531,20 @@ button {
   transition: bottom var(--duration-medium) var(--ease-move);
 }
 
-/* Follow the sheet upward when it snaps to mid (MobileSheet mirrors its
-   snap onto <html data-sheet>; heights must match .mobile-sheet-mid). At
-   "full" the sheet covers the map anyway. Scoped below the desktop
-   breakpoint so these can't out-specificity the desktop rule. */
+/* Follow the sheet upward as it snaps to mid (MobileSheet mirrors its
+   snap onto <html data-sheet>; height comes from the shared --sheet-h-mid
+   token above, same source mobile-sheet.tsx reads for drag/snap math).
+   Scoped below the desktop breakpoint so these can't out-specificity the
+   desktop rule. At expanded there's only a ~12.5% sliver of map left
+   above the sheet — too little room for the button row without colliding
+   with the map's own HUD bar (zone name + coords), so it's hidden rather
+   than repositioned; the sheet covers the map anyway at that point. */
 @media (max-width: 63.9375rem) {
-  [data-sheet="mid"] .map-controls,
+  [data-sheet="mid"] .map-controls {
+    bottom: calc(var(--sheet-h-mid) + var(--spacing-md));
+  }
   [data-sheet="full"] .map-controls {
-    bottom: calc(min(57dvh, 34rem) + var(--spacing-md));
+    display: none;
   }
 }
 
@@ -1092,23 +1113,15 @@ button {
 }
 
 .mobile-sheet-peek {
-  height: 10.25rem;
-  /* Tucked in: the whole sheet reads as one "expand me" control. */
-  cursor: pointer;
-}
-
-/* Content is also `inert` at peek (mobile-sheet.tsx) — no scrolling or
-   taps until the sheet is expanded. */
-.mobile-sheet-peek .sheet-content {
-  overflow: hidden;
+  height: var(--sheet-h-default);
 }
 
 .mobile-sheet-mid {
-  height: min(57dvh, 34rem);
+  height: var(--sheet-h-mid);
 }
 
 .mobile-sheet-full {
-  height: calc(100dvh - 4.25rem);
+  height: var(--sheet-h-expanded);
 }
 
 .sheet-handle {
@@ -1134,6 +1147,9 @@ button {
   height: calc(100% - 2.75rem);
   overflow: auto;
   overscroll-behavior: contain;
+  /* Sheet is pinned to the screen's bottom edge — clear the iOS home
+     indicator instead of letting the last list row sit under it. */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .results-panel {
@@ -1141,15 +1157,27 @@ button {
   background: var(--color-surface);
 }
 
+/* Default snap prioritizes search + filters over the map: hero text goes
+   away so the map gets substantially more of the screen. Scoped to
+   mobile only (matches .map-controls' breakpoint above) since ".results-
+   intro" is the same markup rendered in the desktop split pane, which
+   never sets [data-sheet] at all in practice but shouldn't depend on
+   that to stay visible. */
+@media (max-width: 63.9375rem) {
+  [data-sheet="peek"] .results-intro {
+    display: none;
+  }
+}
+
 .results-intro {
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);
 }
 
 .results-intro h1 {
   max-width: 22rem;
   margin: 0;
   font-family: var(--font-display), sans-serif;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   line-height: 1.05;
   letter-spacing: -0.035em;
 }
