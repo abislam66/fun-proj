@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 import { Button } from "@/components/ui/primitives";
+import { AnalyticsEvent } from "@/lib/analytics";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 /**
@@ -11,9 +13,11 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
  */
 export function GoogleSignInButton({ next }: { next: string }) {
   const [pending, setPending] = useState(false);
+  const posthog = usePostHog();
 
   async function signIn() {
     setPending(true);
+    posthog.capture(AnalyticsEvent.SignInClicked, { next });
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",

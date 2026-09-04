@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 import { VenueMapLoader } from "@/components/map/venue-map-loader";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -8,6 +9,7 @@ import { MobileSheet } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/primitives";
 import { FilterBar } from "@/components/venues/filter-bar";
 import { VenueList } from "@/components/venues/venue-list";
+import { AnalyticsEvent } from "@/lib/analytics";
 import type { Venue, VenueFilters } from "@/lib/venues";
 import {
   countUnknownHours,
@@ -21,6 +23,7 @@ function ResultsPanel({
   venues,
   filters,
   setFilters,
+  onClearFilters,
   unknownHours,
   selectedId,
   hoveredId,
@@ -30,6 +33,7 @@ function ResultsPanel({
   venues: Venue[];
   filters: VenueFilters;
   setFilters: (filters: VenueFilters) => void;
+  onClearFilters: () => void;
   unknownHours: number;
   selectedId: string | null;
   hoveredId: string | null;
@@ -55,7 +59,7 @@ function ResultsPanel({
         {serializeVenueFilters(filters) ? (
           <Button
             className="clear-button"
-            onClick={() => setFilters(EMPTY_VENUE_FILTERS)}
+            onClick={onClearFilters}
             variant="ghost"
           >
             Clear
@@ -64,7 +68,7 @@ function ResultsPanel({
       </div>
       <VenueList
         hoveredId={hoveredId}
-        onClear={() => setFilters(EMPTY_VENUE_FILTERS)}
+        onClear={onClearFilters}
         onHover={onHover}
         onSelect={onSelect}
         selectedId={selectedId}
@@ -89,14 +93,41 @@ export function VenueExplorer({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [sheetCollapse, setSheetCollapse] = useState(0);
+  const posthog = usePostHog();
+
+  // Venue pills are drawn on the map's canvas (a MapLibre symbol layer, see
+  // venue-pill-layer.tsx) — not DOM elements — so autocapture is
+  // structurally blind to a pin tap. This is the one interaction on the
+  // site autocapture genuinely cannot see; every other custom event here
+  // just adds semantic state on top of what autocapture already gets free.
+  function captureVenueSelected(venueId: string, source: "map" | "list") {
+    const venue = visibleVenues.find((candidate) => candidate.id === venueId);
+    posthog.capture(AnalyticsEvent.VenueSelected, {
+      venue_id: venueId,
+      venue_type: venue?.type ?? null,
+      source,
+    });
+  }
 
   // List rows hand the stage to the map: select the venue AND (on mobile)
   // tuck the sheet to peek so the flown-to pin and its popup are visible.
   // Map-originated selections keep the sheet where it is.
   function selectFromList(venueId: string | null) {
+    if (venueId) captureVenueSelected(venueId, "list");
     setSelectedId(venueId);
     if (venueId) setSheetCollapse((count) => count + 1);
   }
+
+  function selectFromMap(venueId: string | null) {
+    if (venueId) captureVenueSelected(venueId, "map");
+    setSelectedId(venueId);
+  }
+
+  function clearFilters() {
+    posthog.capture(AnalyticsEvent.FiltersCleared);
+    setFilters(EMPTY_VENUE_FILTERS);
+  }
+
   const query = serializeVenueFilters(filters);
   const backPath = query ? `/?${query}` : "/";
   const visibleVenues = useMemo(
@@ -119,6 +150,20 @@ export function VenueExplorer({
     }
   }, [selectedId, visibleVenues]);
 
+  // Debounced so typing "cha cha" fires one event, not seven — and only
+  // the length/result count are sent, never the query text itself.
+  useEffect(() => {
+    const trimmed = filters.query.trim();
+    if (!trimmed) return;
+    const timeout = setTimeout(() => {
+      posthog.capture(AnalyticsEvent.SearchPerformed, {
+        query_length: trimmed.length,
+        result_count: visibleVenues.length,
+      });
+    }, 600);
+    return () => clearTimeout(timeout);
+  }, [filters.query, visibleVenues.length, posthog]);
+
   // Keyboard escape hatch: pin selection is otherwise dismissed only by
   // clicking empty map space or the mini-card's close button.
   useEffect(() => {
@@ -136,6 +181,7 @@ export function VenueExplorer({
     <ResultsPanel
       filters={filters}
       hoveredId={hoveredId}
+      onClearFilters={clearFilters}
       onHover={setHoveredId}
       onSelect={selectFromList}
       selectedId={selectedId}
@@ -155,8 +201,9 @@ export function VenueExplorer({
           hoveredId={hoveredId}
           onClearSelection={() => setSelectedId(null)}
           onHover={setHoveredId}
-          onSelect={setSelectedId}
+          onSelect={selectFromMap}
           onSelectZone={(key) => {
+            posthog.capture(AnalyticsEvent.ZoneSelected, { zone: key });
             setFilters((current) => ({
               ...current,
               zones: key ? [key] : [],

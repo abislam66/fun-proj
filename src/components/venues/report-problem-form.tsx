@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { usePostHog } from "posthog-js/react";
 
 import { Button } from "@/components/ui/primitives";
+import { AnalyticsEvent } from "@/lib/analytics";
 
 const REASONS = [
   ["closed", "It looks closed"],
@@ -14,6 +16,7 @@ const REASONS = [
 export function ReportProblemForm({ venueName }: { venueName: string }) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const posthog = usePostHog();
 
   if (submitted) {
     return (
@@ -37,6 +40,10 @@ export function ReportProblemForm({ venueName }: { venueName: string }) {
       className="report-form"
       onSubmit={(event) => {
         event.preventDefault();
+        const reason = new FormData(event.currentTarget).get("reason");
+        posthog.capture(AnalyticsEvent.ProblemReported, {
+          reason: typeof reason === "string" ? reason : "closed",
+        });
         setSubmitted(true);
       }}
     >

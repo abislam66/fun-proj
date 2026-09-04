@@ -90,6 +90,33 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // Reverse-proxies PostHog through this app's own domain (US Cloud region)
+  // so every request — script, event capture, feature-flag `/decide` calls —
+  // is same-origin. That's what keeps this a no-op for the CSP above (no
+  // *.posthog.com grants needed anywhere) and is why PostHog's own script
+  // isn't blocked by ad-blockers the way a third-party host would be.
+  // `/static` and `/array` deliberately go to the `-assets` host, not the
+  // bare one — that's PostHog's documented split, easy to get backwards.
+  // src/components/analytics/posthog-provider.tsx points api_host at
+  // `/ingest`; this only ever forwards traffic when that provider actually
+  // initializes (i.e. NEXT_PUBLIC_POSTHOG_KEY is set — Production only).
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://us-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/array/:path*",
+        destination: "https://us-assets.i.posthog.com/array/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://us.i.posthog.com/:path*",
+      },
+    ];
+  },
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

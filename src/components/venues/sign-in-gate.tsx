@@ -1,5 +1,7 @@
+import { AnalyticsBeacon } from "@/components/analytics/analytics-beacon";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { SiteHeader } from "@/components/layout/site-header";
+import { AnalyticsEvent } from "@/lib/analytics";
 
 /**
  * Shown instead of a venue's details when nobody is signed in. `next` is
@@ -15,6 +17,10 @@ export function SignInGate({
 }) {
   return (
     <div className="public-page">
+      <AnalyticsBeacon
+        event={AnalyticsEvent.SignInGateShown}
+        properties={{ next, venue_name: venueName }}
+      />
       <SiteHeader user={null} />
       <main className="detail-page">
         <section className="sign-in-gate">

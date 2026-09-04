@@ -7,6 +7,123 @@
 
 ---
 
+## 2026-09-04 — PostHog widened to full product analytics (autocapture + masked replay + custom events)
+
+The site owner asked for "maximum useful product analytics," reopening the
+three knobs the 2026-09-03 entry deliberately left off. Same underlying
+architecture (same-origin `/ingest` proxy, `localStorage` persistence,
+Production-only env var, no `identify()`, IP discard/geo-off) — what changed
+is how much the SDK sees and records:
+
+- **`autocapture: true`.** PostHog's autocapture never sends the typed
+  _value_ of an input/textarea/select and always ignores
+  `type="password"` — so this can't leak review text, search text, or
+  report notes on its own. It's also structurally blind to one whole
+  surface: venue pins are drawn as a MapLibre GL canvas symbol layer
+  (`src/components/map/venue-pill-layer.tsx`), not DOM elements, so a pin
+  tap generates no DOM click event for autocapture to see at all.
+- **`disable_session_recording: false` + `session_recording: { maskAllInputs:
+true }`.** Replay is on, but every typed keystroke is masked (`***`)
+  before it leaves the browser — set explicitly even though it's already
+  rrweb's default, because an SDK-level `session_recording` masking option
+  always wins over whatever the dashboard's "Privacy and masking" project
+  setting says (confirmed in the installed `@posthog/types` typings). Code
+  stays the source of truth for this regardless of future dashboard
+  changes. Session recording additionally needs the PostHog project's own
+  "record user sessions" toggle on — a **new** manual step alongside the
+  existing IP ones (see the running list below).
+- **`/admin` excluded structurally, not by a runtime check.** Turning on
+  autocapture + replay made this worth doing for real (admin is
+  Google/password-adjacent internal tooling, not representative product
+  usage). `PostHogAnalyticsProvider` moved out of the root `layout.tsx`
+  into a new `src/app/(public)/layout.tsx` — `/admin` has its own separate
+  nested layout, so `posthog.init()` is simply never called in its
+  component tree: no script load, no listeners, no cookies. Deliberately
+  **not** a `usePathname` opt-out effect in the root layout: that approach
+  would still race the SDK's synchronous initial-pageview capture on a
+  direct `/admin` load, and wouldn't detach already-attached global
+  autocapture listeners on an in-app client-side nav into `/admin` (no such
+  nav exists today, but the layout-group split has zero edge cases either
+  way, so it's the one used).
+- **Eleven hand-instrumented events** (`src/lib/analytics.ts`) cover the
+  funnel autocapture can't reconstruct on its own — which filter/tag
+  toggled and to what state, which venue got selected and from where (map
+  vs. list — the canvas blind spot above), a debounced `search performed`
+  that sends `query_length`/`result_count` and **never the query text**,
+  and outcome events for rating/photo/report actions. All properties are
+  structured (ids, enum keys, booleans, counts) — never free text a person
+  typed, even at call sites autocapture's own masking wouldn't reach
+  anyway. Two of them (`sign in gate shown`, `venue detail viewed`) fire
+  from a small shared `AnalyticsBeacon` mount-effect component
+  (`src/components/analytics/analytics-beacon.tsx`) since `SignInGate` and
+  `venue-detail.tsx` are Server Components — cheaper than converting either
+  to `"use client"` just to call `usePostHog()`.
+- Noted, not fixed: `ReportProblemForm`'s submit handler is local-state-only
+  today — no server action is actually called, so nothing is persisted yet.
+  The `problem reported` capture call was added at today's "submitted"
+  point anyway (instruments the UI that exists); wiring it to a real
+  backend is a separate pre-existing gap, now in `Context/backlog.md`.
+
+**Manual PostHog dashboard steps, current full list (supersedes
+2026-09-03's two-item version):** (1) discard raw IP, (2) disable
+IP-based geolocation, (3) **new** — turn on "record user sessions" at the
+project level. None of these are independently confirmed yet; send one
+real pageview + one real session through production and check both in the
+PostHog UI (no `$ip`/`$geoip_*` on the event; a recording actually appears
+and its inputs read as masked) before treating this as fully closed.
+
+---
+
+## 2026-09-03 — PostHog added; disclosure updated in the same change this time
+
+Resolved the `Context/backlog.md` "Adoption measurement" item: PostHog now runs
+alongside Vercel Web Analytics. Last time an analytics tool shipped (Vercel
+Analytics, 2026-08-27), the `/about`/`auth-security.md` disclosure update was
+forgotten and only caught a day later during unrelated work (see the
+2026-08-28 entry below). This time the disclosure text shipped in the same
+commit as the code, specifically to not repeat that gap.
+
+Configuration was chosen to make the disclosure's claims literally true, not
+approximately true:
+
+- **Reverse-proxied through `/ingest`** (`next.config.ts` rewrites to
+  `us.i.posthog.com`/`us-assets.i.posthog.com`) rather than loaded from
+  PostHog directly. Every request is same-origin, so this needed **zero new
+  CSP directives** — no `*.posthog.com` grant anywhere. `src/middleware.ts`'s
+  matcher excludes `ingest/` so Supabase's session-refresh call doesn't fire
+  on every analytics beacon.
+- **`persistence: "localStorage"`**, not PostHog's default
+  `localStorage+cookie` — so "a cookie only to keep you signed in" (the
+  existing `/about` line) stays true; PostHog sets no cookie at all.
+- **`autocapture: false`** — pageviews only (via `capture_pageview:
+"history_change"`, which handles Next.js App Router's client-side route
+  changes natively, no manual `usePathname` effect needed). Keeps "counts
+  page views" exhaustive rather than a simplification of broader click
+  tracking.
+- **`disable_session_recording: true`** set explicitly in code, on top of it
+  being off by default — never enable session recording in the dashboard
+  without updating the disclosure first.
+- **No `posthog.identify()` anywhere.** Every visitor, signed in or not,
+  stays an anonymous PostHog distinct_id — no Supabase user id, display name,
+  or email is ever sent to it. Keeps this inside the existing minimal-PII
+  stance without touching `auth-security.md`'s PII table.
+- **One PostHog project; `NEXT_PUBLIC_POSTHOG_KEY` set only in Vercel
+  Production.** The provider (`src/components/analytics/posthog-provider.tsx`)
+  no-ops without it, so Preview and local dev never send events and never
+  need a second PostHog project — matches the "small env-var surface" stance
+  in `Specs/deployment.md` and the site owner's earlier preference against
+  over-engineering dev/preview for this project.
+
+**Still a manual (dashboard, not code) step, not yet independently
+confirmed:** enabling PostHog's IP-discard setting _and_ separately disabling
+its IP-based geolocation enrichment (two distinct toggles) — both required to
+actually satisfy `auth-security.md:305`'s "never store a raw IP address"
+rather than just the disclosure text saying so. Send one real pageview
+through the deployed `/ingest` proxy and check it in the PostHog UI for an
+`$ip` value or `$geoip_*` properties before treating this as fully closed.
+
+---
+
 ## 2026-09-02 — Admin photo uploads go client → Blob directly (second route-handler exception)
 
 Production admin photo uploads were reported as very slow. Diagnosis: `uploadVenuePhoto`

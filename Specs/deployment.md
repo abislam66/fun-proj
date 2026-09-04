@@ -59,6 +59,8 @@ Two things deliberately **outside** the build:
 | `NEXT_PUBLIC_MAP_STYLE_URL` | Yes | OpenFreeMap style URL — the one-value tile-provider swap. |
 | `IP_HASH_SALT` | Yes | Salt for anonymous-report IP hashing. Different value per environment. |
 | `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob read/write token for admin-uploaded venue photos (`src/actions/admin.ts`, `put`/`del`). **Production** must use the production Blob store's token; **Preview and Development** must use the separate dev Blob store's token — never the same store. Vercel Blob tokens are scoped per store, so this separation is what keeps a delete/upload from a non-production environment from ever reaching a real production photo. |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No — **Production only** | PostHog project API key (`src/components/analytics/posthog-provider.tsx`). Deliberately unset in Preview and Development — the provider no-ops without it, so only Production ever sends analytics events. Public by design (browser-exposed), same class as `NEXT_PUBLIC_SUPABASE_ANON_KEY`. |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog app URL for dashboard/toolbar links (`ui_host`, not the request path — requests are proxied through `/ingest`, see `next.config.ts`). Defaults to `https://us.i.posthog.com` if unset. |
 
 > ⚠️ Never commit `.env` files or real secret values. Keep a `.env.example` with dummy values checked in.
 

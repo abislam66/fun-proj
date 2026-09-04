@@ -49,9 +49,20 @@ export default async function AboutPage() {
         <section>
           <h2>Cookies &amp; analytics</h2>
           <p>
-            We use a cookie only to keep you signed in. Vercel Web Analytics
-            counts page views without cookies or ad tracking &mdash; there are
-            no advertising trackers on TuEats.
+            We use a cookie only to keep you signed in &mdash; neither analytics
+            tool we use sets one. Vercel Web Analytics just counts page views.
+            PostHog counts page views too, and also records clicks and a handful
+            of specific actions &mdash; which filters you use, when you view or
+            select a place, and if you rate a place, add a photo, or report a
+            problem &mdash; to help us see what&rsquo;s actually useful. It
+            never records what you type: a masked session replay may capture how
+            you move through the site, but every typed value (search, reviews,
+            report notes) is replaced with a placeholder before it ever leaves
+            your browser. None of this runs on our internal admin tools. Both
+            analytics tools stay fully anonymous &mdash; no account id, display
+            name, or email ever reaches either &mdash; and PostHog is further
+            configured to discard IP addresses and skip location lookups. There
+            are no advertising trackers on TuEats.
           </p>
         </section>
         <aside className="about-note">
