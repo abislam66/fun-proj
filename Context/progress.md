@@ -41,6 +41,19 @@
 
 ---
 
+## 2026-09-04 — "Cafe" cuisine tag reverted; back to one cafe filter
+
+PR #17 added `cafe` as its own cuisine tag (separate from the existing
+`venue.type === "cafe"` "Café" filter chip). Same day, reversed that call:
+the site owner wants exactly one cafe concept — admin sets a venue's Type
+to "Cafe," and the one existing "Café" chip is the filter that reflects it.
+Removed the `cafe` entry from `src/config/cuisines.ts` (one line); confirmed
+first via a direct dev-DB query that no venue had ever actually been tagged
+with the cuisine key, so no data cleanup was needed. See `Context/decisions.md`
+2026-09-04 for the full rationale.
+
+---
+
 ## 2026-09-04 — PostHog merged to main and verified live on tueats.co
 
 PR #16 merged (`2df8310`); production redeployed automatically and confirmed

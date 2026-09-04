@@ -7,6 +7,31 @@
 
 ---
 
+## 2026-09-04 — "Cafe" cuisine tag reverted; one cafe filter, not two
+
+PR #17 (merged earlier the same day) added `cafe` as a separate _cuisine
+tag_ in `src/config/cuisines.ts`, deliberately kept independent from the
+pre-existing `venue.type === "cafe"` filter (the "Café" chip on the public
+filter bar, backed by `VenueFilters.isCafe`) — that separation was
+explicitly requested at the time.
+
+The site owner reversed that call the same day: two independently-settable
+"cafe" concepts is the wrong model — an admin could tag a truck with the
+cuisine "Cafe" without setting its Type to Cafe, or vice versa, and the
+public "Café" chip and "Cuisine → Cafe" filter would silently disagree
+about which venues matched. The correct model is one: admin sets a venue's
+**Type** to "Cafe" once, and the single existing "Café" chip
+(`venue.type === "cafe"`) is the one filter that reflects it.
+
+Fix was a clean one-line revert of the `cafe` entry in `CUISINES` — checked
+the dev DB first and confirmed zero venues had ever actually been tagged
+with the cuisine key (all `type = "cafe"` venues carried other cuisine tags
+like `other`/`american`/`chinese`/`fruit`), so no data cleanup was needed.
+Every consumer already reads `CUISINE_KEYS`/`CUISINES` dynamically, so no
+other file needed to change.
+
+---
+
 ## 2026-09-04 — PostHog silently drops captures from automated/headless browsers (not a bug)
 
 Recorded so a future session doesn't burn time re-diagnosing this: testing
