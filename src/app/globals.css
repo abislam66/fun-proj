@@ -2006,6 +2006,16 @@ button {
   color: var(--color-ink-secondary);
 }
 
+.about-page section a {
+  color: var(--color-cherry);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.about-page section a:hover {
+  color: var(--color-cherry-hover);
+}
+
 .directions-link {
   display: inline-flex;
   align-items: center;
