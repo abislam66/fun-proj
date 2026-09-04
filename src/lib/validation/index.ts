@@ -33,3 +33,8 @@ export {
   resolveVenuePhotoSchema,
   type SubmitRatingInput,
 } from "./rating";
+
+export {
+  updateOwnProfileSchema,
+  type UpdateOwnProfileInput,
+} from "./profile";

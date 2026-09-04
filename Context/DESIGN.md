@@ -107,9 +107,11 @@ Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). 
 - **Mobile:** Single column, back returns to explorer with preserved filters/map position.
 - **Desktop:** Typography-led reading column (~40rem) with generous vertical rhythm; optional sticky mini context (open status + primary cuisine) as the user scrolls. Not a cramped phone article stretched to 1200px. Back / “View on map” restores the split explorer state.
 
-### About / admin
+### About / account / admin
 
 - **About:** Readable prose column on desktop; quiet disclaimer and credits.
+- **Account (`/account`):** Same prose column as About. Signed-in only. Header: name, `@username`, “Class of {year}”. Then a compact profile form (name, username, class year) in a bordered `surface-raised` card matching the review composer, then the member's full rating/review list (venue name → stars → relative date → text → edit/delete). Class year is a decade-grid picker (trigger styled like `.input`, 5-column year chips, selected = cherry fill, data typeface) — never a native 50-row `<select>`. **Sign out** is a full-width white secondary button at the very bottom of this page — never in the site header. No avatar. No public `/u/[username]` route.
+- **Site header nav:** Dark marquee. Wordmark left; **About** + circular person-in-circle **profile icon** (`/account`, always shown — signed-out hits the sign-in gate). Profile icon is ~44px, cream stroke, cherry ring when current or hovered. No Sign out, no display-name link.
 - **Admin:** Same tokens, denser spacing, table-first — desktop-primary tooling is fine here.
 
 ### Desktop interaction bar
@@ -164,7 +166,8 @@ Maps to `Specs/architecture-planning.md`:
 - `components/map/` — `VenueMap`, `CampusBuildingLayer`, `VenuePinLayer`, `LocateControl`, `MapAttribution`
 - `components/venues/` — `VenueExplorer`, `VenueList`, `VenueListRow`, `VenueMiniCard`, `FilterBar`, `OpenStatusBadge`, `PaymentIcons`, `CuisineTags`
 - `components/reviews/` — `VenueReviews`, `StarRating`
-- `components/ui/` — Button, Chip, Sheet, Input, EmptyState, Wordmark
+- `components/account/` — `AccountProfileForm`, `AccountReviewList`
+- `components/ui/` — Button, Chip, Sheet, Input, EmptyState, Wordmark, YearPicker
 - Tokens in `globals.css` + Tailwind 4 `@theme`
 
 **Copy voice (Feature 4):** “Open · usually until {close}”, “Closed · opens {next}”, “Hours unknown” — never treat unknown as Closed; never promise a truck is open.
@@ -186,9 +189,8 @@ Maps to `Specs/architecture-planning.md`:
 
 ## Decisions Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-09-01 | Venue pins match zone-label chrome: square plate, extra text padding, line-and-dot stem | Site owner asked for the zone-plate look on detailed truck pins — stadium pills + triangle tails read as a different system; sharing the plate/stem language keeps the map one family |
+| 2026-09-04 | Sign out lives only at the bottom of `/account` (full-width white button) | Header stays About + profile icon on every viewport. Signing out is an account action, not chrome. |
+| 2026-09-04 | Header profile icon (always) + decade-grid class-year picker | Native 50-row year `<select>` was ugly on mobile. Decade chips match filter pills (cherry selected, data typeface, inline expand). Profile icon sits beside About so `/account` is one tap from every page; signed-out still hits the existing gate. Display name is no longer a header link. |
 | 2026-09-01 | No search overlay on the map — search/filters live only in the left pane (desktop) and the mobile sheet | The floating SEARCH window duplicated FilterBar and covered pins. DESIGN already places search on the list side; the map keeps HUD, legend, and controls. |
 | 2026-09-01 | Student ratings after the photo strip; pending member photos never on the public strip | TUE-12: aggregate + composer + review list belong with the venue facts, not mixed into the gallery. Member uploads wait in admin queue so the 10-photo strip stays curated. |
 | 2026-07-17 | Cherry Compass design system created | Design consultation from specs + competitive research; cream+serif indie alternative rejected as AI-default |

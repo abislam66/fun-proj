@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { VenueExplorer } from "@/components/venues/venue-explorer";
-import { getUser } from "@/lib/auth";
 import { getPublishedVenues, toVenue } from "@/lib/db/queries";
 
 type PageProps = {
@@ -43,32 +42,13 @@ export default async function HomePage({ searchParams }: PageProps) {
     else if (value !== undefined) params.set(key, value);
   });
 
-  // Independent failure handling: a broken session check shouldn't take
-  // down the whole map (degrade to signed-out instead), but a broken
-  // venue query has no graceful in-page fallback — that's the core
-  // content, so it gets the dedicated unavailable state.
-  const [venuesResult, userResult] = await Promise.allSettled([
-    getPublishedVenues(),
-    getUser(),
-  ]);
-
-  if (venuesResult.status === "rejected") {
-    console.error("Homepage: failed to load venues:", venuesResult.reason);
+  let venues;
+  try {
+    venues = (await getPublishedVenues()).map(toVenue);
+  } catch (error) {
+    console.error("Homepage: failed to load venues:", error);
     return <HomePageUnavailable />;
   }
-  if (userResult.status === "rejected") {
-    console.error("Homepage: failed to resolve session:", userResult.reason);
-  }
 
-  const venues = venuesResult.value.map(toVenue);
-  const session = userResult.status === "fulfilled" ? userResult.value : null;
-  const user = session ? { displayName: session.profile.displayName } : null;
-
-  return (
-    <VenueExplorer
-      initialQuery={params.toString()}
-      user={user}
-      venues={venues}
-    />
-  );
+  return <VenueExplorer initialQuery={params.toString()} venues={venues} />;
 }

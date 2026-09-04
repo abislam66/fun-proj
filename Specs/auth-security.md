@@ -23,7 +23,7 @@
 |----------|----------|
 | Expected number of users | Hundreds of active accounts during a semester; low-thousands ceiling. Anonymous readers are still the majority of map/list traffic — the account requirement only sits in front of individual venue pages. |
 | Growth expectation | Bounded by campus population — no viral growth expected or designed for. Free tiers hold at 10× the target. |
-| User model | Anonymous public (map/list/search) + `member` (any Google-authenticated visitor, created automatically) + `admin`(s) (no fixed cap, each provisioned individually via direct DB access). Identity for a member = a Google account (held by Supabase Auth) + an auto-generated unique display name (held in `profiles`); nothing about ratings/reviews/proposals is implemented yet — see the 2026-08-28 note above. |
+| User model | Anonymous public (map/list/search) + `member` (any Google-authenticated visitor, created automatically) + `admin`(s) (no fixed cap, each provisioned individually via direct DB access). Identity for a member = a Google account (held by Supabase Auth) + a unique display name and unique username (held in `profiles`); class year is optional. Public reviews show display name only. The private `/account` page is the only place username and class year appear. |
 | Do users belong to groups? | No. No orgs, teams, or groups — just the role enum. |
 | Anonymous / guest access? | The map, search, filters, and venue names/cards are anonymous-accessible by design. Opening an individual venue's detail page (`/eat/[slug]`) requires a signed-in session — a deliberate reversal of the original "no login-walling" non-goal, made 2026-08-28 (see `Context/decisions.md`). The problem-report form still lives on that page and is still identity-agnostic (IP-hash rate-limited, honeypot-protected, no `requireUser()` check) — it just now only ever gets reached by someone who has already signed in, since the page around it is gated. |
 
@@ -43,7 +43,7 @@ member path can ever produce an `admin` role (see Authorization & Roles).
 | Approach | **Delegate identity to Supabase Auth.** We never store or verify credentials ourselves, for either path. |
 | Why this approach | A solo nights-and-weekends project should not own password storage, verification-email plumbing, or an OAuth handshake. Supabase Auth is already in the stack (one vendor), free at this scale, and SSR/cookie-ready for Next.js. |
 | Identity provider — **admin** | Supabase Auth, **email + password**. Each admin account is provisioned individually, directly in the Supabase dashboard by the maintainer — there is no in-app signup or admin self-registration, for the first admin or any added later. |
-| Identity provider — **member** | Supabase Auth, **Google OAuth**, self-service — anyone with a Google account can create one by signing in. No `@temple.edu` restriction (a plain consumer Google account works). First sign-in auto-creates a `profiles` row (`role: "member"`, an auto-generated unique display name — see `src/lib/member-profile.ts`) via `/auth/callback`, the one route handler in the app (see Authentication Method below for why OAuth needs it). |
+| Identity provider — **member** | Supabase Auth, **Google OAuth**, self-service — anyone with a Google account can create one by signing in. No `@temple.edu` restriction (a plain consumer Google account works). First sign-in auto-creates a `profiles` row (`role: "member"`, an auto-generated unique display name and unique username — see `src/lib/member-profile.ts`) via `/auth/callback`, the one route handler in the app (see Authentication Method below for why OAuth needs it). |
 | Why admin uses a password, not OTP | V1 originally used OTP/magic-link for admin too. It never completed a session in practice: Supabase's PKCE flow requires the *same browser* that requested the link to also click it, which silently breaks when the email is opened on a different device, and is separately vulnerable to corporate link-scanners (e.g. Office 365 Safe Links) pre-fetching and consuming the single-use code. A single, low-volume admin account doesn't need passwordless — password auth removes both failure modes entirely. |
 | Why member uses Google OAuth, not email OTP | Reversed 2026-08-28 from the original OTP-gated `@temple.edu` plan — see `Context/decisions.md`. Google sign-in is one click, has no cross-device link-click failure mode, and doesn't depend on Supabase's SMTP pipeline (which had its own reliability problems for the admin OTP flow it replaced, `Context/decisions.md` 2026-08-18). The tradeoff: it's no longer verified-student-only, since any Google account works. |
 | Fallback / alternative | Admin: none beyond the password-recovery flow below. Member: none — Google is the only provider; don't add another (Apple, email OTP, etc.) without a deliberate decision, not as an incremental "why not both." |
@@ -89,10 +89,11 @@ defense against an open-redirect via this param.
 
 On first sign-in, the callback also calls `ensureMemberProfile()`
 (`src/lib/member-profile.ts`), which inserts a `profiles` row with
-`role: "member"` and an auto-generated display name (from the Google
+`role: "member"`, an auto-generated display name (from the Google
 account's name, falling back to the email's local part, then a generic
 default, with `uniqueSlug()`-style numeric-suffix collision handling — see
-`pickDisplayName()`). This is the **only** code path that creates a
+`pickDisplayName()`), and an auto-generated unique username (slug of that
+display name via `pickUsername()`). This is the **only** code path that creates a
 `profiles` row outside of the maintainer's direct DB access for admins, and
 it can never set `role: "admin"` — the insert is hardcoded to `"member"`.
 
@@ -187,10 +188,10 @@ there's no owned content to manage.
 
 | Stage | Decision |
 |-------|----------|
-| Account creation | Automatic on first Google sign-in — `ensureMemberProfile()` inserts a `profiles` row (`role: "member"`, auto-generated display name) the moment `/auth/callback` sees a new `auth.users.id`. No admin involvement, no approval step. |
+| Account creation | Automatic on first Google sign-in — `ensureMemberProfile()` inserts a `profiles` row (`role: "member"`, auto-generated display name and username) the moment `/auth/callback` sees a new `auth.users.id`. No admin involvement, no approval step. |
 | Password reset | N/A — Google owns the credential; TuEats never sees or stores one. |
 | Account recovery | Whatever Google's own account-recovery flow offers — outside this app entirely. |
-| Profile updates | Not exposed — no UI to change the auto-generated display name yet. Revisit once display names are user-facing beyond the header (i.e. once reviews ship). |
+| Profile updates | Private `/account` page — member can change display name, username, and class year. Display-name and username changes share a 24-hour cooldown (`identity_changed_at`). No profile photos. |
 | Deactivation / deletion | Manual, dashboard-only today (delete the Supabase Auth user and/or the `profiles` row) — no self-service deletion UI exists yet. The `/about` disclosure promises a contact route for deletion requests; that's the mechanism until self-service ships. |
 | Who administers users | The admin(s), via the Supabase dashboard — same as admin accounts. |
 
@@ -204,8 +205,10 @@ further here until that phase is scoped.)*
 
 | Data | Classification | Protection |
 |------|---------------|------------|
-| Account email (admin's, or a member's Google email) | PII — the only real PII in the system | Lives **only** in Supabase `auth.users`. Never copied into app tables (`ensureMemberProfile()` only ever writes `id`, `displayName`, `role` — never the Google account's email), never in any query result, page payload, or log line. |
-| Display name | Public by design | The only identity ever rendered or serialized. |
+| Account email (admin's, or a member's Google email) | PII — the only real PII in the system | Lives **only** in Supabase `auth.users`. Never copied into app tables (`ensureMemberProfile()` only ever writes `id`, `displayName`, `username`, `role` — never the Google account's email), never in any query result, page payload, or log line. |
+| Display name | Public by design | The identity rendered on reviews. Unique. |
+| Username | Private account handle | Unique; shown on `/account` only — not a public profile URL, not shown on reviews. |
+| Class year | Private account field | Optional; shown on `/account` only. |
 | User geolocation ("locate me" on the map) | Sensitive | **Never leaves the browser.** Used client-side by MapLibre only; no endpoint receives it, nothing stores it. |
 | IP addresses (anonymous reports) | PII | Never stored raw — salted hash (`IP_HASH_SALT`) for rate limiting only. |
 | Ratings & review text | Public UGC | Tied to display name; moderation via status flags, never hard-deleted out from under reports. |
@@ -245,7 +248,7 @@ further here until that phase is scoped.)*
 - Validate every request body with schemas; reject unexpected fields.
 - Enforce enum values and sensible bounds server-side.
 - Never trust client-supplied identity for authorization decisions.
-- Concretely: every server action parses its input with a **strict Zod schema** from `lib/validation/` before anything else — unknown keys rejected, enums exact, lengths capped (review ≤ 1000, report note ≤ 500, display name 3–30), numbers bounded (stars 1–5 integer, lat/lng inside the campus bounding box for proposals).
+- Concretely: every server action parses its input with a **strict Zod schema** from `lib/validation/` before anything else — unknown keys rejected, enums exact, lengths capped (review ≤ 1000, report note ≤ 500, display name 3–30, username 3–20 `^[a-z][a-z0-9_]+$`), numbers bounded (stars 1–5 integer, class year 1990–2040, lat/lng inside the campus bounding box for proposals).
 - IDs from the client select *which* row **only in combination with** the session user's ID — never alone.
 
 ---
@@ -254,7 +257,7 @@ further here until that phase is scoped.)*
 
 - Sessions rotate (refresh token rotation); sign-out revokes server-side, not just cookie deletion.
 - The strike system (`struck_at`) removes write access without destroying the account or its content — reversible, auditable moderation. Applies once the member phase ships; N/A in V1.
-- Display-name changes are rate-limited to keep identities stable (anti-impersonation). Applies once the member phase ships; N/A in V1 (no display names exist).
+- Display-name and username changes are rate-limited (one identity change per 24 hours via `identity_changed_at`) to keep identities stable (anti-impersonation).
 - Admin sign-in and password-reset requests rely on Supabase Auth's own built-in rate limiting; there is no additional app-level limiter (single low-volume admin account, low abuse surface). Revisit if real abuse is ever observed — the pattern to copy is `assertProblemReportAllowed` in `lib/ratelimit.ts`.
 - Admin accounts are the highest-value target in V1 — there are no other privileged accounts. The admin role grant lives only in the DB (never settable via sign-in or password reset, never self-service), and every admin action is attributable to a specific `auth.users.id`/`profiles` row even when more than one person holds the role.
 

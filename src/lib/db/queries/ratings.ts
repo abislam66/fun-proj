@@ -2,7 +2,7 @@ import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 
 import { RATING_UPSERT_RATE_LIMIT } from "@/config/site";
 import { db } from "@/lib/db";
-import { profiles, ratings, type RatingRow } from "@/lib/db/schema";
+import { profiles, ratings, venues, type RatingRow } from "@/lib/db/schema";
 import { studentRatingSummary, type StudentRatingSummary } from "@/lib/ratings";
 import { RateLimitError, isOverLimit } from "@/lib/ratelimit";
 
@@ -14,6 +14,20 @@ export type VenueReview = {
   status: RatingRow["status"];
   removedReason: string | null;
   displayName: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type MemberReview = {
+  id: string;
+  venueId: string;
+  venueSlug: string;
+  venueName: string;
+  venueStatus: "draft" | "published" | "retired";
+  stars: number;
+  reviewText: string | null;
+  status: RatingRow["status"];
+  removedReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -87,6 +101,46 @@ export async function listVenueReviews(
     ...row,
     stars: Number(row.stars),
   }));
+}
+
+/** Every rating this user has ever submitted, including removed and star-only. */
+export async function listRatingsForUser(
+  userId: string,
+): Promise<MemberReview[]> {
+  const rows = await db
+    .select({
+      id: ratings.id,
+      venueId: ratings.venueId,
+      venueSlug: venues.slug,
+      venueName: venues.name,
+      venueStatus: venues.status,
+      stars: ratings.stars,
+      reviewText: ratings.reviewText,
+      status: ratings.status,
+      removedReason: ratings.removedReason,
+      createdAt: ratings.createdAt,
+      updatedAt: ratings.updatedAt,
+    })
+    .from(ratings)
+    .innerJoin(venues, eq(venues.id, ratings.venueId))
+    .where(eq(ratings.userId, userId))
+    .orderBy(desc(ratings.updatedAt));
+
+  return rows.map((row) => ({
+    ...row,
+    stars: Number(row.stars),
+  }));
+}
+
+export async function listVenueSlugsRatedByUser(
+  userId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ slug: venues.slug })
+    .from(ratings)
+    .innerJoin(venues, eq(venues.id, ratings.venueId))
+    .where(eq(ratings.userId, userId));
+  return rows.map((row) => row.slug);
 }
 
 export async function getUserRatingForVenue(

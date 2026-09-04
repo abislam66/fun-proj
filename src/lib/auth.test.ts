@@ -7,6 +7,9 @@ function profile(overrides: Partial<ProfileRow>): ProfileRow {
   return {
     id: "00000000-0000-4000-8000-000000000001",
     displayName: "tester",
+    username: "tester",
+    graduationYear: null,
+    identityChangedAt: null,
     role: "member",
     struckAt: null,
     createdAt: new Date(),

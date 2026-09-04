@@ -72,7 +72,6 @@ export default async function VenueDetailPage({
 
   const venue: Venue = toVenue(row);
   const backPath = safeInternalPath(query.from);
-  const user = { displayName: session.profile.displayName };
 
   return (
     <VenueDetail
@@ -99,7 +98,6 @@ export default async function VenueDetailPage({
         createdAt: review.createdAt.toISOString(),
         updatedAt: review.updatedAt.toISOString(),
       }))}
-      user={user}
       userId={session.id}
       venue={venue}
     />

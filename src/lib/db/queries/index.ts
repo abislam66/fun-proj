@@ -35,12 +35,16 @@ export {
 export {
   getProfileById,
   listDisplayNames,
+  listUsernames,
   insertMemberProfile,
+  updateOwnProfile,
 } from "./profiles";
 export {
   getRatingAggregatesByVenueIds,
   getVenueRatingAggregate,
   listVenueReviews,
+  listRatingsForUser,
+  listVenueSlugsRatedByUser,
   getUserRatingForVenue,
   assertRatingUpsertAllowed,
   upsertRating,
@@ -48,4 +52,5 @@ export {
   getRatingById,
   removeRating,
   type VenueReview,
+  type MemberReview,
 } from "./ratings";

@@ -140,15 +140,32 @@ export const venuePhotos = pgTable(
 );
 
 /** 1:1 with Supabase auth.users — email lives only in Auth, never here. */
-export const profiles = pgTable("profiles", {
-  id: uuid("id").primaryKey(),
-  displayName: text("display_name").notNull().unique(),
-  role: userRoleEnum("role").notNull().default("member"),
-  struckAt: timestamp("struck_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const profiles = pgTable(
+  "profiles",
+  {
+    id: uuid("id").primaryKey(),
+    displayName: text("display_name").notNull().unique(),
+    username: text("username").notNull().unique(),
+    graduationYear: smallint("graduation_year"),
+    /** Set only when display_name or username changes — identity cooldown. */
+    identityChangedAt: timestamp("identity_changed_at", { withTimezone: true }),
+    role: userRoleEnum("role").notNull().default("member"),
+    struckAt: timestamp("struck_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "profiles_username_format",
+      sql`${table.username} ~ '^[a-z][a-z0-9_]{2,19}$'`,
+    ),
+    check(
+      "profiles_graduation_year_range",
+      sql`${table.graduationYear} IS NULL OR (${table.graduationYear} BETWEEN 1990 AND 2040)`,
+    ),
+  ],
+);
 
 export const problemReports = pgTable("problem_reports", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -191,6 +208,7 @@ export const ratings = pgTable(
   (table) => [
     unique("ratings_venue_user_unique").on(table.venueId, table.userId),
     index("ratings_venue_id_idx").on(table.venueId),
+    index("ratings_user_id_idx").on(table.userId),
     check("ratings_stars_range", sql`${table.stars} BETWEEN 1 AND 5`),
     check(
       "ratings_review_text_length",
