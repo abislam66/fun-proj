@@ -20,6 +20,11 @@ export async function listDisplayNames(): Promise<Set<string>> {
   return new Set(rows.map((row) => row.displayName));
 }
 
+export async function listUsernames(): Promise<Set<string>> {
+  const rows = await db.select({ username: profiles.username }).from(profiles);
+  return new Set(rows.map((row) => row.username));
+}
+
 /**
  * Always inserts with role: "member" — there is no code path from a Google
  * sign-in to any other role. Returns null if a concurrent request already
@@ -28,11 +33,36 @@ export async function listDisplayNames(): Promise<Set<string>> {
 export async function insertMemberProfile(
   id: string,
   displayName: string,
+  username: string,
 ): Promise<ProfileRow | null> {
   const [row] = await db
     .insert(profiles)
-    .values({ id, displayName, role: "member" })
+    .values({ id, displayName, username, role: "member" })
     .onConflictDoNothing()
     .returning();
   return row ?? null;
+}
+
+export async function updateOwnProfile(
+  id: string,
+  values: {
+    displayName: string;
+    username: string;
+    graduationYear: number | null;
+    identityChanged: boolean;
+  },
+): Promise<ProfileRow> {
+  const now = new Date();
+  const [row] = await db
+    .update(profiles)
+    .set({
+      displayName: values.displayName,
+      username: values.username,
+      graduationYear: values.graduationYear,
+      ...(values.identityChanged ? { identityChangedAt: now } : {}),
+    })
+    .where(eq(profiles.id, id))
+    .returning();
+  if (!row) throw new Error("Profile not found");
+  return row;
 }

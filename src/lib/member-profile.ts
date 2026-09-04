@@ -1,13 +1,16 @@
 import type { User } from "@supabase/supabase-js";
 
 import {
+  MAX_DISPLAY_NAME_LENGTH,
+  MIN_DISPLAY_NAME_LENGTH,
+} from "@/config/site";
+import {
   getProfileById,
   insertMemberProfile,
   listDisplayNames,
+  listUsernames,
 } from "@/lib/db/queries";
-
-const MIN_DISPLAY_NAME_LENGTH = 3;
-const MAX_DISPLAY_NAME_LENGTH = 30;
+import { pickUsername } from "@/lib/username";
 
 function baseDisplayName(user: User): string {
   const metadata = user.user_metadata as Record<string, unknown> | undefined;
@@ -63,7 +66,11 @@ export async function ensureMemberProfile(user: User): Promise<void> {
   const existing = await getProfileById(user.id);
   if (existing) return;
 
-  const existingNames = await listDisplayNames();
+  const [existingNames, existingUsernames] = await Promise.all([
+    listDisplayNames(),
+    listUsernames(),
+  ]);
   const displayName = pickDisplayName(user, existingNames);
-  await insertMemberProfile(user.id, displayName);
+  const username = pickUsername(displayName, existingUsernames, user.id);
+  await insertMemberProfile(user.id, displayName, username);
 }

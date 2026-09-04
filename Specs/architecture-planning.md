@@ -11,7 +11,7 @@
 TuEats is a **single Next.js (App Router) application on Vercel** backed by **Supabase (Postgres + Auth)**. There is no separate backend service. The app has three surfaces:
 
 1. **Public surface** (`/`, `/eat/[slug]`, `/about`) — statically generated with ISR and **tag-based revalidation**. Venue data is fetched in React Server Components and passed to client components; the map (MapLibre GL) and list consume the *same* payload so filters stay in sync. Pages carry hours data and compute **"open now" in the browser** — the status is never baked into cached HTML, so a page cached at 9 a.m. is still correct at 9 p.m.
-2. **Account surface** (`/account/*`) — dynamic, cookie-authenticated. Signup, "my ratings & reviews," account deletion.
+2. **Account surface** (`/account`) — dynamic, cookie-authenticated. Private profile (display name, username, class year) and "my ratings & reviews." Account deletion is still later.
 3. **Admin surface** (`/admin/*`) — dynamic, role-gated. Venue CRUD, draft/publish/retire/verify, Google snapshot capture, and the three queues (proposals, review reports, problem reports).
 
 **The single write path** is the load-bearing rule: every mutation — admin or user, authenticated or anonymous — is a **server action** that runs *validate (Zod) → authorize → rate-limit → write (Drizzle) → revalidateTag*. The browser never talks to the database. Supabase's auto-generated REST surface (PostgREST) is neutralized with deny-all RLS policies; the app reaches Postgres only server-side through the connection pooler.
@@ -56,10 +56,10 @@ tueats/
 ├── src/
 │   ├── app/
 │   │   ├── (public)/
-│   │   │   ├── page.tsx            # home: map + list (RSC shell → client <VenueExplorer/>)
-│   │   │   ├── eat/[slug]/page.tsx # venue detail (ISR, generateStaticParams)
-│   │   │   └── about/page.tsx      # disclaimer, content policy, credits
-│   │   ├── account/                # signup/signin, my ratings & reviews, delete account (dynamic)
+│   │   │   ├── page.tsx            # home: map + list
+│   │   │   ├── eat/[slug]/page.tsx # venue detail
+│   │   │   ├── about/page.tsx      # disclaimer, content policy, credits
+│   │   │   └── account/page.tsx    # private profile + my ratings (dynamic)
 │   │   ├── admin/                  # venue CRUD + queues (role-gated, dynamic)
 │   │   ├── auth/callback/route.ts  # Supabase OTP code exchange (only route handler)
 │   │   ├── layout.tsx
@@ -68,12 +68,13 @@ tueats/
 │   │   ├── map/                    # MapLibre wrapper — lazy client component (dynamic import)
 │   │   ├── venues/                 # cards, list rows, filter bar, status badge
 │   │   ├── reviews/                # composer, review list, report dialog, star input
+│   │   ├── account/                # private profile form + own review list
 │   │   └── ui/                     # shared primitives
 │   ├── actions/                    # server actions by domain:
 │   │   ├── ratings.ts              #   submit/delete rating+review
 │   │   ├── proposals.ts            #   submit venue proposal
 │   │   ├── reports.ts              #   report review (authed) / report problem (anon)
-│   │   ├── account.ts              #   signup, profile, deletion
+│   │   ├── account.ts              #   update own profile
 │   │   └── admin.ts                #   venue CRUD, queues, snapshots, strikes
 │   ├── lib/
 │   │   ├── db/                     # drizzle client (pooled), schema.ts, queries/
@@ -152,7 +153,10 @@ Postgres enums: `venue_type` (`truck | restaurant | cafe | vending`), `venue_sta
 | Field | Type | Description |
 |-------|------|-------------|
 | id | uuid PK → auth.users | Supabase Auth owns email + verification |
-| display_name | text UNIQUE NOT NULL | The only public identity; email never leaves Supabase Auth |
+| display_name | text UNIQUE NOT NULL | Public identity on reviews; email never leaves Supabase Auth |
+| username | text UNIQUE NOT NULL | Private handle on `/account` (`^[a-z][a-z0-9_]{2,19}$`); not a public profile URL |
+| graduation_year | smallint NULL | Class year (graduated or will graduate); CHECK 1990–2040 |
+| identity_changed_at | timestamptz | Last display-name or username change; 24h cooldown |
 | role | user_role | `member` / `admin` |
 | struck_at | timestamptz | Non-null = write access revoked (reads unaffected) |
 | created_at | timestamptz | |

@@ -118,14 +118,14 @@ Each feature includes a short description and a set of acceptance criteria writt
 
 ### Feature 8: Campus account signup
 **As a** member of the Temple community,
-**I want to** create an account with my `@temple.edu` email,
-**So that** I can rate, review, and propose venues.
+**I want to** create an account with Google,
+**So that** I can rate, review, and manage my profile.
 
 **Acceptance Criteria:**
-- [ ] Given signup, when I use a non-`@temple.edu` address, then registration is refused with a clear explanation.
-- [ ] Given a valid campus address, when I verify it via emailed link/code, then my account activates and I choose a public display name (only my display name is ever shown — email is never exposed).
-- [ ] Given I am signed out or have no account, when I browse, then every read surface works identically — auth gates writing only.
-- [ ] Given my account, when I want out, then I can delete it, removing my PII while my reviews are either deleted with it or anonymized (my choice at deletion).
+- [ ] Given signup, when I sign in with Google, then my account activates with an auto-generated unique display name and unique username.
+- [ ] Given my account, when I open `/account`, then I can change my display name, username, and class year (the year I graduated or will graduate). Email is never shown.
+- [ ] Given I am signed out or have no account, when I browse the map/search/filters, then those read surfaces work identically — auth gates venue detail pages and writing.
+- [ ] Given my account, when I want out, then I can delete it, removing my PII while my reviews are either deleted with it or anonymized (my choice at deletion). *(Self-service deletion UI is still later; contact via `/about` until then.)*
 
 ---
 
@@ -138,7 +138,7 @@ Each feature includes a short description and a set of acceptance criteria writt
 - [ ] Given a venue page, when I tap a star value, then my rating saves instantly and the aggregate ("4.6 ★ · 212 ratings") updates.
 - [ ] Given I already rated a venue, when I rate again, then my rating is updated (one per user per venue), and I can remove it entirely.
 - [ ] Given aggregates, when displayed on cards, lists, and detail pages, then the student rating is labeled as such and never merged with the Google rating.
-- [ ] Given my account page, when I open "My ratings & reviews", then I see everything I've posted and can jump straight to edit or delete any of it — a private self-view, not a public profile.
+- [ ] Given I am signed in, when I open `/account`, then I see every rating and review I have submitted (including star-only and ones later removed for policy) and can jump to the venue to edit or delete from this page — a private self-view, not a public profile.
 
 ---
 
@@ -260,7 +260,7 @@ Each feature includes a short description and a set of acceptance criteria writt
 
 - **Ordering, payments, or delivery** — TuEats points, it doesn't transact.
 - **Meal-plan dining** (dining halls, meal-swipe venues) — permanently out; it defines the category boundary.
-- **Social graph** — no public profiles beyond display names, no followers, feeds, or DMs. (The private "my ratings & reviews" page in Feature 9 is account management, not a profile.)
+- **Social graph** — no public profiles, no followers, feeds, or DMs. (The private `/account` page in Features 8–9 is account management: name, username, class year, and the member's own ratings/reviews. Nobody else can open it. Profile photos are out of this slice.)
 - **Real-time truck GPS tracking** — locations are curated; Temple trucks are stationary all day anyway.
 - **Native iOS/Android apps** — responsive web only.
 - **Automated scraping of any source** — the Google reference rating is a hand-captured, numbers-only snapshot; nothing automated ever touches Google.

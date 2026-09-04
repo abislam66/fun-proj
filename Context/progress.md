@@ -7,6 +7,8 @@
 
 ## Current status
 
+- **Phase:** Phase 2 in progress (truck directory + member accounts/ratings). Public reads, anonymous reports, admin auth, admin venue CRUD, member Google OAuth, ratings/reviews, member photo queue, and a private `/account` page (name, username, class year, own reviews) are in code. The account page lives on `feature/member-account-profile` until merged; it needs migration `0010_wild_frightful_four.sql` applied before that deploy.
+
 - **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place. The live venue table has grown past the original 69-row KML seed (74 rows now — 61 published/draft, 13 retired) via ordinary admin edits made outside this progress log between sessions; this doc previously understated that and has been corrected as of 2026-08-21 (see that date's entry).
 - **Map/UX overhaul (map-zones branch, 2026-08-25):** campus-overview zones (street-line + building-fill marks), baked venue-name pills that occlude instead of bleeding, pin-anchored popup mini-card with staged camera arrival (arrow disc, `$12` price placeholder), list rows select-on-map (detail pages only via the popup), inline filter drawer with cherry toggle pills, multi-zone map support, mobile sheet/controls fixes, dimmed zoom-gated dining pins. See the 2026-08-25 entries below and `DESIGN.md`'s changelog. (The co-founder's venue-photo gallery from this branch was later consolidated onto a DB backend the same day — see below.)
 - **Admin auth is email/password**, not OTP/magic-link — the OTP flow never completed a real session end-to-end (see `Context/decisions.md`'s 2026-08-18 entries) and was replaced outright. Authorization is unchanged: `requireAdmin()` still requires a `profiles` row with `role: "admin"`, granted only via direct DB access. `Specs/auth-security.md` now documents this V1 model (anonymous public / password admin(s) / future OTP student accounts) and explicitly allows for more than one admin account — no more spec/implementation mismatch.
@@ -25,7 +27,7 @@
 - **Member ratings/reviews + photo queue as of 2026-09-01 (TUE-12).** Signed-in members can leave a 1–5 star rating with optional review text (one row per user per venue) and submit gallery photos that stay pending until an admin approves them. Public strip still shows published photos only. Storage is still Vercel Blob; no Supabase Storage. Venue proposals and Google snapshots are still out of this slice. Forms cannot be used in production until Google OAuth dashboard config is finished (same blocker as 2026-08-28).
 - **Not yet done: the manual Google Cloud + Supabase dashboard configuration this depends on.** Code is implemented, typechecked, linted, tested (86/86), and builds clean, but Google sign-in will not actually work until the site owner: (1) creates a Google Cloud OAuth Client ID and configures the consent screen, (2) enables the Google provider in Supabase (Authentication → Providers) with that Client ID/Secret, and (3) adds `https://tueats.co/auth/callback` and `http://localhost:3000/auth/callback` to Supabase's redirect allow-list. See the conversation record for the exact steps. Not pushed/deployed pending that + the site owner's review.
 - **Next up:**
-  1. Run migration `0009_motionless_shocker.sql` (`pnpm db:migrate` with `DIRECT_DATABASE_URL`) on the live DB **before** deploying this branch — `getPublishedVenues` now reads `ratings`, so the homepage will error until the table exists.
+  1. Run migration `0010_wild_frightful_four.sql` (`pnpm db:migrate` with `DIRECT_DATABASE_URL`) on the live DB **before** deploying `feature/member-account-profile` — `/account` and member sign-in insert usernames. Migration `0009` (ratings) must already be applied.
   2. Complete the Google Cloud + Supabase manual configuration above, then do a real end-to-end sign-in test (not just local verification) before pushing.
   3. Retire **Vegan Tree** via `/admin` — reconfirmed 2026-08-27 as CLOSED per Yelp (this was already flagged 2026-08-21; still not acted on).
   4. Resolve **Pretzel Dough**'s identity — still unconfirmed after a second research pass 2026-08-27; the nearest name match found (Philly Pretzel Factory) is a different brand, not a confirmed match.
@@ -40,6 +42,24 @@
   13. PostHog (2026-09-04, updated after merge): session recording being live is now confirmed (remote config returns a real `sessionRecording` object, not `false`). Still needs a human: browse tueats.co normally for a few seconds, then in the PostHog UI check that one real event has no `$ip`/`$geoip_*` properties and that a session recording appears with masked inputs — automated (Playwright) verification can't do this because PostHog's bot filter correctly drops every capture from a detectably-automated browser, see `Context/decisions.md` 2026-09-04 (post-merge entry).
 
 ---
+
+## 2026-09-04 — Sign out moved off the header
+
+Sign out is no longer in the site header on any viewport. It sits at the
+bottom of `/account` as a full-width white button, after the ratings list.
+
+## 2026-09-04 — Class-year picker + header profile icon
+
+Replaced the native 50-row year `<select>` with an inline decade-grid picker
+(5-column year chips, cherry selected, decade arrows). Header now has a
+person-in-circle icon next to About linking to `/account` (always shown;
+signed-out hits the existing gate). Display name is no longer a header link;
+Sign out stays in the header on wider screens and on the account page for
+phones.
+
+## 2026-09-04 — Private member account page (name, username, class year, own reviews)
+
+Added `/account` as a signed-in-only page: edit display name and unique username, set class year, and see every rating/review the member has submitted (including star-only and removed). Header name links here. No profile photos (stakeholder skipped). Specs updated to match: still no public profiles. Migration `0010_wild_frightful_four.sql` backfills usernames for existing `profiles` rows. Details: `Context/decisions.md` 2026-09-04.
 
 ## 2026-09-04 — PostHog merged to main and verified live on tueats.co
 

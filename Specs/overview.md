@@ -41,7 +41,7 @@ There is no single place where someone standing on campus can see everything nea
 - **No AI/LLM features in Phase 1.** Candidates (e.g., "what should I eat?" recommendations) are deferred to Phase 2 — see `llm-integration.md`.
 - **No ordering, payments, or delivery.** TuEats tells you where to go; the transaction happens at the counter or window.
 - **No login-walled content.** Anyone can browse venues, ratings, and reviews without an account; an account (verified `@temple.edu`) is required only to *write* — reviews, ratings, and new-venue proposals.
-- **No social graph.** Accounts exist to rate, review, and submit: a display name and that's it — no public profiles, followers, DMs, or feeds. (Users get a private page to manage their own ratings and reviews; nobody else sees it.)
+- **No social graph.** Accounts exist to rate, review, and submit. Each member has a **private** `/account` page (display name, unique username, class year, and their own ratings/reviews) that nobody else can open. No public profiles, followers, DMs, or feeds.
 - **No unmoderated publishing of structural data.** User-proposed venues go to an admin approval queue, never straight to the map.
 - **No scraping or unofficial APIs.** Nothing automated ever touches Google properties; the Google reference rating is a numbers-only snapshot captured by hand in the admin UI.
 - **No real-time GPS tracking.** Truck locations are curated data, not live telemetry — the trucks are stationary throughout the day anyway.

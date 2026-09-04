@@ -70,7 +70,6 @@ function HoursTable({ hours }: { hours: VenueHours | null }) {
 export function VenueDetail({
   venue,
   backPath,
-  user,
   reviews,
   ownRating,
   userId,
@@ -78,7 +77,6 @@ export function VenueDetail({
 }: {
   venue: Venue;
   backPath: string;
-  user: { displayName: string } | null;
   reviews: PublicReview[];
   ownRating: OwnRating | null;
   userId: string;
@@ -101,7 +99,7 @@ export function VenueDetail({
         event={AnalyticsEvent.VenueDetailViewed}
         properties={{ venue_id: venue.id, venue_type: venue.type }}
       />
-      <SiteHeader user={user} />
+      <SiteHeader />
       <main className="detail-page">
         <Link className="back-link" href={backPath}>
           ← Back to explore

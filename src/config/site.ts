@@ -54,9 +54,55 @@ export const MAX_VENUE_PHOTOS = 10;
 
 export const MAX_REVIEW_TEXT_LENGTH = 1000;
 
+export const MIN_DISPLAY_NAME_LENGTH = 3;
+export const MAX_DISPLAY_NAME_LENGTH = 30;
+export const DISPLAY_NAME_PATTERN = /^[a-zA-Z0-9 ]+$/;
+
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 20;
+/** Starts with a letter; lowercase letters, digits, underscore. */
+export const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,19}$/;
+export const USERNAME_PATTERN_SOURCE = "^[a-z][a-z0-9_]{2,19}$";
+
+export const GRADUATION_YEAR_MIN = 1990;
+export const GRADUATION_YEAR_MAX = 2040;
+
+/**
+ * Route-shaped and brand-shaped handles nobody should be able to claim.
+ * Checked in Zod, not the DB — the unique constraint still applies.
+ */
+export const RESERVED_USERNAMES = [
+  "about",
+  "account",
+  "admin",
+  "api",
+  "auth",
+  "eat",
+  "help",
+  "login",
+  "me",
+  "moderator",
+  "owl",
+  "owls",
+  "profile",
+  "root",
+  "settings",
+  "signin",
+  "signup",
+  "support",
+  "team",
+  "tueats",
+] as const;
+
 /** Member rating upserts per user per rolling day. */
 export const RATING_UPSERT_RATE_LIMIT = {
   max: 5,
+  windowMs: 24 * 60 * 60 * 1000,
+} as const;
+
+/** One display-name or username change per member per rolling day. */
+export const PROFILE_IDENTITY_RATE_LIMIT = {
+  max: 1,
   windowMs: 24 * 60 * 60 * 1000,
 } as const;
 

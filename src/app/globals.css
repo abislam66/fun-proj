@@ -272,7 +272,7 @@ button {
 .site-header nav {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
   color: #d9cfc8;
   font-size: var(--text-small);
   font-weight: 700;
@@ -290,8 +290,34 @@ button {
   border-color: var(--color-cherry-hover);
 }
 
-.site-header .account-name {
-  color: #a89a92;
+.site-header nav a[aria-current="page"]:not(.header-profile) {
+  color: var(--color-cherry-hover);
+  border-color: var(--color-cherry);
+}
+
+.site-header nav a.header-profile {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  color: #d9cfc8;
+}
+
+.site-header nav a.header-profile:hover,
+.site-header nav a.header-profile[aria-current="page"] {
+  color: var(--color-cherry-hover);
+  border-color: rgba(213, 63, 90, 0.55);
+  background: rgba(157, 34, 53, 0.22);
+}
+
+@media (max-width: 40rem) {
+  .site-header nav {
+    gap: var(--spacing-sm);
+  }
 }
 
 .wordmark {
@@ -1507,19 +1533,218 @@ button {
   color: var(--color-ink-secondary);
 }
 
-.account-control {
+.account-page h1 {
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  letter-spacing: -0.04em;
+}
+
+.account-meta {
+  margin: var(--spacing-sm) 0 var(--spacing-xl);
+  color: var(--color-ink-secondary);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+}
+
+.account-page .account-sign-out {
+  width: 100%;
+  min-height: 3.5rem;
+  margin-top: var(--spacing-2xl);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-body);
+}
+
+.account-page .account-sign-out:hover {
+  border-color: var(--color-ink-secondary);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.account-profile-form {
+  display: grid;
+  gap: var(--spacing-md);
+  margin: var(--spacing-md) 0 0;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-raised);
+}
+
+.account-profile-form label {
   display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: var(--text-small);
+}
+
+.account-username-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-ink-muted);
+}
+
+.account-username-field .input {
+  flex: 1;
+}
+
+.account-year-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: var(--text-small);
+}
+
+.account-year-field legend {
+  padding: 0;
+}
+
+.year-picker {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.year-picker-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.year-picker-trigger[aria-expanded="true"] {
+  border-color: var(--color-cherry);
+}
+
+.year-picker-chevron {
+  color: var(--color-ink-muted);
+  font-size: 0.75rem;
+}
+
+.year-picker-panel {
+  display: grid;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.year-picker-decade {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 2.75rem;
   align-items: center;
   gap: var(--spacing-sm);
 }
 
-.account-name {
-  color: var(--color-ink-muted);
-  font-weight: 500;
+.year-picker-decade p {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 
-.account-sign-out {
-  font-size: inherit;
+.year-picker-nav {
+  display: inline-flex;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.year-picker-nav:hover:not(:disabled) {
+  border-color: var(--color-cherry);
+  color: var(--color-cherry);
+}
+
+.year-picker-nav:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.year-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--spacing-xs);
+}
+
+.year-picker-year {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.year-picker-year:hover {
+  border-color: var(--color-cherry);
+  background: var(--color-cherry-soft);
+  color: var(--color-cherry-deep);
+}
+
+.year-picker-year.is-selected {
+  border-color: var(--color-cherry);
+  background: var(--color-cherry);
+  color: #fff;
+}
+
+.year-picker-year.is-selected:hover {
+  background: var(--color-cherry-hover);
+  color: #fff;
+}
+
+.year-picker-clear,
+.year-picker-hint {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-small);
+}
+
+.year-picker-clear {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-cherry);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.account-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .back-link {

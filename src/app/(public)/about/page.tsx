@@ -1,15 +1,11 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
-import { getUser } from "@/lib/auth";
 
 export default async function AboutPage() {
-  const session = await getUser();
-  const user = session ? { displayName: session.profile.displayName } : null;
-
   return (
     <div className="public-page">
-      <SiteHeader user={user} />
+      <SiteHeader />
       <main className="about-page">
         <p className="eyebrow">About the guide</p>
         <h1>Campus food, without the guesswork.</h1>
@@ -43,7 +39,9 @@ export default async function AboutPage() {
             sign-in through Supabase. We only ever see your name and email from
             Google to create your account &mdash; your email is never shown to
             anyone or stored outside of authentication, and your Google password
-            is never seen by TuEats at all.
+            is never seen by TuEats at all. Once you&apos;re signed in, tap the
+            profile icon in the header to open your account: change your name,
+            username, and class year, and see every rating you&apos;ve posted.
           </p>
         </section>
         <section>
