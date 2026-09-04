@@ -7,6 +7,39 @@
 
 ---
 
+## 2026-09-04 — Zone overlays: remove the visual layers entirely, keep the click target
+
+Asked to remove "visible zone polygon/rectangle outlines and dotted/dashed
+zone lines" while keeping badges and filtering. Two ways to read that: (a)
+strip only the border/dashed-line strokes but keep the colored wash fill,
+or (b) strip every drawn shape (wash, outline, dashed line) and leave just
+the invisible hit-polygon + badge. Went with (b) — "only remove the visual
+geometry overlays" (plural) read as all of them, and a lone colored
+rectangle with no border reads as strangely worse, not better, than no
+fill at all. `HIT_LAYER_ID`'s `fill-opacity: 0.01` layer stays mounted
+(it's what makes clicking anywhere in a zone still select it) — it was
+already functionally invisible before this change, so "keep filtering
+behavior unchanged" and "remove the visible geometry" aren't in tension.
+If a future ask wants the wash back but not the outline, that's
+re-adding one `map.addLayer` call, not undoing this.
+
+## 2026-09-04 — Bulk cuisine editing: "Cafe" excluded on purpose
+
+Asked for admin bulk cuisine add/remove "such as Cafe or Halal." Halal is
+a real `CUISINES` key; Cafe is not — it was deliberately reworked back in
+`feat/cafe-cuisine-tag`/`a34d910` into a `venue.type` value (`isCafe` in
+`filterVenues` checks `venue.type === "cafe"`, not a cuisines-array
+membership). Bulk-adding "Cafe" the way this feature adds "Halal" would
+mean flipping a venue's fundamental type, not appending a tag — a
+different, much bigger operation (and arguably premature: `CLAUDE.md`'s
+phase discipline defers new venue-type work to milestone ③, and retyping
+an existing truck as a cafe isn't reversible the way an array tag is).
+Built the bulk tool against `CUISINE_KEYS` only, added a schema test
+asserting `cuisine: "cafe"` is rejected, and flagged this gap to the user
+in the same turn rather than silently guessing which behavior they meant.
+If bulk venue-type retyping is actually wanted, that's a distinct feature
+with its own confirmation step, not a variant of this one.
+
 ## 2026-09-04 — Phone: venue facts in the sheet, explicit View details
 
 The map mini-card was a floating popup whose entire body was a link to
