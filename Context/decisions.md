@@ -33,7 +33,7 @@ Two choices worth recording so they aren't silently reversed:
 
 **Non-obvious implementation gotcha, worth remembering:** reading a CSS
 custom property via `getComputedStyle(el).getPropertyValue("--foo")`
-returns its *unresolved token text* (e.g. `"calc((100dvh - 4.25rem) *
+returns its _unresolved token text_ (e.g. `"calc((100dvh - 4.25rem) *
 0.5)"`), never a resolved pixel number — custom properties don't get
 `calc()`/`dvh` resolution the way real layout properties do. Getting an
 actual px value requires laying out a real element with the real class

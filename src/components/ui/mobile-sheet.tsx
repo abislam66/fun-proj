@@ -90,8 +90,7 @@ export function MobileSheet({
     if (!element) return;
     const { peek, full } = targetsPx.current;
     const [minPx, maxPx] = peek < full ? [peek, full] : [full, peek];
-    const dragged =
-      startHeightPx.current + (startY.current - event.clientY);
+    const dragged = startHeightPx.current + (startY.current - event.clientY);
     const clamped = Math.min(maxPx, Math.max(minPx, dragged));
     lastHeightPx.current = clamped;
     element.style.height = `${clamped}px`;
