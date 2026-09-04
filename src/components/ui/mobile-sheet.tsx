@@ -4,15 +4,17 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
 
-import { measureMobileSheetHeightPx } from "@/lib/mobile-sheet-heights";
+import {
+  measureMobileSheetHeightPx,
+  type MobileSheetSnap,
+} from "@/lib/mobile-sheet-heights";
 
-type SheetSnap = "peek" | "mid" | "full";
-
-const SNAP_ORDER: SheetSnap[] = ["peek", "mid", "full"];
+const BROWSE_SNAPS: MobileSheetSnap[] = ["collapsed", "peek", "full"];
 
 // Below this much pointer travel, a press-and-release on the handle is
 // treated as a tap (cycle to the next state) rather than a drag.
@@ -20,38 +22,73 @@ const TAP_THRESHOLD_PX = 10;
 
 export function MobileSheet({
   children,
-  collapseSignal = 0,
+  mode = "browse",
+  onDismissPreview,
 }: {
   children: ReactNode;
-  /** Increment to tuck the sheet to peek (e.g. after a list selection). */
-  collapseSignal?: number;
+  /** Browse = search/list snaps. Preview = selected venue card. */
+  mode?: "browse" | "preview";
+  /** Dragging the preview down past the collapsed stop dismisses it. */
+  onDismissPreview?: () => void;
 }) {
-  const [snap, setSnap] = useState<SheetSnap>("peek");
+  const [snap, setSnap] = useState<MobileSheetSnap>("peek");
   const sheetRef = useRef<HTMLElement>(null);
   const dragging = useRef(false);
   const startY = useRef(0);
   const startHeightPx = useRef(0);
   const lastHeightPx = useRef(0);
-  const targetsPx = useRef({ peek: 0, mid: 0, full: 0 });
+  const targetsPx = useRef({
+    collapsed: 0,
+    peek: 0,
+    full: 0,
+    preview: 0,
+  });
+  const onDismissPreviewRef = useRef(onDismissPreview);
+  onDismissPreviewRef.current = onDismissPreview;
+
+  const visualSnap: MobileSheetSnap = mode === "preview" ? "preview" : snap;
 
   useEffect(() => {
-    if (collapseSignal > 0) setSnap("peek");
-  }, [collapseSignal]);
-
-  useEffect(() => {
-    document.documentElement.dataset.sheet = snap;
+    document.documentElement.dataset.sheet = visualSnap;
     return () => {
       delete document.documentElement.dataset.sheet;
     };
-  }, [snap]);
+  }, [visualSnap]);
+
+  // Preview height is content-sized (`height: auto`). Publish the live px
+  // value so map controls / camera padding can follow it — a CSS token
+  // can't resolve auto height.
+  useLayoutEffect(() => {
+    const element = sheetRef.current;
+    if (!element || mode !== "preview") {
+      document.documentElement.style.removeProperty("--sheet-h-preview");
+      return;
+    }
+    function publish() {
+      if (!element) return;
+      document.documentElement.style.setProperty(
+        "--sheet-h-preview",
+        `${element.getBoundingClientRect().height}px`,
+      );
+    }
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--sheet-h-preview");
+    };
+  }, [mode, children]);
 
   // While actively dragging, the inline height below is the live source
   // of truth and must win over the CSS transition; settling back onto a
   // snap state lets the class (and its --sheet-h-* token) take over
   // again so resize/rotation keeps recomputing it correctly.
-  function settle(nextSnap: SheetSnap, fromHeightPx: number) {
+  function settle(nextSnap: MobileSheetSnap, fromHeightPx: number) {
     const element = sheetRef.current;
-    setSnap(nextSnap);
+    // Preview is a mode overlay — don't overwrite the browse snap so
+    // dismissing returns to collapsed/peek/full as it was.
+    if (nextSnap !== "preview") setSnap(nextSnap);
     if (!element) return;
     const targetPx = targetsPx.current[nextSnap];
     element.style.transition = "";
@@ -76,9 +113,10 @@ export function MobileSheet({
     startHeightPx.current = element.getBoundingClientRect().height;
     lastHeightPx.current = startHeightPx.current;
     targetsPx.current = {
+      collapsed: measureMobileSheetHeightPx("collapsed"),
       peek: measureMobileSheetHeightPx("peek"),
-      mid: measureMobileSheetHeightPx("mid"),
       full: measureMobileSheetHeightPx("full"),
+      preview: startHeightPx.current,
     };
     element.style.transition = "none";
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -88,8 +126,9 @@ export function MobileSheet({
     if (!dragging.current) return;
     const element = sheetRef.current;
     if (!element) return;
-    const { peek, full } = targetsPx.current;
-    const [minPx, maxPx] = peek < full ? [peek, full] : [full, peek];
+    const minPx = targetsPx.current.collapsed;
+    const maxPx =
+      mode === "preview" ? targetsPx.current.preview : targetsPx.current.full;
     const dragged = startHeightPx.current + (startY.current - event.clientY);
     const clamped = Math.min(maxPx, Math.max(minPx, dragged));
     lastHeightPx.current = clamped;
@@ -101,12 +140,34 @@ export function MobileSheet({
     dragging.current = false;
     const traveled = Math.abs(startY.current - event.clientY);
     if (traveled < TAP_THRESHOLD_PX) {
-      const next = snap === "peek" ? "mid" : snap === "mid" ? "full" : "mid";
+      if (mode === "preview") {
+        settle("preview", lastHeightPx.current);
+        return;
+      }
+      // Tap steps between search (peek) and the list (full). Map-only is
+      // a deliberate drag-down from peek, not a tap through-stop.
+      const next =
+        snap === "collapsed" ? "peek" : snap === "peek" ? "full" : "peek";
       settle(next, lastHeightPx.current);
       return;
     }
-    // Nearest of the 3 target heights to where the drag ended.
-    const nearest = SNAP_ORDER.reduce((closest, candidate) =>
+    if (mode === "preview") {
+      const toCollapsed =
+        Math.abs(targetsPx.current.collapsed - lastHeightPx.current) <
+        Math.abs(targetsPx.current.preview - lastHeightPx.current);
+      if (toCollapsed) {
+        const element = sheetRef.current;
+        if (element) {
+          element.style.transition = "";
+          element.style.height = "";
+        }
+        onDismissPreviewRef.current?.();
+        return;
+      }
+      settle("preview", lastHeightPx.current);
+      return;
+    }
+    const nearest = BROWSE_SNAPS.reduce((closest, candidate) =>
       Math.abs(targetsPx.current[candidate] - lastHeightPx.current) <
       Math.abs(targetsPx.current[closest] - lastHeightPx.current)
         ? candidate
@@ -118,17 +179,22 @@ export function MobileSheet({
   function onPointerCancel() {
     if (!dragging.current) return;
     dragging.current = false;
-    settle(snap, lastHeightPx.current);
+    settle(mode === "preview" ? "preview" : snap, lastHeightPx.current);
   }
+
+  const handleLabel =
+    mode === "preview"
+      ? "Venue preview. Drag down to close."
+      : `Results sheet ${snap === "collapsed" ? "map" : snap}. Drag or tap to change height.`;
 
   return (
     <section
-      aria-label="Venue results"
-      className={`mobile-sheet mobile-sheet-${snap}`}
+      aria-label={mode === "preview" ? "Venue preview" : "Venue results"}
+      className={`mobile-sheet mobile-sheet-${visualSnap}`}
       ref={sheetRef}
     >
       <button
-        aria-label={`Results sheet ${snap}. Drag or tap to change height.`}
+        aria-label={handleLabel}
         className="sheet-handle"
         onPointerCancel={onPointerCancel}
         onPointerDown={onPointerDown}
@@ -138,7 +204,9 @@ export function MobileSheet({
       >
         <span />
       </button>
-      <div className="sheet-content">{children}</div>
+      <div className="sheet-content" inert={visualSnap === "collapsed"}>
+        {children}
+      </div>
     </section>
   );
 }

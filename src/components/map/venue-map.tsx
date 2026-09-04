@@ -23,6 +23,7 @@ import {
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
+import { PLACEHOLDER_PRICE_RANGE } from "@/components/venues/venue-preview";
 import {
   MAP_ZONE_KEYS,
   MAP_ZONES,
@@ -38,7 +39,10 @@ import {
 } from "@/config/site";
 import { getOpenStatus } from "@/lib/hours";
 import { mapZoneContaining } from "@/lib/map/point-in-polygon";
-import { measureMobileSheetHeightPx } from "@/lib/mobile-sheet-heights";
+import {
+  measureCurrentMobileSheetHeightPx,
+  measureMobileSheetHeightPx,
+} from "@/lib/mobile-sheet-heights";
 import type { Venue } from "@/lib/venues";
 
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -52,17 +56,11 @@ const MINI_CARD_PIN_CLEARANCE = 68;
 // have their own fitBounds). Street level, where pills read individually.
 const VENUE_STREET_ZOOM = 16;
 
-// Placeholder until venues carry real price data (user call, 2026-08-25:
-// "just for now, make it $12") — every mini-card shows this value.
-const PLACEHOLDER_PRICE_RANGE = "$12";
-
 // Below the desktop breakpoint the results sheet overlays the bottom of
-// the map canvas; zone flights pad for its tucked (default-snap) height
-// so the zone centers in the visible strip, not the half-covered full
-// canvas. Measured live via the same probe mobile-sheet.tsx's drag/snap
-// math uses (see mobile-sheet-heights.ts for why a plain CSS var read
-// doesn't work) rather than a hardcoded px value, since that height is
-// viewport-dependent.
+// the map canvas; zone flights pad for the sheet's *current* snap height
+// so the zone centers in the actually-visible strip. Measured live via
+// the same probe mobile-sheet.tsx's drag/snap math uses (see
+// mobile-sheet-heights.ts) rather than a hardcoded px value.
 const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 
 export function VenueMap({
@@ -130,6 +128,21 @@ export function VenueMap({
     lng: number;
   } | null>(null);
   const [hudZoom, setHudZoom] = useState<number | null>(null);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : window.matchMedia(DESKTOP_MEDIA_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_MEDIA_QUERY);
+    function sync() {
+      setIsDesktop(media.matches);
+    }
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     if (!map) return;
@@ -275,7 +288,9 @@ export function VenueMap({
     // No host zone to fly into: go to the truck itself — center it and
     // come down to street zoom if the map is still zoomed out.
     const position: [number, number] = [selectedVenue.lng, selectedVenue.lat];
+    const desktop = window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
     if (
+      desktop &&
       map.getBounds().contains(position) &&
       map.getZoom() >= VENUE_STREET_ZOOM
     ) {
@@ -284,6 +299,14 @@ export function VenueMap({
     map.easeTo({
       center: position,
       zoom: Math.max(map.getZoom(), VENUE_STREET_ZOOM),
+      padding: desktop
+        ? 0
+        : {
+            top: 0,
+            right: 0,
+            bottom: measureMobileSheetHeightPx("preview"),
+            left: 0,
+          },
       duration: reduceMotion ? 0 : 650,
     });
   }, [map, selectedVenue, reduceMotion]);
@@ -336,8 +359,14 @@ export function VenueMap({
 
   useEffect(() => {
     if (!map || selectedZones.length === 0) return;
-    flyToZones(map, selectedZones, reduceMotion, enteringZoneRef);
-  }, [map, selectedZones, reduceMotion]);
+    flyToZones(
+      map,
+      selectedZones,
+      reduceMotion,
+      enteringZoneRef,
+      Boolean(selectedId),
+    );
+  }, [map, selectedZones, reduceMotion, selectedId]);
 
   // Stage the mini-card behind the camera: zone flight first, then the
   // pop. Declared AFTER the camera effects above so a movement they just
@@ -597,7 +626,7 @@ export function VenueMap({
       />
 
       <AnimatePresence>
-        {poppedVenue ? (
+        {poppedVenue && isDesktop ? (
           // Outer div: positioned at the pin by the placement effect (its
           // CSS transform centers the card above the pill) — framer must
           // not own its transform, so only opacity animates here. Inner
@@ -694,6 +723,7 @@ function flyToZones(
   keys: MapZoneKey[],
   reduceMotion: boolean | null,
   enteringZoneRef: { current: boolean },
+  venueSelected: boolean,
 ) {
   enteringZoneRef.current = true;
   // Union of every selected zone's bbox — one zone behaves exactly as the
@@ -708,7 +738,9 @@ function flyToZones(
   const pad = Math.max(...keys.map((key) => MAP_ZONES[key].padding));
   const bottomInset = window.matchMedia(DESKTOP_MEDIA_QUERY).matches
     ? 0
-    : measureMobileSheetHeightPx("peek");
+    : venueSelected
+      ? measureMobileSheetHeightPx("preview")
+      : measureCurrentMobileSheetHeightPx();
   map.fitBounds(
     [
       [bounds.west, bounds.south],

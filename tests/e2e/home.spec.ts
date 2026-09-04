@@ -47,11 +47,15 @@ test("mobile explorer exposes sheet detents", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  const handle = page.getByRole("button", { name: /Results sheet mid/ });
+  const handle = page.getByRole("button", { name: /Results sheet peek/ });
   await expect(handle).toBeVisible();
   await handle.click();
   await expect(
     page.getByRole("button", { name: /Results sheet full/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Results sheet full/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Results sheet peek/ }),
   ).toBeVisible();
 });
 

@@ -7,6 +7,59 @@
 
 ---
 
+## 2026-09-04 — Phone: venue facts in the sheet, explicit View details
+
+The map mini-card was a floating popup whose entire body was a link to
+the detail page. On a phone that covered the map and made an accidental
+tap navigate. Phones now swap the results sheet into a venue preview
+(`VenuePreview`) with the same fields as the card, plus a primary
+**View details** button as the only navigation. Dismiss returns to the
+browse drawer (peek). Desktop is unchanged.
+
+The `$12` placeholder moved to `venue-preview.tsx` so both surfaces
+share one constant. Camera padding on mobile uses `--sheet-h-preview`
+while a venue is selected so the pin sits in the visible map strip.
+
+## 2026-09-04 — Zone tap keeps the current sheet snap
+
+Tapping a map zone while the drawer was collapsed (full map) bounced it
+open to peek/search. That was leftover from when a zone flight had to
+clear a covering sheet. Zone (and pin) taps now leave the snap alone —
+same rule as "map-originated selections keep the sheet where it is."
+List rows still tuck to peek so the mini-card isn't trapped behind the
+list. `flyToZones` pads for the sheet's _current_ height, not always peek,
+so a zone chosen in map-only centers in the full canvas.
+
+## 2026-09-04 — Mobile results sheet: collapsed full-map snap
+
+Peek + full were not enough: there was no way to put the drawer away and
+just use the map. Added a third snap, **collapsed** — handle height plus
+the iOS home-indicator inset, nothing else. Search/filters/list are
+`inert` and clipped there so they can't steal taps. This is not the old
+50/50 "mid" coming back: collapsed is _smaller_ than peek, not between
+peek and full.
+
+Tap still toggles peek ↔ full (collapsed → peek on tap, so a tap on the
+handle from map-only brings search back). Reaching collapsed is a
+drag-down from peek, which is the gesture the site owner described
+("bring the drawer down"). List-row / zone-tap still tucks to peek so
+the mini-card has a known inset; pull down again for the map.
+
+`--sheet-h-collapsed` / `.mobile-sheet-collapsed` / `[data-sheet="collapsed"]`
+join the existing token set. Map controls follow the handle at that
+height instead of sitting on the old peek offset.
+
+## 2026-09-04 — Mobile results sheet: no mid snap
+
+The 50/50 "mid" detent had no job: the map was too covered to scan and
+the list was too short to browse. The sheet now has two rests only —
+peek (map + search/filters, ~32.5% of the area below the header) and
+full (the list, ~87.5%). Handle tap toggles; a drag snaps to the nearer
+of those two. `--sheet-h-mid` / `.mobile-sheet-mid` / `[data-sheet="mid"]`
+are gone so a leftover CSS rule can't resurrect the half-state. Ratios
+and the pointer-event drag path from the earlier 2026-09-04 entry still
+hold; this only deletes the middle stop.
+
 ## 2026-09-04 — Mobile results sheet: drag-follow + sizing decisions
 
 Reworked the mobile map/results bottom sheet (`src/components/ui/mobile-sheet.tsx`)

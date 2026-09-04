@@ -87,17 +87,17 @@
 
 ### Home (`/`) — mobile
 
-Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). Compact search/filter strip. Non-modal bottom sheet: peek ~28%, mid ~55%, full ~92%. No marketing hero. No second map HUD bar — it ate the map. Zoom +/- stay off the phone control row.
+Map is the first viewport. Wordmark top-left (“Tu” ink, “Eats” cherry). Compact search/filter strip. Non-modal bottom sheet with **three** browse snaps: collapsed (handle only — full map), peek (~33% — map + search/filters), and full (~87.5% — the list). Selecting a venue on the phone **swaps** that drawer for a venue preview sheet (same facts as the desktop mini-card, plus a View details button to `/eat/[slug]`). No floating map popup on phone. Dismissing it restores the search/list (or map-only) snap you were on. No half-and-half mid stop. Tapping a zone keeps the current browse snap. No marketing hero. No second map HUD bar. Zoom +/- stay off the phone control row.
 
 ### Home (`/`) — desktop (portfolio surface)
 
 - **Split composition from first paint:** list + filters + search on the left; MapLibre on the right filling remaining height (under a slim top bar with wordmark + about/account). On desktop (≥1024) the map HUD bar is the same 4.75rem marquee as the list header (3px cherry edge) so the two top bars read as one band. On mobile the HUD is omitted — zone names live on the map plates; after a zone is selected a thin name-only label floats on the map. Phone also hides +/- zoom (pinch is enough); reset-view and locate stay.
 - **Shared state:** Same URL searchParams and payload as mobile — filter/search/selection stay in sync across panes. Hovering or focusing a list row highlights the matching cuisine pill on the map; selecting a pin scrolls/focuses the list row.
-- **Rows select, never navigate:** Clicking a list row (desktop pane or mobile sheet) selects the venue on the map — fly-to plus anchored mini-card; on mobile the sheet tucks to peek so the map is visible. The mini-card's "View details" is the only path from the explorer to `/eat/[slug]`. The map is the primary surface — list rows feed it.
+- **Rows select, never navigate:** Clicking a list row (desktop pane or mobile sheet) selects the venue on the map. Desktop: fly-to plus anchored mini-card. Phone: the results sheet swaps to a venue preview (name, tags, status, price, View details). The mini-card / preview CTA is the only path from the explorer to `/eat/[slug]`. The map is the primary surface — list rows feed it.
 - **Staged arrival:** The mini-card never pops while the camera is still traveling. Selection sequences like a user would move: fly into the host zone (or ease a zone-less venue to street zoom ~16), and only on arrival does the popup appear over the pill. No movement needed → instant pop.
 - **List density:** Comfortable rows with name, cuisine tags, zone, open-status badge, payment icons, and a compact student-rating readout when one exists — designed for mouse scan, not thumb-only.
 - **Map:** Larger campus view earns the desktop width; cuisine pills remain legible; controls sit bottom-right of the map pane, stacked above the attribution line (not floating over the list).
-- **No mobile chrome on desktop:** No grab-handle sheet, no peek/mid/full detents, no “tap to expand list.” If it looks like a phone UI scaled up, it’s wrong.
+- **No mobile chrome on desktop:** No grab-handle sheet, no collapsed/peek/full detents, no “tap to expand list.” If it looks like a phone UI scaled up, it’s wrong.
 - **Empty / filtered states:** Friendly empty copy in the list pane; map still shows campus (pins filtered). Never a blank white half-screen.
 
 ### Venue detail (`/eat/[slug]`)
@@ -164,7 +164,7 @@ See [docs/design/map-and-pins.md](docs/design/map-and-pins.md) and [public/pins/
 Maps to `Specs/architecture-planning.md`:
 
 - `components/map/` — `VenueMap`, `CampusBuildingLayer`, `VenuePinLayer`, `LocateControl`, `MapAttribution`
-- `components/venues/` — `VenueExplorer`, `VenueList`, `VenueListRow`, `VenueMiniCard`, `FilterBar`, `OpenStatusBadge`, `PaymentIcons`, `CuisineTags`
+- `components/venues/` — `VenueExplorer`, `VenueList`, `VenueListRow`, `VenueMiniCard`, `VenuePreview`, `FilterBar`, `OpenStatusBadge`, `PaymentIcons`, `CuisineTags`
 - `components/reviews/` — `VenueReviews`, `StarRating`
 - `components/account/` — `AccountProfileForm`, `AccountReviewList`
 - `components/ui/` — Button, Chip, Sheet, Input, EmptyState, Wordmark, YearPicker
@@ -189,6 +189,10 @@ Maps to `Specs/architecture-planning.md`:
 
 ## Decisions Log
 
+| 2026-09-04 | Phone venue preview hugs its content | A 40% viewport min-height left empty white under View details. Preview height is the card, not a snap fraction. |
+| 2026-09-04 | Phone venue preview lives in the sheet, not a map popup | The pin-anchored mini-card covered the map and made the whole card a link. On phones the same facts (name, tags, status, $12) open in the bottom sheet with an explicit View details button. Desktop keeps the floating card. |
+| 2026-09-04 | Zone taps keep the current sheet snap | Forcing peek on a zone tap yanked map-only back to search. Zone taps leave the browse drawer where it is. |
+| 2026-09-04 | Mobile sheet: collapsed + peek + full (no mid) | Pull the drawer down past peek for a full-map view (handle only). Peek is map + search; full is the list. The 50/50 mid stop had no job and stays gone. Tap toggles peek ↔ full; map-only is a drag-down. |
 | 2026-09-04 | Mobile: drop map HUD + +/- zoom; thin in-zone name label | The zone status bar stacked under the site header and squeezed the map. Zone plates already name places; a slim name-only label appears after a zone is selected. Reset-view still returns to campus. Pinch zoom replaces +/-. |
 | 2026-09-04 | Desktop map HUD matches list-header height (4.75rem, 3px cherry edge) | The thinner map bar sat above the list header’s bottom edge and looked like two different chrome systems. |
 | 2026-09-04 | Sign out lives only at the bottom of `/account` (full-width white button) | Header stays About + profile icon on every viewport. Signing out is an account action, not chrome. |

@@ -9,6 +9,7 @@ import { MobileSheet } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/primitives";
 import { FilterBar } from "@/components/venues/filter-bar";
 import { VenueList } from "@/components/venues/venue-list";
+import { VenuePreview } from "@/components/venues/venue-preview";
 import { AnalyticsEvent } from "@/lib/analytics";
 import type { Venue, VenueFilters } from "@/lib/venues";
 import {
@@ -90,7 +91,6 @@ export function VenueExplorer({
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [sheetCollapse, setSheetCollapse] = useState(0);
   const posthog = usePostHog();
 
   // Venue pills are drawn on the map's canvas (a MapLibre symbol layer, see
@@ -107,13 +107,12 @@ export function VenueExplorer({
     });
   }
 
-  // List rows hand the stage to the map: select the venue AND (on mobile)
-  // tuck the sheet to peek so the flown-to pin and its popup are visible.
-  // Map-originated selections keep the sheet where it is.
+  // List rows hand the stage to the map: select the venue. On mobile the
+  // results sheet swaps to the venue preview; on desktop the pin card
+  // pops. Map-originated zone taps keep the browse sheet where it is.
   function selectFromList(venueId: string | null) {
     if (venueId) captureVenueSelected(venueId, "list");
     setSelectedId(venueId);
-    if (venueId) setSheetCollapse((count) => count + 1);
   }
 
   function selectFromMap(venueId: string | null) {
@@ -163,7 +162,7 @@ export function VenueExplorer({
   }, [filters.query, visibleVenues.length, posthog]);
 
   // Keyboard escape hatch: pin selection is otherwise dismissed only by
-  // clicking empty map space or the mini-card's close button.
+  // clicking empty map space or the preview close control.
   useEffect(() => {
     if (!selectedId) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -174,6 +173,8 @@ export function VenueExplorer({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectedId]);
+
+  const selectedVenue = venues.find((venue) => venue.id === selectedId) ?? null;
 
   const panel = (
     <ResultsPanel
@@ -206,9 +207,6 @@ export function VenueExplorer({
               ...current,
               zones: key ? [key] : [],
             }));
-            // Zone chosen on the map itself — hand the stage to the map
-            // (the zone flight would otherwise land behind the sheet).
-            if (key) setSheetCollapse((count) => count + 1);
           }}
           selectedId={selectedId}
           selectedZones={filters.zones}
@@ -216,7 +214,20 @@ export function VenueExplorer({
         />
       </div>
       <div className="mobile-results">
-        <MobileSheet collapseSignal={sheetCollapse}>{panel}</MobileSheet>
+        <MobileSheet
+          mode={selectedVenue ? "preview" : "browse"}
+          onDismissPreview={() => setSelectedId(null)}
+        >
+          {selectedVenue ? (
+            <VenuePreview
+              backPath={backPath}
+              onClose={() => setSelectedId(null)}
+              venue={selectedVenue}
+            />
+          ) : (
+            panel
+          )}
+        </MobileSheet>
       </div>
     </main>
   );
