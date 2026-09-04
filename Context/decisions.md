@@ -27,7 +27,7 @@ open to peek/search. That was leftover from when a zone flight had to
 clear a covering sheet. Zone (and pin) taps now leave the snap alone —
 same rule as "map-originated selections keep the sheet where it is."
 List rows still tuck to peek so the mini-card isn't trapped behind the
-list. `flyToZones` pads for the sheet's *current* height, not always peek,
+list. `flyToZones` pads for the sheet's _current_ height, not always peek,
 so a zone chosen in map-only centers in the full canvas.
 
 ## 2026-09-04 — Mobile results sheet: collapsed full-map snap
