@@ -35,14 +35,9 @@ Named Temple footprints are a curated GeoJSON overlay (`public/maps/campus-build
 
 ### Zones
 
-Campus overview draws **map zones**, not every venue pin. Two marks, named in `src/config/map-zones.ts`:
+Campus overview draws **map zone badges**, not every venue pin, and (2026-09-04) no visible zone geometry at all — no corridor lines, no wash, no outline. Each zone still has a `MAP_ZONE_MARK.streetLine`/`buildingFill` classification in `src/config/map-zones.ts` and a matching `street-line`/`building-fill` feature in `map-zones.geojson`, but `MapZoneLayer` no longer draws either: only an invisible hit-fill (click-to-select) and the badge/label plate render. The mark still exists purely as metadata (it's what the badge glyph and any future re-introduction of the visual would key off), not as anything currently on screen.
 
-| Variable | What it draws | Zones |
-|----------|---------------|-------|
-| `MAP_ZONE_MARK.streetLine` | Cherry corridor (casement + core line) | Student Center, W Montgomery, SERC trucks, Tyler trucks |
-| `MAP_ZONE_MARK.buildingFill` | Cherry wash + outline | Vantage & The View (buildings); The Wall (plaza west of Anderson, not Anderson); Richie's Cafe (cafe footprint only, not Facilities); Liacouras Walk (1926–1938 building only, not 1940 Residence Hall) |
-
-Click a zone → fly in → venue pills whose coordinates fall inside that zone. List-filter `zone_key` (`norris` / `montgomery` / `twelfth`) is unrelated. Zone names use a light cherry plate (`#F3E6E9`) with a thin cherry outline — the same family as `buildingFill`, not a white text halo. Each name is an opaque sprite so overlapping plates cover each other instead of blending.
+Click a zone (its badge, or anywhere inside its invisible hit polygon) → fly in → venue pills whose coordinates fall inside that zone. List-filter `zone_key` (`norris` / `montgomery` / `twelfth`) is unrelated. Zone badges are `buildZoneLabelIcon`'s per-zone color-coded name plate (icon chip, live "N spots" count, leader-line-and-dot stem — see `src/lib/map/zone-label-icon.ts`) — they're the only visible trace of a zone at the overview now.
 
 ## Pins — venue name plates
 

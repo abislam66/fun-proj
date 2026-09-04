@@ -19,46 +19,16 @@ import { beforeIdFor, liftOverlaysAboveBasemap } from "@/lib/map/overlay-order";
 
 const SOURCE_ID = "map-zones";
 const HIT_LAYER_ID = "map-zones-hit";
-const STREET_LINE_CASEMENT_ID = "map-zones-street-line-casement";
-const STREET_LINE_CORE_ID = "map-zones-street-line-core";
-const BUILDING_FILL_ID = "map-zones-building-fill";
-const BUILDING_FILL_LINE_ID = "map-zones-building-fill-line";
 const LABEL_LAYER_ID = "map-zones-label";
 
-export const MAP_ZONE_LAYER_IDS = [
-  HIT_LAYER_ID,
-  STREET_LINE_CASEMENT_ID,
-  STREET_LINE_CORE_ID,
-  BUILDING_FILL_ID,
-  BUILDING_FILL_LINE_ID,
-  LABEL_LAYER_ID,
-] as const;
+export const MAP_ZONE_LAYER_IDS = [HIT_LAYER_ID, LABEL_LAYER_ID] as const;
 
 export const MAP_ZONE_CLICK_LAYER_IDS = [
   HIT_LAYER_ID,
-  BUILDING_FILL_ID,
-  STREET_LINE_CORE_ID,
-  STREET_LINE_CASEMENT_ID,
   LABEL_LAYER_ID,
 ] as const;
 
 const CHERRY = "#9D2235";
-const CHERRY_SOFT = "#F8ECEF";
-
-/** One color per zone (retro-HUD redesign) instead of every zone sharing cherry. */
-const ZONE_FILL_MATCH = [
-  "match",
-  ["get", "zoneKey"],
-  ...MAP_ZONE_KEYS.flatMap((key) => [key, MAP_ZONES[key].color]),
-  CHERRY,
-] as unknown as string;
-
-const ZONE_SOFT_MATCH = [
-  "match",
-  ["get", "zoneKey"],
-  ...MAP_ZONE_KEYS.flatMap((key) => [key, MAP_ZONES[key].soft]),
-  CHERRY_SOFT,
-] as unknown as string;
 
 function zoneKeyFromFeatures(
   features: MapGeoJSONFeature[] | undefined,
@@ -82,9 +52,15 @@ function setOverviewVisible(map: MapLibreMap, overview: boolean) {
 }
 
 /**
- * Overview-only zone overlays. `streetLine` corridors and `buildingFill`
- * washes are drawn together. Hidden once a zone is selected so pins
- * can take over.
+ * Overview-only zone marks. 2026-09-04: the visible `streetLine` corridors
+ * and `buildingFill` washes/outlines were removed — only two layers still
+ * render: an invisible hit-fill (`HIT_LAYER_ID`, for click-to-select) and
+ * the badge/label plate (`LABEL_LAYER_ID`). The underlying geometry (each
+ * zone's `membership` ring, and `map-zones.geojson`'s `street-line`/
+ * `building-fill` features) is untouched — filtering, click-to-select, and
+ * the badge counts all still work exactly as before; only the drawn
+ * fill/outline/dashed-line shapes are gone. Hidden entirely once a zone is
+ * selected so pins can take over.
  */
 export function MapZoneLayer({
   map,
@@ -150,75 +126,6 @@ export function MapZoneLayer({
         },
       },
       beforeIdFor(map, HIT_LAYER_ID),
-    );
-
-    map.addLayer(
-      {
-        id: BUILDING_FILL_ID,
-        type: "fill",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.buildingFill],
-        paint: {
-          "fill-color": ZONE_SOFT_MATCH,
-          "fill-opacity": 0.88,
-        },
-      },
-      beforeIdFor(map, BUILDING_FILL_ID),
-    );
-
-    map.addLayer(
-      {
-        id: BUILDING_FILL_LINE_ID,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.buildingFill],
-        paint: {
-          "line-color": ZONE_FILL_MATCH,
-          "line-width": 1.6,
-          "line-opacity": 0.95,
-        },
-      },
-      beforeIdFor(map, BUILDING_FILL_LINE_ID),
-    );
-
-    map.addLayer(
-      {
-        id: STREET_LINE_CASEMENT_ID,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.streetLine],
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
-        paint: {
-          "line-color": ZONE_SOFT_MATCH,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 14, 10, 16, 18],
-          "line-opacity": 0.95,
-        },
-      },
-      beforeIdFor(map, STREET_LINE_CASEMENT_ID),
-    );
-
-    map.addLayer(
-      {
-        id: STREET_LINE_CORE_ID,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "role"], MAP_ZONE_GEOJSON_ROLE.streetLine],
-        layout: {
-          "line-cap": "butt",
-          "line-join": "round",
-        },
-        paint: {
-          "line-color": ZONE_FILL_MATCH,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 14, 4, 16, 7],
-          // A dashed core reads as a pixel-drawn road stripe rather than a
-          // solid modern line — part of the Y2K reference's aesthetic.
-          "line-dasharray": [2, 1.6],
-        },
-      },
-      beforeIdFor(map, STREET_LINE_CORE_ID),
     );
 
     map.addLayer(
