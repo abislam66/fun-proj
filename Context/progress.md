@@ -43,6 +43,27 @@
 
 ---
 
+## 2026-09-04 — Mobile bottom sheet: real drag-follow + resized snap states
+
+The mobile map/results page already had a 3-state sheet (peek/mid/full)
+but it only jumped between states on release, never tracked the finger
+during the drag, and its default/peek state was an inert ~164px preview
+with search and filters unreachable until expanded. Reworked
+`src/components/ui/mobile-sheet.tsx` so the handle now follows the
+pointer continuously and snaps to whichever of the 3 states is nearest
+on release; resized the states so the default (now the entry state) is
+~33% sheet / ~67% map with the hero text ("Find your next campus bite.")
+hidden and search/filters directly usable, mid is a 50/50 split, and
+expanded is ~87.5% sheet / ~12.5% map (previously ~100%, fully hiding
+the map). Map-control button positioning and `venue-map.tsx`'s
+`flyToZones` inset both now derive from the same shared
+`--sheet-h-default/mid/expanded` CSS tokens instead of separately
+hand-copied numbers. Desktop's split layout is untouched — mobile-only.
+See `Context/decisions.md` for the ratio-basis, library, and
+CSS-custom-property-measurement details.
+
+---
+
 ## 2026-09-04 — "Cafe" cuisine tag reverted; back to one cafe filter
 
 PR #17 added `cafe` as its own cuisine tag (separate from the existing
