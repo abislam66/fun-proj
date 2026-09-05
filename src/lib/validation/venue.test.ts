@@ -150,6 +150,12 @@ describe("bulkSetCuisineSchema", () => {
     ).toEqual({ ids, cuisine: "halal", action: "remove" });
   });
 
+  it("accepts the cafe cuisine tag (independent of venue.type)", () => {
+    expect(
+      bulkSetCuisineSchema.parse({ ids, cuisine: "cafe", action: "add" }),
+    ).toEqual({ ids, cuisine: "cafe", action: "add" });
+  });
+
   it("rejects an empty id list", () => {
     expect(() =>
       bulkSetCuisineSchema.parse({ ids: [], cuisine: "halal", action: "add" }),
@@ -168,7 +174,7 @@ describe("bulkSetCuisineSchema", () => {
 
   it("rejects a cuisine key that isn't in CUISINES", () => {
     expect(() =>
-      bulkSetCuisineSchema.parse({ ids, cuisine: "cafe", action: "add" }),
+      bulkSetCuisineSchema.parse({ ids, cuisine: "sushi", action: "add" }),
     ).toThrow();
   });
 

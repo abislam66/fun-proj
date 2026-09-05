@@ -7,6 +7,33 @@
 
 ---
 
+## 2026-09-04 — "Cafe" cuisine tag restored (third flip) — corrects the entry below
+
+The entry directly below this one ("Bulk cuisine editing: 'Cafe' excluded
+on purpose") concluded Cafe should stay a `venue.type`-only concept and
+built the bulk cuisine editor without it. The site owner overrode that:
+**Cafe now exists as both a `venue.type` value and a `CUISINES` tag**,
+coexisting on purpose (a venue's Type and its cuisine tags are separate —
+see the doc comment on `CUISINES` in `src/config/cuisines.ts`).
+
+Full history, so a future session isn't confused by the back-and-forth:
+`eaa55f4` added a "Coffee & Café" cuisine → `a34d910` reworked it into
+`venue.type === "cafe"` instead → PR #17 (`ad3c3aa`) added `cafe` back as
+its *own* cuisine tag, explicitly independent of `venue.type` → `b3a72d4`
+reverted that the same day ("two independently-settable cafe concepts is
+the wrong model") → this entry restores it, per explicit site-owner
+instruction referencing PR #17 directly. Nothing else needed to change:
+`bulkAddVenueCuisine`/`bulkRemoveVenueCuisine`, `bulkSetCuisineSchema`, the
+admin cuisine picker, and the public Cuisine filter all read
+`CUISINES`/`CUISINE_KEYS` dynamically, so re-adding the one config entry
+is the entire fix. The validation test that asserted `cuisine: "cafe"` is
+rejected was updated to assert it's accepted instead (a different key,
+`"sushi"`, now covers "rejects an unknown cuisine").
+
+If a future session is tempted to "clean up" the apparent duplication
+between the Café type-filter chip and the Cafe cuisine tag again: don't,
+without asking first — this has now been decided three times.
+
 ## 2026-09-04 — Zone overlays: remove the visual layers entirely, keep the click target
 
 Asked to remove "visible zone polygon/rectangle outlines and dotted/dashed
