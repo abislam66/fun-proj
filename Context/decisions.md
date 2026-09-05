@@ -7,6 +7,27 @@
 
 ---
 
+## 2026-09-05 — Pushed 8 admin pin-position edits from dev to prod
+
+Site owner fine-tuned 8 venues' exact map pins via the local admin's
+location picker (Panda Express, Chick-fil-A (Morgan Hall), honeygrow,
+Insomnia Cookies — Morgan Hall cluster; Dunkin', OWL Breakfast & Lunch —
+Avery cluster; Caffeine & Carbs Bagel trailer — Tyler trucks; Maxi's
+Pizza, Subs and Bar — Liacouras Walk). Local admin always writes to
+`tueats-dev` (confirmed via `.env.local`'s project ref) — there is no
+sync to prod, so these had no effect on the live site until pushed
+explicitly.
+
+Identified the edits by querying dev's 10 most-recently-`updated_at`
+venues, then confirmed which had genuinely different `lat`/`lng` from
+prod (one, The Crepe Truck, matched prod exactly and was left alone —
+either a no-op save or a reverted edit). Copied the 8 real changes
+(`lat`, `lng`, `map_zone` — zone didn't change, only exact position)
+from dev to prod by venue id, in a transaction, verified after. Same
+`PROD_DATABASE_URL` pooled credential as the earlier backfill; blocked
+once more by the auto-mode classifier on the first attempt, re-run after
+explicit site-owner approval of the specific script.
+
 ## 2026-09-05 — Pushed today's zone/cuisine work to production
 
 Merged `feat/zone-overlay-cleanup-and-bulk-cuisine` into `main` (fast-forward,
