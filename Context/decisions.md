@@ -7,6 +7,98 @@
 
 ---
 
+## 2026-09-05 — Fixed: any zone click could permanently kill the map
+
+Site owner reported "Map tiles unavailable" firing reliably on a zone
+click (reported as Morgan Hall, but reproduced identically for
+Susquehanna and Avery too — not zone-specific). Reproduced headlessly
+with Playwright against the public map (no auth needed) and instrumented
+`venue-map.tsx`'s `instance.on("error", ...)` handler, which silently
+discards the actual `Error` object before setting `failed = true` — the
+real exception was invisible until logged directly:
+
+```
+Error: The width and height of the updated image must be that same as
+the previous version of the image
+  at MapZoneLayer.useEffect (map-zone-layer.tsx:220)
+```
+
+Root cause: `MapZoneLayer`'s spot-count re-bake effect
+(`map-zone-layer.tsx:196-213`) called `map.updateImage(imageId, plate)`
+unconditionally whenever `zoneCounts` changed. MapLibre's `updateImage`
+requires the replacement bitmap to have the *exact same* width/height as
+whatever is already registered under that id, and throws synchronously
+otherwise — a hard requirement, not a warning. `buildZoneLabelIcon`'s
+canvas width depends on the live spot-count text's digit length ("4
+SPOTS" vs. "10 SPOTS" render at different widths), so any zone whose
+count crosses a digit boundary breaks `updateImage` the next time this
+effect runs — which is on *every* `zoneCounts` change, including the one
+that fires when any zone gets selected (not just the zone whose count
+actually changed). Today's Avery widening (4 → 10 spots, see the entry
+below) pushed this from "latent" to "always reproduces," since 10 is
+double-digit and 4 wasn't.
+
+**This was pre-existing, not introduced by the Avery/Morgan Hall/
+Susquehanna work** — any zone crossing a single-to-double-digit spot
+count (or vice versa, e.g. a retirement) would have hit it before too;
+today's edit just happened to trigger it immediately and made it visible.
+
+Fix: the re-bake effect now mirrors the initial-registration effect's own
+pattern (`map-zone-layer.tsx:99-109`) — `removeImage` + `addImage` instead
+of `updateImage`. Both are cheap, idempotent, and tolerate any size
+change. Verified via the same Playwright repro: clicking Morgan Hall,
+Susquehanna, and Avery all now leave the map intact (`typecheck`/`test`
+181/181 still clean).
+
+**Left alone, flagged as a separate concern:** `venue-map.tsx`'s top-level
+`instance.on("error", () => setFailed(true))` still treats literally any
+MapLibre error as permanently fatal for the rest of the page's life, with
+no retry and no logging of what actually failed — that's why this bug was
+invisible until directly instrumented. Worth hardening later (at minimum,
+log `e.error` so the next one isn't a fresh investigation from zero), but
+out of scope for today's fix, which addresses the actual thrown error
+rather than how loudly it's swallowed.
+
+## 2026-09-05 — Avery widened to absorb the Broad St corner cluster
+
+Site owner looked at the map and asked for the whole visible cherry-pin
+cluster at the Broad St corner — Wendy's, Hangry Joe's, QDOBA Mexican
+Eats, Chopsticks Express, Oh Brother, Tropical Smoothie Cafe — folded
+into Avery, rather than split across Avery/Cecil B. Moore Ave. This
+directly reverses the previous day's "leave Hangry Joe's in cecil-b-moore,
+~9m clearance" call (see the 2026-09-04 N Broad St split entry below) —
+explicit instruction overrides the earlier tight-boundary judgment call.
+
+Checked all 15 venues then in `cecil-b-moore` sorted by longitude first:
+exactly these 6 occupy a contiguous strip (lng -75.1589 to -75.1581) right
+up against Avery's old east edge (-75.1589), with the next-nearest venue
+(Maple Star, -75.1604) sitting *west* of Avery's own west edge — so
+widening Avery east to -75.158 (Cecil B. Moore Ave's old outer edge)
+sweeps up exactly the 6 intended venues and nothing else.
+
+Both zones simplify as a result: Avery's box just grows from
+`[-75.1598,39.9782]–[-75.1589,39.98]` to `[-75.1598,39.9777]–[-75.158,39.98]`
+(south edge drops to 39.9777 to also reach Tropical Smoothie Cafe, which
+sits just below the old 39.9782 floor), and Cecil B. Moore Ave's bracket/
+staple shape — built the day before specifically to wrap around Avery's
+notch — reverts to a plain rectangle now that there's no notch left to
+carve around. `public/maps/map-zones.geojson`'s matching membership/
+building-fill polygons and the Avery label point were updated the same
+way; the two Cecil B. Moore Ave street-line segments were left as-is
+(purely decorative, and the street itself still runs through Avery's
+block).
+
+**Verified the same way as the original split:** snapshotted every
+venue's `map_zone` before touching anything, re-ran `pnpm backfill:map-zones`
+(recomputes every venue from `mapZoneContaining`, idempotent), then
+diffed before vs. after across all 114 venues — exactly the 6 intended
+venues flipped `cecil-b-moore` → `avery`, zero unexpected changes.
+`point-in-polygon.test.ts` updated to match: the old "leaves Hangry Joe's
+in cecil-b-moore" test now asserts `avery`, plus new coverage for QDOBA
+and Chopsticks Express (Oh Brother and Tropical Smoothie Cafe already had
+tests, now asserting the new zone instead of the old one — no duplicate
+assertions left behind).
+
 ## 2026-09-04 — "Cafe" cuisine tag restored (third flip) — corrects the entry below
 
 The entry directly below this one ("Bulk cuisine editing: 'Cafe' excluded

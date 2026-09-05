@@ -195,7 +195,14 @@ export function MapZoneLayer({
 
   // Re-bake each zone's badge whenever the live spot count changes (filter
   // changes, publish/retire, etc.) — same image id, updated bitmap, so the
-  // symbol layer above never needs to be touched.
+  // symbol layer above never needs to be touched. Re-registers via
+  // remove+add rather than `updateImage`: the badge's canvas width depends
+  // on the spot count's digit length ("4 SPOTS" vs "10 SPOTS"), and
+  // `updateImage` throws a hard, uncaught-by-design error the instant a
+  // new bitmap's dimensions differ from what's already registered —
+  // exactly what happens the moment any zone's count crosses a digit
+  // boundary. That error used to take down the whole map (the top-level
+  // `error` handler in venue-map.tsx treats any MapLibre error as fatal).
   useEffect(() => {
     if (!map) return;
     for (const key of MAP_ZONE_KEYS) {
@@ -208,7 +215,8 @@ export function MapZoneLayer({
         zone.color,
         zone.icon,
       );
-      map.updateImage(imageId, plate);
+      map.removeImage(imageId);
+      map.addImage(imageId, plate, { pixelRatio: plate.pixelRatio });
     }
   }, [map, zoneCounts]);
 

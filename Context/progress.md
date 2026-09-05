@@ -27,6 +27,8 @@
 - **Member ratings/reviews + photo queue as of 2026-09-01 (TUE-12).** Signed-in members can leave a 1–5 star rating with optional review text (one row per user per venue) and submit gallery photos that stay pending until an admin approves them. Public strip still shows published photos only. Storage is still Vercel Blob; no Supabase Storage. Venue proposals and Google snapshots are still out of this slice. Forms cannot be used in production until Google OAuth dashboard config is finished (same blocker as 2026-08-28).
 - **Zone overlays removed from the public map + admin bulk cuisine editing, as of 2026-09-04.** The overview map no longer draws zone fill/outline/dashed corridor lines — only the invisible click-hit polygon and the badge/label plate remain (zone geometry, filtering, and badge counts unchanged). Admin's bulk-selection bar can now add/remove a single cuisine tag across many venues at once (Halal/Vegan Friendly bulk-editing already existed; this generalizes it to any `CUISINES` key, including "Cafe" — which coexists with, and is independent of, the `venue.type === "cafe"` filter). On branch `feat/zone-overlay-cleanup-and-bulk-cuisine`, not yet pushed. See this date's decisions.md entry and the changelog entry below.
 - **N Broad St zone split into Avery, Morgan Hall, and Susquehanna, as of 2026-09-04.** 16 venues reassigned. Originally committed on its own unmerged branch (`feat/zone-reorg-avery-morgan-susquehanna`) while its DB update went live independently — leaving every other branch's `MAP_ZONES` missing these three keys despite the DB already using them, which crashed `venueLocationText` for those 16 venues. Cherry-picked (`1c5b586`) onto `feat/zone-overlay-cleanup-and-bulk-cuisine` to fix that. See this date's changelog entry above and `Context/decisions.md`.
+- **Avery widened as of 2026-09-05** to also absorb the Broad St corner cluster (Wendy's, Hangry Joe's, QDOBA Mexican Eats, Chopsticks Express, Oh Brother, Tropical Smoothie Cafe) per explicit site-owner instruction — 6 more venues reassigned from `cecil-b-moore`, which reverts to a plain rectangle (no more notch to carve around). See `Context/decisions.md`.
+- **Fixed a pre-existing bug (2026-09-05): clicking any zone whose spot count crossed a 1↔2-digit threshold permanently broke the map** ("Map tiles unavailable", stuck until reload). Root cause was `MapZoneLayer` calling `map.updateImage()` on a badge whose canvas legitimately resized; fixed via `removeImage`+`addImage`. Not caused by the zone-reorg work, but made reliably reproducible by it (Avery's count crossed 4→10). See `Context/decisions.md`.
 - **Not yet done: the manual Google Cloud + Supabase dashboard configuration this depends on.** Code is implemented, typechecked, linted, tested (86/86), and builds clean, but Google sign-in will not actually work until the site owner: (1) creates a Google Cloud OAuth Client ID and configures the consent screen, (2) enables the Google provider in Supabase (Authentication → Providers) with that Client ID/Secret, and (3) adds `https://tueats.co/auth/callback` and `http://localhost:3000/auth/callback` to Supabase's redirect allow-list. See the conversation record for the exact steps. Not pushed/deployed pending that + the site owner's review.
 - **Next up:**
   1. Run migration `0010_wild_frightful_four.sql` (`pnpm db:migrate` with `DIRECT_DATABASE_URL`) on the live DB **before** deploying `feature/member-account-profile` — `/account` and member sign-in insert usernames. Migration `0009` (ratings) must already be applied.
@@ -44,6 +46,34 @@
   13. PostHog (2026-09-04, updated after merge): session recording being live is now confirmed (remote config returns a real `sessionRecording` object, not `false`). Still needs a human: browse tueats.co normally for a few seconds, then in the PostHog UI check that one real event has no `$ip`/`$geoip_*` properties and that a session recording appears with masked inputs — automated (Playwright) verification can't do this because PostHog's bot filter correctly drops every capture from a detectably-automated browser, see `Context/decisions.md` 2026-09-04 (post-merge entry).
 
 ---
+
+## 2026-09-05 — Fixed: any zone click could permanently kill the map
+
+`MapZoneLayer`'s badge re-bake effect used `map.updateImage()`, which
+MapLibre hard-requires to keep the exact same pixel dimensions as before
+— but the badge canvas's width depends on the live spot count's digit
+length. Any zone crossing a 1-digit ↔ 2-digit count threshold threw
+synchronously, and the map's catch-all error handler treated that as
+fatal (no retry, stuck until reload). Reported as "always happens on
+Morgan Hall," but reproduced identically on Susquehanna and Avery —
+not zone-specific. Today's Avery widening (4 → 10 spots, see above) made
+it reproduce on every zone click, but the bug predates that change.
+Fixed by switching to `removeImage` + `addImage` (matches the pattern
+already used for initial registration). Full root-cause writeup,
+including the actual swallowed error message: `Context/decisions.md`.
+
+## 2026-09-05 — Avery widened to absorb the Broad St corner cluster
+
+Folded 6 more venues into Avery per explicit site-owner instruction after
+looking at the map: Wendy's, Hangry Joe's, QDOBA Mexican Eats, Chopsticks
+Express, Oh Brother, Tropical Smoothie Cafe — all previously
+`cecil-b-moore`, all sitting in a contiguous strip against Avery's old
+east edge. Avery's box grew east (to -75.158) and south (to 39.9777, to
+also reach Tropical Smoothie Cafe); Cecil B. Moore Ave's bracket/staple
+shape simplified back to a plain rectangle now that there's no notch to
+wrap around. Verified with the same before/after `backfill:map-zones`
+diff pattern as the original split — exactly these 6 changed, zero
+surprises across all 114 venues. Full writeup: `Context/decisions.md`.
 
 ## 2026-09-04 — "Cafe" cuisine tag restored, corrects the entry below
 
