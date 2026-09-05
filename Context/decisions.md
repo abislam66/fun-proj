@@ -7,6 +7,62 @@
 
 ---
 
+## 2026-09-05 — Pushed today's zone/cuisine work to production
+
+Merged `feat/zone-overlay-cleanup-and-bulk-cuisine` into `main` (fast-forward,
+no conflicts) and deployed to production, following `Specs/deployment.md`'s
+"migrate → deploy" order — prod's DB was fully migrated and its data
+backfilled *before* main was pushed, so there was never a window where
+live code ran against an unmigrated schema.
+
+**Discovered while checking prod's migration state (read-only) before
+migrating:** prod's `profiles`/`ratings` schema already fully matched
+migration `0010`'s end state — every column, constraint, and index was
+already there — but `drizzle.__drizzle_migrations` only recorded 9 applied
+migrations (through `0008`), not 11. Someone applied `0009`/`0010`'s SQL to
+prod directly at some point (outside `drizzle-kit migrate`), so the schema
+was correct but the bookkeeping table wasn't. Confirmed via dev's own
+journal (which has all 11 rows) that this was purely a tracking gap, not
+missing schema — `0009`/`0010`'s hash+timestamp pairs from dev matched
+prod's actual state exactly.
+
+Also noticed migration `0006`'s recorded hash differs between dev and prod
+despite an identical `created_at`. Checked `0006`'s SQL
+(`ALTER TABLE "venues" ADD COLUMN "map_zone" text;`) — trivial, and the
+column already exists correctly in prod either way, so this is almost
+certainly a CRLF/LF byte-level difference in the file from a Windows
+checkout at some point, not a real drift. Left as-is; not worth chasing
+further since the actual DDL effect is identical and already applied.
+
+**Fix, not a migration:** inserted the two missing journal rows directly
+(same hash+`created_at` as dev's rows 10/11) rather than running
+`drizzle-kit migrate` — running it as-is would have replayed `0009`/`0010`'s
+`ADD COLUMN`/`CREATE TABLE` statements against columns/tables that already
+exist and failed outright. Verified with a real `drizzle-kit migrate` run
+against prod immediately after: no errors, nothing pending, confirming the
+baseline was correct.
+
+**Then ran the actual project `backfill:map-zones` script against prod**
+(not a one-off query) — prod's `venues.map_zone` still had the old
+pre-reorg zones (`broad-st`, unwidened `cecil-b-moore`) since the
+zone-split and Avery-widening work had only ever touched `tueats-dev`.
+Without this, deploying today's code would have immediately reproduced the
+`venueLocationText` crash (fixed earlier today, see below) for the 12
+`broad-st` venues in *production*. Backfill result matched dev's exactly:
+101 in a real zone, 13 "other," post-backfill distribution
+(avery: 10, cecil-b-moore: 9, morgan-hall: 5, susquehanna: 7, ...)
+identical between dev and prod.
+
+**Credential note:** used `PROD_DIRECT_DATABASE_URL`
+(`.env.prod-readonly.local`) for the journal fix and prod's
+`DATABASE_URL` (`.env.local.prod-backup`) for the backfill — both are
+full-access production credentials kept read-only only by convention
+(see that file's own header comment and the 2026-08-27 entries below).
+Today's writes were narrow and verified (journal metadata only; a venue
+backfill that's already idempotent and tested against dev first), done
+with explicit site-owner sign-off after flagging the departure from how
+those credentials are normally used.
+
 ## 2026-09-05 — Fixed: any zone click could permanently kill the map
 
 Site owner reported "Map tiles unavailable" firing reliably on a zone
