@@ -102,22 +102,14 @@ describe("mapZoneContaining", () => {
     expect(mapZoneContaining(-75.1627803, 39.9794942)).toBe("cecil-b-moore");
   });
 
-  // Cecil B. Moore Ave's south edge pushed down 2026-08-30 to reach two
-  // venues just south of the original edge, near the Broad St corner.
-  it("places Oh Brother (corrected coords) in cecil-b-moore", () => {
-    expect(mapZoneContaining(-75.1583, 39.9781)).toBe("cecil-b-moore");
-  });
-
-  it("places Tropical Smoothie Cafe (stored coords, never flagged for correction) in cecil-b-moore", () => {
-    expect(mapZoneContaining(-75.1584827, 39.9778398)).toBe("cecil-b-moore");
-  });
-
   // 2026-09-04: N Broad St removed, replaced by avery/morgan-hall/
   // susquehanna; Avery carved out of cecil-b-moore's own middle (Avery's
   // real cluster sits a block west of Broad, near Cecil B. Moore Ave, not
-  // within N Broad St's old footprint at all).
-  it("places Wendy's (stored coords, 1708 N Broad St) in cecil-b-moore, not morgan-hall", () => {
-    expect(mapZoneContaining(-75.1580982, 39.9790933)).toBe("cecil-b-moore");
+  // within N Broad St's old footprint at all). Widened the same day to
+  // also cover the Broad St corner cluster (see Context/decisions.md) —
+  // cecil-b-moore is a plain rectangle again, not a bracket/staple shape.
+  it("places Wendy's (stored coords, 1708 N Broad St) in avery, not morgan-hall", () => {
+    expect(mapZoneContaining(-75.1580982, 39.9790933)).toBe("avery");
   });
 
   it("places City View Pizza (stored coords) in avery", () => {
@@ -128,11 +120,27 @@ describe("mapZoneContaining", () => {
     expect(mapZoneContaining(-75.159, 39.979)).toBe("avery");
   });
 
-  it("leaves Hangry Joe's — avery's tightest clearance (~9m) — in cecil-b-moore, not avery", () => {
-    expect(mapZoneContaining(-75.158796, 39.978687)).toBe("cecil-b-moore");
+  it("places Hangry Joe's in avery (widened east edge, no longer the tight ~9m case)", () => {
+    expect(mapZoneContaining(-75.158796, 39.978687)).toBe("avery");
   });
 
-  it("leaves Maple Star, just west of the avery notch, in cecil-b-moore", () => {
+  it("places QDOBA Mexican Eats (stored coords) in avery", () => {
+    expect(mapZoneContaining(-75.158377, 39.9785404)).toBe("avery");
+  });
+
+  it("places Chopsticks Express (stored coords) in avery", () => {
+    expect(mapZoneContaining(-75.1583, 39.97845)).toBe("avery");
+  });
+
+  it("places Oh Brother (corrected coords) in avery", () => {
+    expect(mapZoneContaining(-75.1583, 39.9781)).toBe("avery");
+  });
+
+  it("places Tropical Smoothie Cafe (stored coords, never flagged for correction) in avery", () => {
+    expect(mapZoneContaining(-75.1584827, 39.9778398)).toBe("avery");
+  });
+
+  it("leaves Maple Star, just west of avery's west edge, in cecil-b-moore", () => {
     expect(mapZoneContaining(-75.1603996, 39.9792368)).toBe("cecil-b-moore");
   });
 

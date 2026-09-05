@@ -29,10 +29,11 @@
  * Hall and Susquehanna (its two real venue clusters), and Avery (carved
  * out of Cecil B. Moore Ave's own territory, since The Avery apartments
  * sit a block west of Broad St, near Cecil B. Moore Ave, not within N
- * Broad St's old footprint at all). Cecil B. Moore Ave's polygon is now a
- * bracket/staple shape wrapping around the Avery notch, since Avery's
- * cluster sits in the middle of the corridor by longitude, not at either
- * end — see Context/decisions.md for the full geometry writeup.
+ * Broad St's old footprint at all). Avery was widened the same day to
+ * also cover the Broad St corner cluster (Wendy's, Hangry Joe's, QDOBA,
+ * Chopsticks Express, Oh Brother, Tropical Smoothie Cafe), so Cecil B.
+ * Moore Ave is back to a plain rectangle (no notch to carve around) — see
+ * Context/decisions.md for the full geometry writeup.
  */
 
 /** How a map zone is drawn at campus overview. */
@@ -261,9 +262,9 @@ export const MAP_ZONES = {
     soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
-      "Cecil B. Moore Avenue between roughly 17th and 14th — approximate corridor, not hand-traced like the other zones. " +
+      "Cecil B. Moore Avenue between roughly 17th and 15th — approximate corridor, not hand-traced like the other zones. " +
       "South edge pushed down 2026-08-30 to also reach Oh Brother and Tropical Smoothie Cafe, both just south of the original edge near the Broad St corner. " +
-      "Reshaped 2026-09-04 into a bracket/staple shape (west span, a notch, east span) when the Avery zone was carved out of its middle: Avery's real-world cluster (City View Pizza, OWL Breakfast & Lunch, Dunkin', The Peabody) sits at roughly the corridor's midpoint by longitude, not at either end, so a plain rectangle can't exclude it without also cutting into venues on both sides. The notch shares an exact boundary with Avery's own polygon (lng -75.1598/-75.1589, lat 39.9782) — zero gap, zero overlap by construction.",
+      "Reshaped 2026-09-04 into a bracket/staple shape when the Avery zone was first carved out of its middle, then simplified back to a plain rectangle the same day when Avery grew east to absorb the whole block between 15th and the Broad St corner (Wendy's, Hangry Joe's, QDOBA, Chopsticks Express, Oh Brother, Tropical Smoothie Cafe) — see Avery's own description and Context/decisions.md.",
     sort: 9,
     mark: MAP_ZONE_MARK.streetLine,
     padding: 64,
@@ -271,11 +272,7 @@ export const MAP_ZONES = {
       [-75.1638, 39.9777],
       [-75.1638, 39.98],
       [-75.1598, 39.98],
-      [-75.1598, 39.9782],
-      [-75.1589, 39.9782],
-      [-75.1589, 39.98],
-      [-75.158, 39.98],
-      [-75.158, 39.9777],
+      [-75.1598, 39.9777],
       [-75.1638, 39.9777],
     ] as LngLat[],
   },
@@ -286,16 +283,16 @@ export const MAP_ZONES = {
     soft: "#F8ECEF",
     icon: "star" as MapZoneIcon,
     description:
-      "The block immediately around The Avery apartments (1601 N 15th St / Cecil B. Moore Ave), carved out of Cecil B. Moore Ave's own territory 2026-09-04 rather than N Broad St — The Avery sits a block west of Broad, geocoding nowhere near the old N Broad St zone's footprint. Tight box around City View Pizza, OWL Breakfast & Lunch, Dunkin', and The Peabody; east edge sits ~9m from Hangry Joe's (nearest Cecil B. Moore Ave venue), the tightest clearance of this reorg — worth a real-world sanity check if a new venue ever geocodes near that edge.",
+      "The block around The Avery apartments and the Broad St corner (roughly 15th to Broad), carved out of Cecil B. Moore Ave's own territory 2026-09-04 rather than N Broad St — The Avery sits a block west of Broad, geocoding nowhere near the old N Broad St zone's footprint. Originally a tight box around just City View Pizza, OWL Breakfast & Lunch, Dunkin', and The Peabody; widened the same day to also cover the Broad St corner cluster (Wendy's, Hangry Joe's, QDOBA Mexican Eats, Chopsticks Express, Oh Brother, Tropical Smoothie Cafe) per explicit site-owner instruction — Hangry Joe's had been left just outside the original ~9m-tight east edge, and the owner wanted the whole visible cluster in one zone rather than split across Avery/Cecil B. Moore Ave. Cecil B. Moore Ave's polygon simplified back to a plain rectangle as a result (no more notch to carve around).",
     sort: 10,
     mark: MAP_ZONE_MARK.buildingFill,
     padding: 56,
     membership: [
-      [-75.1598, 39.9782],
+      [-75.1598, 39.9777],
       [-75.1598, 39.98],
-      [-75.1589, 39.98],
-      [-75.1589, 39.9782],
-      [-75.1598, 39.9782],
+      [-75.158, 39.98],
+      [-75.158, 39.9777],
+      [-75.1598, 39.9777],
     ] as LngLat[],
   },
   "morgan-hall": {
