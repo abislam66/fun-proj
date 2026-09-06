@@ -6,10 +6,12 @@ import type { Venue } from "@/lib/venues";
 
 /**
  * Hot Spots This Week — a hand-curated Top 5, swapped into the same results
- * sheet as ResultsPanel when viewMode === "hotspots". The picks are the
- * ordered slug list in `HOT_SPOTS_THIS_WEEK`, resolved against the venues
- * VenueExplorer already loaded; filters don't apply here. Tapping a row
- * selects that venue on the map, same as a ResultsPanel row.
+ * sheet as ResultsPanel when viewMode === "hotspots". The board is the
+ * admin-curated `hot_spots` table (`hotSpotVenueIds`, ordered); when that's
+ * empty it falls back to the `HOT_SPOTS_THIS_WEEK` config slugs. Picks are
+ * resolved against the venues VenueExplorer already loaded, so a
+ * retired/unpublished pick just drops out. Filters don't apply here.
+ * Tapping a row selects that venue on the map, same as a ResultsPanel row.
  *
  * The community-voted board (upvote/downvote, venue_votes, migration 0011)
  * is deferred — see Context/decisions.md. The vote server actions and
@@ -17,21 +19,26 @@ import type { Venue } from "@/lib/venues";
  */
 export function HotSpotsPanel({
   venues,
+  hotSpotVenueIds = [],
   selectedId,
   hoveredId,
   onHover,
   onSelect,
 }: {
   venues: Venue[];
+  hotSpotVenueIds?: string[];
   selectedId: string | null;
   hoveredId: string | null;
   onHover?: (venueId: string | null) => void;
   onSelect: (venueId: string | null) => void;
 }) {
+  const byId = new Map(venues.map((venue) => [venue.id, venue]));
   const bySlug = new Map(venues.map((venue) => [venue.slug, venue]));
-  const picks = HOT_SPOTS_THIS_WEEK.map((slug) => bySlug.get(slug)).filter(
-    (venue): venue is Venue => venue != null,
-  );
+  const picks = (
+    hotSpotVenueIds.length > 0
+      ? hotSpotVenueIds.map((id) => byId.get(id))
+      : HOT_SPOTS_THIS_WEEK.map((slug) => bySlug.get(slug))
+  ).filter((venue): venue is Venue => venue != null);
 
   if (picks.length === 0) {
     return (

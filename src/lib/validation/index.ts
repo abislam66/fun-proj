@@ -38,3 +38,5 @@ export {
 export { updateOwnProfileSchema, type UpdateOwnProfileInput } from "./profile";
 
 export { submitVenueVoteSchema, type SubmitVenueVoteInput } from "./vote";
+
+export { updateHotSpotsSchema, type UpdateHotSpotsInput } from "./hot-spots";

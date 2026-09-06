@@ -250,6 +250,30 @@ export const venueVotes = pgTable(
   ],
 );
 
+/**
+ * Admin-curated "Hot Spots This Week" board — an ordered, hand-picked set
+ * of up to 5 published venues shown on the home Hot Spots tab. `position`
+ * (1..5) is the primary key, so the table holds at most 5 rows and its
+ * order is intrinsic; the admin editor replaces the whole set on save.
+ * Independent of `venue_votes` — this is editorial curation, not voting.
+ */
+export const hotSpots = pgTable(
+  "hot_spots",
+  {
+    position: smallint("position").primaryKey(),
+    venueId: uuid("venue_id")
+      .notNull()
+      .references(() => venues.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("hot_spots_venue_unique").on(table.venueId),
+    check("hot_spots_position_range", sql`${table.position} BETWEEN 1 AND 5`),
+  ],
+);
+
 export type VenueRow = typeof venues.$inferSelect;
 export type VenueInsert = typeof venues.$inferInsert;
 export type ProfileRow = typeof profiles.$inferSelect;
@@ -260,3 +284,5 @@ export type RatingRow = typeof ratings.$inferSelect;
 export type RatingInsert = typeof ratings.$inferInsert;
 export type VenueVoteRow = typeof venueVotes.$inferSelect;
 export type VenueVoteInsert = typeof venueVotes.$inferInsert;
+export type HotSpotRow = typeof hotSpots.$inferSelect;
+export type HotSpotInsert = typeof hotSpots.$inferInsert;

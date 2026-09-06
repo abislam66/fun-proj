@@ -7,6 +7,29 @@
 
 ---
 
+## 2026-09-06 — Hot Spots This Week board is admin-editable (DB-backed)
+
+Follow-up to the static-Top-5 entry below: the board is now curated from
+`/admin/hot-spots` instead of a code edit. New `hot_spots` table (migration
+`0012_nostalgic_nova`): `position` smallint PK 1..5, `venue_id` FK, deny-all
+RLS — at most 5 rows, order intrinsic, replaced wholesale on save. Follows
+the standard write path: `updateHotSpots` action → `requireAdmin` → Zod
+(`updateHotSpotsSchema`, ≤5 distinct uuids) → published-venue check →
+`replaceHotSpots` (one transaction) → `revalidateTag("hot-spots")`. Read
+side: `getHotSpots`/`getHotSpotVenueIds` in `src/lib/db/queries/hot-spots.ts`,
+`unstable_cache` tag `hot-spots` (no TTL, same pattern as `venues`).
+
+`src/app/(public)/page.tsx` now SSR-loads the board and passes
+`hotSpotVenueIds` through `VenueExplorer` → `HotSpotsPanel`. **Fallback
+chain:** DB board (by id) → if the table is empty, `HOT_SPOTS_THIS_WEEK`
+config slugs → picks resolved against published venues, so a
+retired/unpublished pick just drops out. A failed board load degrades to
+the config fallback, never takes the page down. Admin nav gets a "Hot
+Spots" link (`src/components/admin/admin-shell.tsx`).
+
+Needs migrations `0011` **and** `0012` applied to dev then prod before the
+admin editor works (the home fallback works without them).
+
 ## 2026-09-06 — Hot Spots This Week ships as a static curated Top 5 (voting deferred)
 
 The community upvote/downvote board from the 2026-09-05 redesign was never

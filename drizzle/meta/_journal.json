@@ -85,6 +85,13 @@
       "when": 1788657083896,
       "tag": "0011_glorious_owl",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788730736196,
+      "tag": "0012_nostalgic_nova",
+      "breakpoints": true
     }
   ]
 }

@@ -54,6 +54,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
         >
           Venues
         </Link>
+        <Link
+          aria-current={
+            pathname.startsWith("/admin/hot-spots") ? "page" : undefined
+          }
+          className={
+            pathname.startsWith("/admin/hot-spots") ? "is-active" : undefined
+          }
+          href="/admin/hot-spots"
+        >
+          Hot Spots
+        </Link>
         <Link href="/admin#reports">Problem reports</Link>
         <Link href="/admin#photos">Photo queue</Link>
       </nav>

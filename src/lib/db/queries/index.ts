@@ -65,3 +65,4 @@ export {
   getUserVotesForVenues,
   type HotSpotRanking,
 } from "./venue-votes";
+export { getHotSpots, getHotSpotVenueIds, replaceHotSpots } from "./hot-spots";
