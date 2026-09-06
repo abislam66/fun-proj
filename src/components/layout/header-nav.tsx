@@ -2,46 +2,79 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { MouseEvent, ReactNode } from "react";
 
-export function HeaderNav() {
+import {
+  UserAvatar,
+  type HeaderSession,
+} from "@/components/layout/user-avatar";
+
+type ViewMode = "map" | "hotspots";
+
+/**
+ * A nav item that degrades gracefully: from the homepage (where VenueExplorer
+ * owns view-mode state) a click intercepts and calls the local handler with
+ * no navigation; from any other page (/about, /account, admin) it's a plain
+ * link to "/" with the right query param, since there's no local state to
+ * call back into there.
+ */
+function NavAction({
+  href,
+  onClick,
+  active,
+  children,
+}: {
+  href: string;
+  onClick?: () => void;
+  active?: boolean;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
-  const onAccount = pathname === "/account";
-  const onAbout = pathname === "/about";
+  const onHomePage = pathname === "/";
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (onHomePage && onClick) {
+      event.preventDefault();
+      onClick();
+    }
+  }
 
   return (
-    <nav aria-label="Primary navigation">
-      <Link aria-current={onAbout ? "page" : undefined} href="/about">
-        About
-      </Link>
-      <Link
-        aria-current={onAccount ? "page" : undefined}
-        aria-label="Your account"
-        className="header-profile"
-        href="/account"
-        title="Your account"
-      >
-        <ProfileGlyph />
-      </Link>
-    </nav>
+    <Link
+      aria-current={active ? "page" : undefined}
+      className="header-action"
+      href={href}
+      onClick={handleClick}
+    >
+      {children}
+    </Link>
   );
 }
 
-function ProfileGlyph() {
+export function HeaderNav({
+  session = null,
+  viewMode = "map",
+  onHome,
+  onHotSpots,
+}: {
+  session?: HeaderSession | null;
+  viewMode?: ViewMode;
+  onHome?: () => void;
+  onHotSpots?: () => void;
+}) {
   return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="22"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.75"
-      viewBox="0 0 24 24"
-      width="22"
-    >
-      <circle cx="12" cy="12" r="9.25" />
-      <circle cx="12" cy="9" r="2.6" />
-      <path d="M7.2 17.4c.9-2.2 2.7-3.4 4.8-3.4s3.9 1.2 4.8 3.4" />
-    </svg>
+    <nav aria-label="Primary navigation">
+      <NavAction active={viewMode === "map"} href="/" onClick={onHome}>
+        Home
+      </NavAction>
+      <NavAction
+        active={viewMode === "hotspots"}
+        href="/?view=hotspots"
+        onClick={onHotSpots}
+      >
+        Hot Spots This Week
+      </NavAction>
+      <UserAvatar session={session} />
+    </nav>
   );
 }

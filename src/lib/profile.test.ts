@@ -5,8 +5,28 @@ import {
   decadeStart,
   formatClassYear,
   identityChangeBlocked,
+  initialsFromDisplayName,
   yearsInDecade,
 } from "@/lib/profile";
+
+describe("initialsFromDisplayName", () => {
+  it("takes the first letter of the first and last word", () => {
+    expect(initialsFromDisplayName("Abrar Islam")).toBe("AI");
+  });
+
+  it("uses just one letter for a single-word name", () => {
+    expect(initialsFromDisplayName("Cher")).toBe("C");
+  });
+
+  it("ignores extra internal whitespace", () => {
+    expect(initialsFromDisplayName("  Rafiat   Amir  ")).toBe("RA");
+  });
+
+  it("falls back to a placeholder for an empty name", () => {
+    expect(initialsFromDisplayName("")).toBe("?");
+    expect(initialsFromDisplayName("   ")).toBe("?");
+  });
+});
 
 describe("formatClassYear", () => {
   it("uses Class of for both past and future years", () => {

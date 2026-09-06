@@ -27,4 +27,6 @@ export const AnalyticsEvent = {
   PhotoSubmitted: "photo submitted",
   ProblemReported: "problem reported",
   VenueDetailViewed: "venue detail viewed",
+  VoteCast: "vote cast",
+  HotSpotsViewed: "hot spots viewed",
 } as const;

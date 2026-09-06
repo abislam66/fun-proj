@@ -56,3 +56,12 @@ export {
   type VenueReview,
   type MemberReview,
 } from "./ratings";
+export {
+  getUserVoteForVenue,
+  assertVoteAllowed,
+  upsertVote,
+  deleteOwnVote,
+  getWeeklyVenueRanking,
+  getUserVotesForVenues,
+  type HotSpotRanking,
+} from "./venue-votes";

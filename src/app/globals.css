@@ -99,6 +99,18 @@
   --sheet-h-preview: 14rem;
 }
 
+/* The results sheet overlays the map at every breakpoint now (map-first
+   redesign) — desktop's taller viewport gets bigger caps on the same
+   three tokens rather than a separate side-panel layout. mobile-sheet-
+   heights.ts needs no change: it measures the real DOM element at the
+   real viewport width, so these values are picked up automatically. */
+@media (min-width: 64rem) {
+  :root {
+    --sheet-h-default: min(28rem, 40dvh);
+    --sheet-h-expanded: min(60rem, 85dvh);
+  }
+}
+
 @theme inline {
   --color-cherry: #9d2235;
   --color-cherry-hover: #b52a3f;
@@ -306,12 +318,16 @@ button {
   border-color: var(--color-cherry-hover);
 }
 
-.site-header nav a[aria-current="page"]:not(.header-profile) {
+.site-header nav a[aria-current="page"] {
   color: var(--color-cherry-hover);
   border-color: var(--color-cherry);
 }
 
-.site-header nav a.header-profile {
+.user-avatar {
+  position: relative;
+}
+
+.user-avatar-trigger {
   display: inline-flex;
   min-width: 2.75rem;
   min-height: 2.75rem;
@@ -323,11 +339,69 @@ button {
   color: #d9cfc8;
 }
 
-.site-header nav a.header-profile:hover,
-.site-header nav a.header-profile[aria-current="page"] {
+.user-avatar-trigger:hover,
+.user-avatar-trigger[aria-expanded="true"] {
   color: var(--color-cherry-hover);
   border-color: rgba(213, 63, 90, 0.55);
   background: rgba(157, 34, 53, 0.22);
+}
+
+.user-avatar-initials {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-cherry);
+  color: var(--color-surface);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.user-avatar-menu {
+  position: absolute;
+  top: calc(100% + var(--spacing-sm));
+  right: 0;
+  z-index: 40;
+  display: grid;
+  min-width: 11rem;
+  padding: var(--spacing-xs);
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pixel);
+  color: var(--color-ink);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.user-avatar-menu-item {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font-size: var(--text-small);
+  font-weight: 600;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.user-avatar-menu-item:hover {
+  background: var(--color-cherry-soft);
+  color: var(--color-cherry-deep);
+}
+
+.user-avatar-menu-signin {
+  padding: var(--spacing-xs) var(--spacing-sm);
 }
 
 @media (max-width: 40rem) {
@@ -562,16 +636,17 @@ button {
    the base `bottom` above; expanded hides the row (only a ~12.5%
    sliver of map left). Scoped below the desktop breakpoint so this
    can't out-specificity the desktop corner-column rule. */
-@media (max-width: 63.9375rem) {
-  [data-sheet="collapsed"] .map-controls {
-    bottom: calc(var(--sheet-h-collapsed) + var(--spacing-md));
-  }
-  [data-sheet="preview"] .map-controls {
-    bottom: calc(var(--sheet-h-preview) + var(--spacing-md));
-  }
-  [data-sheet="full"] .map-controls {
-    display: none;
-  }
+/* The sheet overlays the map at every breakpoint now — these follow its
+   live snap state universally, not just below the old desktop split's
+   breakpoint. */
+[data-sheet="collapsed"] .map-controls {
+  bottom: calc(var(--sheet-h-collapsed) + var(--spacing-md));
+}
+[data-sheet="preview"] .map-controls {
+  bottom: calc(var(--sheet-h-preview) + var(--spacing-md));
+}
+[data-sheet="full"] .map-controls {
+  display: none;
 }
 
 .map-control-button {
@@ -1158,11 +1233,7 @@ button {
   background: var(--color-cherry-soft);
 }
 
-.desktop-results {
-  display: none;
-}
-
-.mobile-results {
+.results-sheet-region {
   display: block;
 }
 
@@ -1225,6 +1296,20 @@ button {
   background: var(--color-border);
 }
 
+/* "Swipe up to see all restaurants" — shown only at the collapsed browse
+   state (map-first landing, list otherwise hidden). Grid auto-flow
+   already stacks this under the drag-pill span above with no extra
+   layout rules needed. */
+.sheet-handle-label {
+  padding-bottom: var(--spacing-xs);
+  color: var(--color-ink-secondary);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .sheet-content {
   height: calc(100% - 2.75rem);
   overflow: auto;
@@ -1237,32 +1322,6 @@ button {
 .results-panel {
   min-height: 100%;
   background: var(--color-surface);
-}
-
-/* Default snap prioritizes search + filters over the map: hero text goes
-   away so the map gets substantially more of the screen. Scoped to
-   mobile only (matches .map-controls' breakpoint above) since ".results-
-   intro" is the same markup rendered in the desktop split pane, which
-   never sets [data-sheet] at all in practice but shouldn't depend on
-   that to stay visible. */
-@media (max-width: 63.9375rem) {
-  [data-sheet="collapsed"] .results-intro,
-  [data-sheet="peek"] .results-intro {
-    display: none;
-  }
-}
-
-.results-intro {
-  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-sm);
-}
-
-.results-intro h1 {
-  max-width: 22rem;
-  margin: 0;
-  font-family: var(--font-display), sans-serif;
-  font-size: 1.5rem;
-  line-height: 1.05;
-  letter-spacing: -0.035em;
 }
 
 .venue-preview {
@@ -1336,6 +1395,33 @@ button {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Floating search+filters card over the map — the map-first landing's
+   replacement for the old list pane's inline search bar. Sized to
+   content (not full-width) so most of the map stays clickable/visible
+   around it; the drawer growing taller just extends the card further
+   down, since it isn't in document flow with anything below it. */
+.map-search-overlay {
+  position: absolute;
+  top: var(--spacing-md);
+  left: 50%;
+  z-index: 15;
+  width: min(20rem, calc(100% - 2 * var(--spacing-md)));
+  transform: translateX(-50%);
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pixel);
+}
+
+.map-search-overlay .filter-area {
+  padding: var(--spacing-sm) var(--spacing-sm) 0;
+  border-bottom: 0;
+}
+
+.map-search-overlay .filter-drawer-open {
+  padding-bottom: var(--spacing-sm);
+}
+
 .search-wrap {
   position: relative;
   display: block;
@@ -1343,6 +1429,17 @@ button {
 
 .search-wrap .input {
   padding-left: 2.55rem;
+}
+
+/* The floating search field is a quick "jump to a place" affordance, not
+   the primary input the account/review forms are — so it runs shorter and
+   tighter than the base .input here (scoped to the overlay only). */
+.map-search-overlay .search-wrap .input {
+  min-height: 2.5rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  padding-left: 2.3rem;
+  font-size: var(--text-small);
 }
 
 .search-icon {
@@ -1356,6 +1453,11 @@ button {
   transform: rotate(-35deg);
 }
 
+.map-search-overlay .search-icon {
+  top: 0.5rem;
+  left: 0.8rem;
+}
+
 .filter-scroll {
   display: flex;
   gap: var(--spacing-sm);
@@ -1367,6 +1469,18 @@ button {
 
 .filter-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.filter-clear-button {
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-cherry);
+  white-space: nowrap;
+}
+
+.filter-clear-button:hover {
+  background: var(--color-cherry-soft);
 }
 
 /* Menu options open as an in-flow drawer under the chip row — the panel
@@ -1470,7 +1584,8 @@ button {
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Rows are buttons (select-on-map), not links — reset button chrome. */
+/* Rows are links to /eat/[slug] — reset anchor chrome to look like the
+   old button (global `a` rule already strips underline/color). */
 .venue-row {
   display: block;
   width: 100%;
@@ -1496,6 +1611,123 @@ button {
 
 .venue-row-selected {
   background: var(--color-cherry-soft);
+}
+
+.hot-spots-loading {
+  padding: var(--spacing-xl) var(--spacing-md);
+  color: var(--color-ink-secondary);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  text-align: center;
+}
+
+.hot-spots-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hot-spots-list li {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.hot-spot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: background var(--duration-short) var(--ease-move);
+}
+
+.hot-spot-rank {
+  flex-shrink: 0;
+  min-width: 1.75rem;
+  color: var(--color-ink-muted);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+
+.hot-spot-name {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--spacing-sm) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.hot-spot-name:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.hot-spot-votes {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.hot-spot-vote {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1.5px solid var(--color-marquee);
+  border-radius: var(--radius-pixel);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-pixel-sm);
+}
+
+.hot-spot-vote:hover {
+  background: var(--color-cherry-soft);
+}
+
+.hot-spot-vote:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.hot-spot-vote:focus-visible {
+  outline: 2px solid var(--color-cherry);
+  outline-offset: 2px;
+}
+
+.hot-spot-vote-active {
+  border-color: var(--color-cherry);
+  background: var(--color-cherry);
+  color: var(--color-surface);
+}
+
+.hot-spot-score {
+  min-width: 1.75rem;
+  color: var(--color-ink);
+  font-family: var(--font-data), monospace;
+  font-size: var(--text-small);
+  font-weight: 700;
+  text-align: center;
+}
+
+.hot-spot-signin-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md) var(--spacing-sm);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-small);
+}
+
+.hot-spot-signin-prompt p {
+  margin: 0;
 }
 
 .venue-row-top,
@@ -2309,12 +2541,13 @@ button {
 }
 
 @media (min-width: 64rem) {
-  /* No sheet on desktop: back to a vertical column in the corner,
-     stacked above the attribution line. */
+  /* Desktop keeps a vertical column in the corner (more breathing room
+     than mobile's row), but its bottom still follows the sheet's live
+     height via the universal [data-sheet] rules above — the sheet exists
+     on desktop too now. */
   .map-controls {
     flex-direction: column;
     right: var(--spacing-xl);
-    bottom: calc(var(--spacing-xl) + 2.25rem);
   }
 
   .map-hud-bar {
@@ -2364,35 +2597,8 @@ button {
     padding: 0 var(--spacing-xl);
   }
 
-  .explorer > .site-header {
-    right: 60%;
-  }
-
   .explorer-map {
-    inset: 0 0 0 40%;
-  }
-
-  .desktop-results {
-    position: absolute;
-    top: 4.75rem;
-    bottom: 0;
-    left: 0;
-    display: block;
-    width: 40%;
-    overflow: auto;
-    border-right: 1px solid var(--color-border);
-  }
-
-  .mobile-results {
-    display: none;
-  }
-
-  .results-intro {
-    padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
-  }
-
-  .results-intro h1 {
-    font-size: 2.3rem;
+    inset: 4.75rem 0 0;
   }
 
   .filter-area,
@@ -2409,17 +2615,5 @@ button {
   .detail-page,
   .about-page {
     padding-top: var(--spacing-3xl);
-  }
-}
-
-@media (min-width: 80rem) {
-  .explorer > .site-header,
-  .desktop-results {
-    right: auto;
-    width: min(42%, var(--explorer-list-wide));
-  }
-
-  .explorer-map {
-    left: min(42%, var(--explorer-list-wide));
   }
 }

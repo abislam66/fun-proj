@@ -1,8 +1,11 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import type { HeaderSession } from "@/components/layout/user-avatar";
 import { VenueExplorer } from "@/components/venues/venue-explorer";
+import { getUser } from "@/lib/auth";
 import { getPublishedVenues, toVenue } from "@/lib/db/queries";
+import { initialsFromDisplayName } from "@/lib/profile";
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -50,5 +53,26 @@ export default async function HomePage({ searchParams }: PageProps) {
     return <HomePageUnavailable />;
   }
 
-  return <VenueExplorer initialQuery={params.toString()} venues={venues} />;
+  // A failed session check degrades to "signed out" — it never takes the
+  // whole page down the way a failed venue query does above.
+  let headerSession: HeaderSession | null = null;
+  try {
+    const session = await getUser();
+    if (session) {
+      headerSession = {
+        displayName: session.profile.displayName,
+        initials: initialsFromDisplayName(session.profile.displayName),
+      };
+    }
+  } catch (error) {
+    console.error("Homepage: failed to load session:", error);
+  }
+
+  return (
+    <VenueExplorer
+      initialQuery={params.toString()}
+      session={headerSession}
+      venues={venues}
+    />
+  );
 }

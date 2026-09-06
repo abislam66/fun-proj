@@ -36,3 +36,5 @@ export {
 } from "./rating";
 
 export { updateOwnProfileSchema, type UpdateOwnProfileInput } from "./profile";
+
+export { submitVenueVoteSchema, type SubmitVenueVoteInput } from "./vote";

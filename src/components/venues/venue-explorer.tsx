@@ -5,13 +5,19 @@ import { usePostHog } from "posthog-js/react";
 
 import { VenueMapLoader } from "@/components/map/venue-map-loader";
 import { SiteHeader } from "@/components/layout/site-header";
+import type { HeaderSession } from "@/components/layout/user-avatar";
 import { MobileSheet } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/primitives";
-import { FilterBar } from "@/components/venues/filter-bar";
+import { HotSpotsPanel } from "@/components/venues/hot-spots-panel";
+import { MapSearchOverlay } from "@/components/venues/map-search-overlay";
 import { VenueList } from "@/components/venues/venue-list";
 import { VenuePreview } from "@/components/venues/venue-preview";
 import { AnalyticsEvent } from "@/lib/analytics";
-import type { Venue, VenueFilters } from "@/lib/venues";
+import {
+  DESKTOP_MEDIA_QUERY,
+  type MobileSheetSnap,
+} from "@/lib/mobile-sheet-heights";
+import type { Venue } from "@/lib/venues";
 import {
   countUnknownHours,
   EMPTY_VENUE_FILTERS,
@@ -20,34 +26,29 @@ import {
   serializeVenueFilters,
 } from "@/lib/venues";
 
+type ViewMode = "map" | "hotspots";
+
 function ResultsPanel({
   venues,
-  filters,
-  setFilters,
+  backPath,
   onClearFilters,
   unknownHours,
+  filtersActive,
   selectedId,
   hoveredId,
   onHover,
-  onSelect,
 }: {
   venues: Venue[];
-  filters: VenueFilters;
-  setFilters: (filters: VenueFilters) => void;
+  backPath: string;
   onClearFilters: () => void;
   unknownHours: number;
+  filtersActive: boolean;
   selectedId: string | null;
   hoveredId: string | null;
   onHover: (venueId: string | null) => void;
-  onSelect: (venueId: string | null) => void;
 }) {
   return (
     <div className="results-panel">
-      <div className="results-intro">
-        <p className="eyebrow">Off-meal-plan food near Temple</p>
-        <h1>Find your next campus bite.</h1>
-      </div>
-      <FilterBar filters={filters} onChange={setFilters} />
       <div className="results-summary" aria-live="polite">
         <span>
           {venues.length} {venues.length === 1 ? "place" : "places"}
@@ -57,7 +58,7 @@ function ResultsPanel({
             +{unknownHours} with unknown hours
           </span>
         ) : null}
-        {serializeVenueFilters(filters) ? (
+        {filtersActive ? (
           <Button
             className="clear-button"
             onClick={onClearFilters}
@@ -68,10 +69,10 @@ function ResultsPanel({
         ) : null}
       </div>
       <VenueList
+        backPath={backPath}
         hoveredId={hoveredId}
         onClear={onClearFilters}
         onHover={onHover}
-        onSelect={onSelect}
         selectedId={selectedId}
         venues={venues}
       />
@@ -82,16 +83,51 @@ function ResultsPanel({
 export function VenueExplorer({
   venues,
   initialQuery,
+  session = null,
 }: {
   venues: Venue[];
   initialQuery: string;
+  session?: HeaderSession | null;
 }) {
+  const initialParams = useMemo(
+    () => new URLSearchParams(initialQuery),
+    [initialQuery],
+  );
   const [filters, setFilters] = useState(() =>
-    parseVenueFilters(new URLSearchParams(initialQuery)),
+    parseVenueFilters(initialParams),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    initialParams.get("view") === "hotspots" ? "hotspots" : "map",
+  );
+  // The results sheet now overlays the map at every breakpoint — map
+  // dominates on load, so it starts collapsed everywhere, not just mobile.
+  // A bookmarked "?view=restaurants" link opens straight to the list.
+  const [snap, setSnap] = useState<MobileSheetSnap>(() =>
+    initialParams.get("view") === "restaurants" ? "peek" : "collapsed",
+  );
+  // On mobile, selecting a venue swaps the sheet into a preview card (no
+  // room for both a browse view and a floating mini-card at once). On
+  // desktop the mini-card handles the selection instead — the sheet stays
+  // in whatever browse content it already had, so picking a venue never
+  // silently discards an open Hot Spots board or restaurant list.
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : window.matchMedia(DESKTOP_MEDIA_QUERY).matches,
+  );
   const posthog = usePostHog();
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_MEDIA_QUERY);
+    function sync() {
+      setIsDesktop(media.matches);
+    }
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   // Venue pills are drawn on the map's canvas (a MapLibre symbol layer, see
   // venue-pill-layer.tsx) — not DOM elements — so autocapture is
@@ -125,6 +161,16 @@ export function VenueExplorer({
     setFilters(EMPTY_VENUE_FILTERS);
   }
 
+  function goHome() {
+    setViewMode("map");
+  }
+
+  function openHotSpots() {
+    posthog.capture(AnalyticsEvent.HotSpotsViewed);
+    setViewMode("hotspots");
+    setSnap((current) => (current === "collapsed" ? "peek" : current));
+  }
+
   const query = serializeVenueFilters(filters);
   const backPath = query ? `/?${query}` : "/";
   const visibleVenues = useMemo(
@@ -135,11 +181,15 @@ export function VenueExplorer({
     () => countUnknownHours(venues, filters),
     [venues, filters],
   );
+  const filtersActive = query.length > 0;
 
   useEffect(() => {
-    const next = query ? `/?${query}` : "/";
+    const params = new URLSearchParams(query);
+    if (viewMode === "hotspots") params.set("view", "hotspots");
+    const combined = params.toString();
+    const next = combined ? `/?${combined}` : "/";
     window.history.replaceState(window.history.state, "", next);
-  }, [query]);
+  }, [query, viewMode]);
 
   useEffect(() => {
     if (selectedId && !visibleVenues.some((venue) => venue.id === selectedId)) {
@@ -175,25 +225,50 @@ export function VenueExplorer({
   }, [selectedId]);
 
   const selectedVenue = venues.find((venue) => venue.id === selectedId) ?? null;
+  // See the isDesktop comment above: only mobile ever swaps the sheet into
+  // the preview card.
+  const sheetMode = selectedVenue && !isDesktop ? "preview" : "browse";
 
-  const panel = (
-    <ResultsPanel
-      filters={filters}
-      hoveredId={hoveredId}
-      onClearFilters={clearFilters}
-      onHover={setHoveredId}
-      onSelect={selectFromList}
-      selectedId={selectedId}
-      setFilters={setFilters}
-      unknownHours={unknownHours}
-      venues={visibleVenues}
-    />
-  );
+  const sheetBody =
+    sheetMode === "preview" && selectedVenue ? (
+      <VenuePreview
+        backPath={backPath}
+        onClose={() => setSelectedId(null)}
+        venue={selectedVenue}
+      />
+    ) : viewMode === "hotspots" ? (
+      <HotSpotsPanel
+        hoveredId={hoveredId}
+        isSignedIn={session !== null}
+        onHover={setHoveredId}
+        onSelect={selectFromList}
+        selectedId={selectedId}
+      />
+    ) : (
+      <ResultsPanel
+        backPath={backPath}
+        filtersActive={filtersActive}
+        hoveredId={hoveredId}
+        onClearFilters={clearFilters}
+        onHover={setHoveredId}
+        selectedId={selectedId}
+        unknownHours={unknownHours}
+        venues={visibleVenues}
+      />
+    );
 
   return (
     <main className="explorer">
-      <SiteHeader />
-      <div className="desktop-results">{panel}</div>
+      {/* The map-first redesign dropped the visible "Find your next campus
+          bite" hero text (map dominates instead), but the page still needs
+          exactly one real h1 for accessibility/SEO. */}
+      <h1 className="sr-only">TuEats — food around Temple University</h1>
+      <SiteHeader
+        onHome={goHome}
+        onHotSpots={openHotSpots}
+        session={session}
+        viewMode={viewMode}
+      />
       <div className="explorer-map">
         <VenueMapLoader
           backPath={backPath}
@@ -212,21 +287,22 @@ export function VenueExplorer({
           selectedZones={filters.zones}
           venues={visibleVenues}
         />
+        <MapSearchOverlay
+          active={filtersActive}
+          filters={filters}
+          onChange={setFilters}
+          onClear={clearFilters}
+        />
       </div>
-      <div className="mobile-results">
+      <div className="results-sheet-region">
         <MobileSheet
-          mode={selectedVenue ? "preview" : "browse"}
+          browseLabel="All Restaurants ⌃"
+          mode={sheetMode}
           onDismissPreview={() => setSelectedId(null)}
+          onSnapChange={setSnap}
+          snap={snap}
         >
-          {selectedVenue ? (
-            <VenuePreview
-              backPath={backPath}
-              onClose={() => setSelectedId(null)}
-              venue={selectedVenue}
-            />
-          ) : (
-            panel
-          )}
+          {sheetBody}
         </MobileSheet>
       </div>
     </main>

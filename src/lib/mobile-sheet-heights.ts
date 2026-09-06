@@ -1,6 +1,13 @@
 "use client";
 
 /**
+ * Shared breakpoint for every "does the sheet behave like mobile or
+ * desktop" decision — venue-map.tsx's camera padding, venue-explorer.tsx's
+ * preview-mode gating. One constant so they can never drift apart.
+ */
+export const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
+
+/**
  * Measures the live pixel height of one of the mobile results sheet's 3
  * snap states (globals.css .mobile-sheet-collapsed/-peek/-full/-preview,
  * driven by the shared --sheet-h-* tokens).

@@ -9,7 +9,7 @@ import {
   MAP_ZONE_KEYS_SORTED,
   type MapZoneKey,
 } from "@/config/map-zones";
-import { Chip, Input } from "@/components/ui/primitives";
+import { Button, Chip, Input } from "@/components/ui/primitives";
 import { AnalyticsEvent } from "@/lib/analytics";
 import type { VenueFilters } from "@/lib/venues";
 
@@ -24,9 +24,17 @@ function toggle<T extends string>(values: T[], value: T): T[] {
 export function FilterBar({
   filters,
   onChange,
+  onClear,
+  active,
+  searchPlaceholder = "Search food or a place",
 }: {
   filters: VenueFilters;
   onChange: (filters: VenueFilters) => void;
+  /** Resets query/filters/zone back to the default unfiltered state. */
+  onClear: () => void;
+  /** Whether any query/filter/zone is currently non-default. */
+  active: boolean;
+  searchPlaceholder?: string;
 }) {
   // Menu options expand inline below the chip row — an in-panel drawer
   // that pushes the results down. Never a floating popover over the list.
@@ -75,7 +83,7 @@ export function FilterBar({
         <span className="sr-only">Search venues or cuisines</span>
         <Input
           onChange={(event) => update("query", event.target.value)}
-          placeholder="Search food or a place"
+          placeholder={searchPlaceholder}
           type="search"
           value={filters.query}
         />
@@ -115,6 +123,15 @@ export function FilterBar({
         >
           Zone{filters.zones.length ? ` · ${filters.zones.length}` : ""}
         </button>
+        {active ? (
+          <Button
+            className="filter-clear-button"
+            onClick={onClear}
+            variant="ghost"
+          >
+            Clear filters
+          </Button>
+        ) : null}
       </div>
       <div
         className={

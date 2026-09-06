@@ -6,7 +6,6 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
 } from "react";
 
 import {
@@ -23,15 +22,24 @@ const TAP_THRESHOLD_PX = 10;
 export function MobileSheet({
   children,
   mode = "browse",
+  snap,
+  onSnapChange,
   onDismissPreview,
+  browseLabel,
 }: {
   children: ReactNode;
   /** Browse = search/list snaps. Preview = selected venue card. */
   mode?: "browse" | "preview";
+  /** Controlled by the parent so nav actions (All Restaurants, swipe-up)
+   *  can drive the same state the drag/tap handlers update. */
+  snap: MobileSheetSnap;
+  onSnapChange: (snap: MobileSheetSnap) => void;
   /** Dragging the preview down past the collapsed stop dismisses it. */
   onDismissPreview?: () => void;
+  /** Shown in the handle only at the collapsed browse state — the
+   *  "swipe up to see all restaurants" affordance. */
+  browseLabel?: string;
 }) {
-  const [snap, setSnap] = useState<MobileSheetSnap>("peek");
   const sheetRef = useRef<HTMLElement>(null);
   const dragging = useRef(false);
   const startY = useRef(0);
@@ -88,7 +96,7 @@ export function MobileSheet({
     const element = sheetRef.current;
     // Preview is a mode overlay — don't overwrite the browse snap so
     // dismissing returns to collapsed/peek/full as it was.
-    if (nextSnap !== "preview") setSnap(nextSnap);
+    if (nextSnap !== "preview") onSnapChange(nextSnap);
     if (!element) return;
     const targetPx = targetsPx.current[nextSnap];
     element.style.transition = "";
@@ -203,6 +211,9 @@ export function MobileSheet({
         type="button"
       >
         <span />
+        {browseLabel && mode === "browse" && snap === "collapsed" ? (
+          <span className="sheet-handle-label">{browseLabel}</span>
+        ) : null}
       </button>
       <div className="sheet-content" inert={visualSnap === "collapsed"}>
         {children}

@@ -7,6 +7,141 @@
 
 ---
 
+## 2026-09-06 — Header nav trimmed to Home + Hot Spots; search overlay shrunk
+
+Site owner asked to drop the **All Restaurants** nav action, leaving the
+primary nav as exactly **Home + Hot Spots This Week + profile glyph**. This
+walks back the "exactly three actions (Home, All Restaurants, Hot Spots)"
+line from the 2026-09-05 entry — the restaurant list is still reachable from
+the map's bottom sheet (drag the "All Restaurants ⌃" handle up, or a
+bookmarked `?view=restaurants` link), so the header link was redundant, not
+a lost path. Removed the `onAllRestaurants` prop chain
+(`HeaderNav`→`SiteHeader`→`VenueExplorer`), the `openAllRestaurants` handler,
+the `NavAction` `primary` variant, and the now-dead `.header-action-primary`
+CSS.
+
+Also shrank the floating map search card (`.map-search-overlay`): width cap
+`28rem → 20rem`, and the search input itself now runs shorter/tighter than
+the base `.input` (min-height `3rem → 2.5rem`, smaller vertical padding,
+`--text-small`) — scoped to the overlay so the account/review form inputs
+are unchanged. It reads as a quick "jump to a place" affordance, not a
+primary form field.
+
+Verified: `pnpm typecheck` + `pnpm lint` clean; live-browser screenshots at
+390px and 1280px confirm the two-item nav + profile glyph and the narrower,
+shorter search card. Not yet pushed.
+
+Note: `Context/DESIGN.md` still describes the header as "About + profile
+icon" — that line predates the 2026-09-05 redesign and this change; the
+header has been under active owner-directed iteration and DESIGN.md's
+header section is stale, not a constraint being violated.
+
+## 2026-09-05 — Map-first landing redesign + Hot Spots voting (spec gap, explicit override)
+
+Site owner asked for the public landing page to become map-first (map
+dominates on load at every breakpoint, no restaurant list until "All
+Restaurants" or a swipe-up gesture, floating search/filters over the map,
+top nav Home/All Restaurants/Hot Spots This Week, a signed-in avatar) plus
+a new "Hot Spots This Week" community-voted (upvote/downvote) weekly
+ranking. Planned via plan mode with three parallel Explore agents against
+the real codebase, then a dedicated Plan agent, then hand-verified against
+source before writing the final plan — see the approved plan for full
+technical detail; this entry covers the two decisions that needed
+explicit site-owner sign-off before scoping them in.
+
+**Desktop unifies with mobile on one sheet-over-map model.** The old
+persistent 40/60 list+map split (`.desktop-results`, always visible) is
+gone — `MobileSheet` (kept that name; only its outer wrapper div was
+renamed to `results-sheet-region`) is now used at every breakpoint, sized
+larger via a `@media (min-width: 64rem)` override on
+`--sheet-h-default`/`--sheet-h-expanded`. Its `snap` state moved from
+internal `useState` to a prop controlled by `VenueExplorer`, since nav
+actions (All Restaurants, the new "swipe up" handle label) and the
+existing drag/tap handlers now both need to drive the same state. This
+was flagged as the highest-risk single change in the plan — the sheet's
+pointer-event state machine has been iterated on multiple times (see this
+file's several 2026-09-04 mobile-sheet entries) — and was hand-verified
+in a real browser (Playwright, both a 390px and 1440px viewport) after
+the refactor: drag-follow, tap-cycle, and preview-dismiss all still work.
+
+**Desktop keeps its own pin-anchored mini-card, not the sheet, for
+selection.** First implementation pass swapped the sheet into `VenuePreview`
+mode on _any_ venue selection regardless of breakpoint, which on desktop
+silently discarded whatever the sheet was showing (the restaurant list, or
+the Hot Spots board) every time a pin was clicked — caught via a live
+screenshot during verification, not by typecheck/lint/tests, none of which
+would have flagged it. Fixed by tracking `isDesktop` in `VenueExplorer`
+(mirroring the same `matchMedia` pattern `VenueMap` already used
+internally) and only switching sheet `mode` to `"preview"` when `!isDesktop`
+— desktop's sheet now stays in browse mode and the floating mini-card
+handles the selection on its own, exactly as before this redesign.
+`DESKTOP_MEDIA_QUERY` was extracted from `venue-map.tsx` into
+`mobile-sheet-heights.ts` so both components (now three, counting
+`venue-explorer.tsx`) share one source of truth for the breakpoint instead
+of three copies of the same magic string. Known minor follow-up, not
+fixed: the floating mini-card can visually overlap the new floating search
+overlay when the selected pin sits very near the top of the map.
+
+**"Hot Spots This Week" is a genuine spec gap — flagged, not silently
+built.** It appears nowhere in `Specs/features.md`, `overview.md`, or
+`domain-knowledge.md`; the project is mid-Phase-2 (accounts + ratings/
+reviews shipped 2026-09-01, proposals/review-moderation/Google-snapshots
+still open Phase-2 items, Phase 3 not started); and a public per-venue
+vote board sits adjacent to (not identical to) `overview.md`'s explicit
+"no social graph — no public profiles, followers, DMs, or feeds" non-goal.
+Site owner explicitly signed off on building it now anyway, in the same
+flag-then-decide pattern as the 2026-08-28 login-wall override. Follow-up
+not done in this pass (implementation-only): `Specs/features.md` needs a
+new Phase-2 feature entry, and `overview.md`'s "no social graph" bullet
+needs a parenthetical carve-out so it doesn't read as silently contradicted.
+
+**What shipped:** `venue_votes` table (migration `0011_glorious_owl.sql`,
+mirrors `ratings`' conventions exactly — `unique(venue_id, user_id)` as
+the upsert target, no `status` enum since a bare +1/-1 has no free text to
+moderate, plus a `created_at` index `ratings` doesn't need since every
+ranking read filters on it). Rolling 7-day window for "this week"
+(`updated_at >= now() - 7 days`, computed in JS like every existing rate
+limiter), not a calendar-Monday reset — no time-windowed aggregate query
+existed anywhere in this codebase before this, so there was no existing
+convention to break either way, and a rolling window avoids the board
+reading as empty every Monday morning. `src/actions/votes.ts`
+(`submitVenueVote` toggles off on a repeat tap of the same arrow —
+Yik-Yak-style — rather than re-affirming it; `getHotSpotsRanking` also
+returns the caller's own votes so the UI can show which arrow is already
+active), `src/lib/db/queries/venue-votes.ts`, `src/lib/validation/vote.ts`,
+`VOTE_RATE_LIMIT` (30/user/day — higher than ratings' 5/day since a vote
+is a single tap, not composed content) in `config/site.ts`.
+
+**Deliberately zero `revalidateTag` calls for votes.** Every existing
+`revalidateTag` call in this codebase fires inside a mutating action, once
+per write, invalidating the whole `"venues"` cache tag — fine for ratings
+(capped at 5/user/day) but would thrash the homepage's cache on every
+single vote tap for a feature most visits never open. `getWeeklyVenueRanking`
+is not wrapped in `unstable_cache` at all; `HotSpotsPanel` fetches it via a
+plain server action when the tab opens (not baked into the homepage's
+unconditional SSR fetch), and votes update optimistically client-side from
+the action's own return value. If a future session "fixes" this back into
+the `revalidateTag("venues")` habit by reflex, that's wrong — read this
+entry first.
+
+**Avatar is initials-only, no photos.** No photo field exists on
+`profiles`, and `Specs/auth-security.md` states "No profile photos"
+explicitly — `UserAvatar` renders initials-in-a-circle (new
+`initialsFromDisplayName` in `src/lib/profile.ts`) when signed in and the
+pre-existing generic `ProfileGlyph` icon when signed out. "About" moved
+from top-level nav into the avatar's dropdown in both states, to keep the
+primary nav to exactly three actions (Home, All Restaurants, Hot Spots)
+plus the avatar.
+
+Verified: `pnpm typecheck`/`lint`/`test` (185/185, +4 new for
+`initialsFromDisplayName`) and `pnpm build` all clean; `pnpm db:migrate`
+applied cleanly to `tueats-dev`; live-browser Playwright checks (both
+viewports) confirmed map-first load with no list visible, the search
+overlay, All Restaurants opening the real list, Hot Spots showing the
+correct empty state (no fabricated votes/rankings), a venue selection
+still opening the existing pin-popup/mini-card path, and zero console/page
+errors. Not yet pushed to `main`.
+
 ## 2026-09-05 — Pushed 8 admin pin-position edits from dev to prod
 
 Site owner fine-tuned 8 venues' exact map pins via the local admin's
@@ -33,7 +168,7 @@ explicit site-owner approval of the specific script.
 Merged `feat/zone-overlay-cleanup-and-bulk-cuisine` into `main` (fast-forward,
 no conflicts) and deployed to production, following `Specs/deployment.md`'s
 "migrate → deploy" order — prod's DB was fully migrated and its data
-backfilled *before* main was pushed, so there was never a window where
+backfilled _before_ main was pushed, so there was never a window where
 live code ran against an unmigrated schema.
 
 **Discovered while checking prod's migration state (read-only) before
@@ -69,7 +204,7 @@ pre-reorg zones (`broad-st`, unwidened `cecil-b-moore`) since the
 zone-split and Avery-widening work had only ever touched `tueats-dev`.
 Without this, deploying today's code would have immediately reproduced the
 `venueLocationText` crash (fixed earlier today, see below) for the 12
-`broad-st` venues in *production*. Backfill result matched dev's exactly:
+`broad-st` venues in _production_. Backfill result matched dev's exactly:
 101 in a real zone, 13 "other," post-backfill distribution
 (avery: 10, cecil-b-moore: 9, morgan-hall: 5, susquehanna: 7, ...)
 identical between dev and prod.
@@ -103,13 +238,13 @@ the previous version of the image
 Root cause: `MapZoneLayer`'s spot-count re-bake effect
 (`map-zone-layer.tsx:196-213`) called `map.updateImage(imageId, plate)`
 unconditionally whenever `zoneCounts` changed. MapLibre's `updateImage`
-requires the replacement bitmap to have the *exact same* width/height as
+requires the replacement bitmap to have the _exact same_ width/height as
 whatever is already registered under that id, and throws synchronously
 otherwise — a hard requirement, not a warning. `buildZoneLabelIcon`'s
 canvas width depends on the live spot-count text's digit length ("4
 SPOTS" vs. "10 SPOTS" render at different widths), so any zone whose
 count crosses a digit boundary breaks `updateImage` the next time this
-effect runs — which is on *every* `zoneCounts` change, including the one
+effect runs — which is on _every_ `zoneCounts` change, including the one
 that fires when any zone gets selected (not just the zone whose count
 actually changed). Today's Avery widening (4 → 10 spots, see the entry
 below) pushed this from "latent" to "always reproduces," since 10 is
@@ -149,7 +284,7 @@ explicit instruction overrides the earlier tight-boundary judgment call.
 Checked all 15 venues then in `cecil-b-moore` sorted by longitude first:
 exactly these 6 occupy a contiguous strip (lng -75.1589 to -75.1581) right
 up against Avery's old east edge (-75.1589), with the next-nearest venue
-(Maple Star, -75.1604) sitting *west* of Avery's own west edge — so
+(Maple Star, -75.1604) sitting _west_ of Avery's own west edge — so
 widening Avery east to -75.158 (Cecil B. Moore Ave's old outer edge)
 sweeps up exactly the 6 intended venues and nothing else.
 
@@ -188,7 +323,7 @@ see the doc comment on `CUISINES` in `src/config/cuisines.ts`).
 Full history, so a future session isn't confused by the back-and-forth:
 `eaa55f4` added a "Coffee & Café" cuisine → `a34d910` reworked it into
 `venue.type === "cafe"` instead → PR #17 (`ad3c3aa`) added `cafe` back as
-its *own* cuisine tag, explicitly independent of `venue.type` → `b3a72d4`
+its _own_ cuisine tag, explicitly independent of `venue.type` → `b3a72d4`
 reverted that the same day ("two independently-settable cafe concepts is
 the wrong model") → this entry restores it, per explicit site-owner
 instruction referencing PR #17 directly. Nothing else needed to change:
@@ -257,7 +392,7 @@ Two non-obvious geometry problems came up, both solved with non-convex
    ray-casting logic, `src/lib/map/point-in-polygon.ts`) has no concept
    of holes or multi-part zones beyond what a single simple ring can
    express — a staple shape is a simple ring, so this fits without any
-   code change. Avery's box and the notch share an *exact* boundary
+   code change. Avery's box and the notch share an _exact_ boundary
    (lng -75.1598/-75.1589, lat 39.9782) — zero gap, zero overlap by
    construction, not by careful tuning.
 2. **Morgan Hall's north extension (to reach Panera Bread, added at the
@@ -303,7 +438,7 @@ with regardless of where exactly the line is drawn.
 (street-line paths, building-fill polygons, label anchor points) decoupled
 from the `membership` ring used for actual point-in-polygon computation.
 Also fixed a latent staleness there in passing: its `cecil-b-moore`
-membership feature still had the zone's *pre*-2026-08-30 south edge
+membership feature still had the zone's _pre_-2026-08-30 south edge
 (39.9782, not 39.9777) — harmless since that GeoJSON feature is only used
 for the invisible click-hit layer, not detection logic, but now corrected
 as part of rewriting that feature anyway.

@@ -217,6 +217,39 @@ export const ratings = pgTable(
   ],
 );
 
+/**
+ * One venue "Hot Spots" vote per member per venue — +1/-1, upsertable,
+ * toggle-off on re-tap. No status enum: unlike ratings there's no free
+ * text to moderate, so the rate limiter + the existing struckAt write-gate
+ * is sufficient.
+ */
+export const venueVotes = pgTable(
+  "venue_votes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    venueId: uuid("venue_id")
+      .notNull()
+      .references(() => venues.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => profiles.id),
+    value: smallint("value").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("venue_votes_venue_user_unique").on(table.venueId, table.userId),
+    index("venue_votes_venue_id_idx").on(table.venueId),
+    index("venue_votes_user_id_idx").on(table.userId),
+    index("venue_votes_created_at_idx").on(table.createdAt),
+    check("venue_votes_value_range", sql`${table.value} IN (-1, 1)`),
+  ],
+);
+
 export type VenueRow = typeof venues.$inferSelect;
 export type VenueInsert = typeof venues.$inferInsert;
 export type ProfileRow = typeof profiles.$inferSelect;
@@ -225,3 +258,5 @@ export type VenuePhotoRow = typeof venuePhotos.$inferSelect;
 export type VenuePhotoInsert = typeof venuePhotos.$inferInsert;
 export type RatingRow = typeof ratings.$inferSelect;
 export type RatingInsert = typeof ratings.$inferInsert;
+export type VenueVoteRow = typeof venueVotes.$inferSelect;
+export type VenueVoteInsert = typeof venueVotes.$inferInsert;

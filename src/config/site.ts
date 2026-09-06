@@ -111,3 +111,16 @@ export const MEMBER_PHOTO_RATE_LIMIT = {
   max: 3,
   windowMs: 24 * 60 * 60 * 1000,
 } as const;
+
+/**
+ * Member Hot Spots votes per user per rolling day. Higher than ratings'
+ * 5/day since a vote is a single tap, not composed content — reacting to
+ * a dozen+ board entries in one sitting is normal use, not abuse.
+ */
+export const VOTE_RATE_LIMIT = {
+  max: 30,
+  windowMs: 24 * 60 * 60 * 1000,
+} as const;
+
+/** "This week" for the Hot Spots ranking — a rolling window, not a calendar reset. */
+export const HOT_SPOTS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;

@@ -40,6 +40,7 @@ import {
 import { getOpenStatus } from "@/lib/hours";
 import { mapZoneContaining } from "@/lib/map/point-in-polygon";
 import {
+  DESKTOP_MEDIA_QUERY,
   measureCurrentMobileSheetHeightPx,
   measureMobileSheetHeightPx,
 } from "@/lib/mobile-sheet-heights";
@@ -55,13 +56,6 @@ const MINI_CARD_PIN_CLEARANCE = 68;
 // Zoom a selection flies to when its venue has no host zone (zone flights
 // have their own fitBounds). Street level, where pills read individually.
 const VENUE_STREET_ZOOM = 16;
-
-// Below the desktop breakpoint the results sheet overlays the bottom of
-// the map canvas; zone flights pad for the sheet's *current* snap height
-// so the zone centers in the actually-visible strip. Measured live via
-// the same probe mobile-sheet.tsx's drag/snap math uses (see
-// mobile-sheet-heights.ts) rather than a hardcoded px value.
-const DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 
 export function VenueMap({
   venues,
@@ -102,10 +96,6 @@ export function VenueMap({
 
   const selectedVenue = venues.find((venue) => venue.id === selectedId) ?? null;
   const zonesActive = selectedZones.length > 0;
-  // Pills render whenever any zones are selected (venues are already
-  // filtered to them); a selected venue OUTSIDE every zone still gets its
-  // own pill so the mini-card never floats bare.
-  const pinVenues = zonesActive ? venues : selectedVenue ? [selectedVenue] : [];
   const poppedVenue =
     selectedVenue && poppedVenueId === selectedVenue.id ? selectedVenue : null;
 
@@ -128,6 +118,18 @@ export function VenueMap({
     lng: number;
   } | null>(null);
   const [hudZoom, setHudZoom] = useState<number | null>(null);
+
+  // Individual pins take over from zone badges once the user has zoomed in
+  // past overview scale on their own — not only when a zone is explicitly
+  // clicked. Reuses the same threshold the zoom-out-to-exit effect below
+  // uses, so crossing it means the same thing in both directions.
+  const zoomedPastOverview =
+    hudZoom !== null && hudZoom >= MAP_ZONE_OVERVIEW_MAX_ZOOM;
+  const pinsVisible = zonesActive || zoomedPastOverview;
+  // Pills render whenever pins are visible (venues are already filtered to
+  // any active zone selection); a selected venue outside every zone still
+  // gets its own pill so the mini-card never floats bare.
+  const pinVenues = pinsVisible ? venues : selectedVenue ? [selectedVenue] : [];
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window === "undefined"
       ? false
@@ -296,17 +298,24 @@ export function VenueMap({
     ) {
       return;
     }
+    // The results sheet now overlays the bottom of the map at every
+    // breakpoint. On mobile, selecting a venue swaps the sheet into
+    // preview mode, so pad for that height directly (avoids a race with
+    // MobileSheet's own effect updating the live [data-sheet] attribute).
+    // On desktop the mini-card handles the selection instead — the sheet
+    // stays in whatever browse state it was in — so pad for its actual
+    // current height, not preview's.
     map.easeTo({
       center: position,
       zoom: Math.max(map.getZoom(), VENUE_STREET_ZOOM),
-      padding: desktop
-        ? 0
-        : {
-            top: 0,
-            right: 0,
-            bottom: measureMobileSheetHeightPx("preview"),
-            left: 0,
-          },
+      padding: {
+        top: 0,
+        right: 0,
+        bottom: desktop
+          ? measureCurrentMobileSheetHeightPx()
+          : measureMobileSheetHeightPx("preview"),
+        left: 0,
+      },
       duration: reduceMotion ? 0 : 650,
     });
   }, [map, selectedVenue, reduceMotion]);
@@ -601,13 +610,13 @@ export function VenueMap({
         map={map}
         onSelect={selectZone}
         zoneCounts={zoneCounts}
-        zonesActive={zonesActive}
+        zonesActive={pinsVisible}
       />
 
       {/* Overlay stack (overlay-order.ts) paints above Positron, so road
           names never cover buildings, zones, or pins. Dining mounts before
           VenuePillLayer so venue pills stay on top of info pins. */}
-      <CampusDiningLayer map={map} visible={!zonesActive} />
+      <CampusDiningLayer map={map} visible={!pinsVisible} />
 
       <VenuePillLayer
         hoveredId={hoveredId}
@@ -729,9 +738,14 @@ function flyToZones(
     north: Math.max(...boxes.map((b) => b.north)),
   };
   const pad = Math.max(...keys.map((key) => MAP_ZONES[key].padding));
-  const bottomInset = window.matchMedia(DESKTOP_MEDIA_QUERY).matches
-    ? 0
-    : venueSelected
+  // The sheet overlays the map at every breakpoint now. Only mobile ever
+  // swaps into preview mode on a venue selection (desktop's mini-card
+  // handles that instead, leaving the sheet in its current browse state)
+  // — so "preview" height only applies there; every other case pads for
+  // whatever height the sheet is actually showing right now.
+  const isMobile = !window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
+  const bottomInset =
+    isMobile && venueSelected
       ? measureMobileSheetHeightPx("preview")
       : measureCurrentMobileSheetHeightPx();
   map.fitBounds(
