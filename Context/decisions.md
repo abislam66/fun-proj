@@ -7,6 +7,29 @@
 
 ---
 
+## 2026-09-06 — Hot Spots This Week ships as a static curated Top 5 (voting deferred)
+
+The community upvote/downvote board from the 2026-09-05 redesign was never
+finished, and its `venue_votes` table (migration `0011`) turned out not to
+be applied to prod — so the live `HotSpotsPanel` was erroring
+("Couldn't load Hot Spots") on every open. Site owner's call: don't debug
+the migration, just ship a hand-picked board now.
+
+`HOT_SPOTS_THIS_WEEK` in `src/config/site.ts` is an ordered slug list
+(`blue-truck` → "NY Halal", `chipotle-mexican-grill`, `honey` → "Honey
+Truck", `brood-coffee-truck`, `richies-cafe`). `HotSpotsPanel` resolves it
+against the venues `VenueExplorer` already loaded and renders a `#1–#5`
+list; rows select on the map like `ResultsPanel` rows. No server action,
+no DB read, no `venue_votes` dependency — the missing migration no longer
+matters for the live site. Filters don't apply to the board (it's `venues`,
+not `visibleVenues`).
+
+The vote infra stays in the tree unreferenced (`src/actions/votes.ts`,
+`src/lib/db/queries/venue-votes.ts`, `src/lib/validation/vote.ts`,
+`venueVotes` schema, migration `0011`) for the eventual real build — see
+`Context/backlog.md`. To change the week's picks, edit the config array;
+a slug with no matching published venue is silently skipped.
+
 ## 2026-09-06 — Header nav trimmed to Home + Hot Spots; search overlay shrunk
 
 Site owner asked to drop the **All Restaurants** nav action, leaving the

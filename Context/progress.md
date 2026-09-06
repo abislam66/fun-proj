@@ -7,7 +7,7 @@
 
 ## Current status
 
-- **Map-first landing redesign + Hot Spots voting, as of 2026-09-05.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav (trimmed 2026-09-06): Home / Hot Spots This Week / avatar-or-profile-glyph (initials only — no photos); the "All Restaurants" nav link was dropped since the sheet handle already opens the list. Hot Spots is a real community-voted (upvote/downvote, one per member per venue, toggle-off on re-tap) weekly ranking, backed by a new `venue_votes` table (migration `0011`) — deliberately not wrapped in any cache tag, since votes are far more frequent than the writes that pattern was built for. This is a genuine spec gap (not in any `Specs/` file, mid-Phase-2, adjacent to the "no social graph" non-goal) shipped with explicit site-owner sign-off — see `Context/decisions.md` for the full writeup and the still-open `Specs/features.md`/`overview.md` follow-up. Not yet pushed to `main`.
+- **Map-first landing redesign + Hot Spots voting, as of 2026-09-05.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav (trimmed 2026-09-06): Home / Hot Spots This Week / avatar-or-profile-glyph (initials only — no photos); the "All Restaurants" nav link was dropped since the sheet handle already opens the list. Hot Spots This Week shipped 2026-09-06 as a **static hand-curated Top 5** (`HOT_SPOTS_THIS_WEEK` slug list in `src/config/site.ts`, rendered by `HotSpotsPanel` against already-loaded venues) — the community upvote/downvote board was never finished and its `venue_votes` migration `0011` is still unapplied on prod. The vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `0011`) stays in the tree unreferenced for the real build later. The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2, adjacent to the "no social graph" non-goal) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Deployed to `main` / `tueats.co` on 2026-09-06** (`a3b6606` redesign, `314f73d` deploy re-trigger, plus a nav-trim + static-Hot-Spots follow-up commit).
 - **Phase:** Phase 2 in progress (truck directory + member accounts/ratings). Public reads, anonymous reports, admin auth, admin venue CRUD, member Google OAuth, ratings/reviews, member photo queue, and a private `/account` page (name, username, class year, own reviews) are in code. The account page lives on `feature/member-account-profile` until merged; it needs migration `0010_wild_frightful_four.sql` applied before that deploy.
 
 - **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place. The live venue table has grown past the original 69-row KML seed (74 rows now — 61 published/draft, 13 retired) via ordinary admin edits made outside this progress log between sessions; this doc previously understated that and has been corrected as of 2026-08-21 (see that date's entry).
@@ -48,6 +48,29 @@
   13. PostHog (2026-09-04, updated after merge): session recording being live is now confirmed (remote config returns a real `sessionRecording` object, not `false`). Still needs a human: browse tueats.co normally for a few seconds, then in the PostHog UI check that one real event has no `$ip`/`$geoip_*` properties and that a session recording appears with masked inputs — automated (Playwright) verification can't do this because PostHog's bot filter correctly drops every capture from a detectably-automated browser, see `Context/decisions.md` 2026-09-04 (post-merge entry).
 
 ---
+
+## 2026-09-06 — Shipped redesign to prod; Hot Spots became a static Top 5
+
+**Deployed the map-first redesign + Hot Spots to `main` / `tueats.co`.**
+`prettier --write` on the commit set (real violations existed in the
+redesign files; `core.autocrlf=true` was masking them locally as 384-file
+CRLF noise). Verified `pnpm typecheck` / `lint` / `test` (185/185) /
+`build` before pushing. Junk left untracked (`.claude/`, `.scratch/`,
+`AGENTS.md`, `_robocopy.log`, `skills-lock.json`, `truck photos/`).
+
+The first push (`a3b6606`) hit a transient GitHub `cannot lock ref`
+error — the ref advanced server-side but no push webhook fired, so no
+Vercel deploy started. An empty commit (`314f73d`) forced a fresh event;
+that deployed clean (`dpl_4cVDMLx11xWPgUQtmedxPg3cF2Kz`, READY).
+
+Prod smoke-check found **Hot Spots erroring** ("Couldn't load Hot Spots"):
+`venue_votes` (migration `0011`) was never applied to prod and the panel's
+server action queries it. Owner's call — don't chase the migration, ship a
+curated board. `HotSpotsPanel` rewritten to render `HOT_SPOTS_THIS_WEEK`
+(a 5-slug config list: NY Halal, Chipotle, Honey Truck, Brood Coffee Truck,
+Richie's Café) against already-loaded venues — no DB, no server action.
+Vote infra kept in the tree, unreferenced. See `Context/decisions.md` +
+`Context/backlog.md`.
 
 ## 2026-09-06 — Header nav trimmed; map search overlay shrunk
 

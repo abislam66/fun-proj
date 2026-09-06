@@ -1,227 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { getHotSpotsRanking, submitVenueVote } from "@/actions/votes";
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { EmptyState } from "@/components/ui/primitives";
-import type { HotSpotRanking } from "@/lib/db/queries";
-
-type VoteState = Record<string, 1 | -1 | undefined>;
+import { HOT_SPOTS_THIS_WEEK } from "@/config/site";
+import type { Venue } from "@/lib/venues";
 
 /**
- * Weekly community-voted ranking, swapped into the same results sheet as
- * ResultsPanel when viewMode === "hotspots". Fetched on demand (not baked
- * into the homepage's SSR fetch) since most visits never open this tab —
- * see Context/decisions.md for the caching rationale.
+ * Hot Spots This Week — a hand-curated Top 5, swapped into the same results
+ * sheet as ResultsPanel when viewMode === "hotspots". The picks are the
+ * ordered slug list in `HOT_SPOTS_THIS_WEEK`, resolved against the venues
+ * VenueExplorer already loaded; filters don't apply here. Tapping a row
+ * selects that venue on the map, same as a ResultsPanel row.
+ *
+ * The community-voted board (upvote/downvote, venue_votes, migration 0011)
+ * is deferred — see Context/decisions.md. The vote server actions and
+ * queries stay in the tree for that future build; nothing calls them yet.
  */
 export function HotSpotsPanel({
+  venues,
   selectedId,
   hoveredId,
-  isSignedIn,
   onHover,
   onSelect,
 }: {
+  venues: Venue[];
   selectedId: string | null;
   hoveredId: string | null;
-  isSignedIn: boolean;
   onHover?: (venueId: string | null) => void;
   onSelect: (venueId: string | null) => void;
 }) {
-  const [status, setStatus] = useState<"loading" | "ready" | "error">(
-    "loading",
+  const bySlug = new Map(venues.map((venue) => [venue.slug, venue]));
+  const picks = HOT_SPOTS_THIS_WEEK.map((slug) => bySlug.get(slug)).filter(
+    (venue): venue is Venue => venue != null,
   );
-  const [ranking, setRanking] = useState<HotSpotRanking[]>([]);
-  const [myVotes, setMyVotes] = useState<VoteState>({});
-  const [signInPromptFor, setSignInPromptFor] = useState<string | null>(null);
 
-  async function load() {
-    setStatus("loading");
-    const result = await getHotSpotsRanking();
-    if (!result.ok) {
-      setStatus("error");
-      return;
-    }
-    setRanking(result.data.ranking);
-    setMyVotes(result.data.myVotes);
-    setStatus("ready");
-  }
-
-  // Only ever fetched once per panel mount — reopening the tab remounts
-  // this component and refetches, which is the only refresh path (no
-  // polling, no revalidateTag — see the caching decision above).
-  useEffect(() => {
-    void load();
-  }, []);
-
-  async function vote(venueId: string, value: 1 | -1) {
-    if (!isSignedIn) {
-      setSignInPromptFor(venueId);
-      return;
-    }
-    // Optimistic: mirror the server's own toggle-off-on-repeat-tap logic
-    // locally so the UI doesn't wait on the round trip.
-    const previous = myVotes[venueId];
-    const optimistic = previous === value ? undefined : value;
-    setMyVotes((current) => ({ ...current, [venueId]: optimistic }));
-    const result = await submitVenueVote({ venueId, value });
-    if (!result.ok) {
-      setMyVotes((current) => ({ ...current, [venueId]: previous }));
-      return;
-    }
-    setMyVotes((current) => ({
-      ...current,
-      [venueId]: result.data.value ?? undefined,
-    }));
-  }
-
-  if (status === "loading") {
+  if (picks.length === 0) {
     return (
-      <p aria-live="polite" className="hot-spots-loading">
-        Loading Hot Spots…
+      <EmptyState
+        description="This week's board isn't ready yet — check back soon."
+        title="No Hot Spots yet"
+      />
+    );
+  }
+
+  return (
+    <>
+      <p className="hot-spots-intro">
+        This week&rsquo;s five most talked-about spots on campus.
       </p>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <EmptyState
-        action={
-          <button
-            className="text-link"
-            onClick={() => void load()}
-            type="button"
-          >
-            Try again
-          </button>
-        }
-        description="Something went wrong loading this week's board."
-        title="Couldn't load Hot Spots"
-      />
-    );
-  }
-
-  if (ranking.length === 0) {
-    return (
-      <EmptyState
-        description="Be the first to upvote a favorite spot."
-        title="No votes yet this week"
-      />
-    );
-  }
-
-  return (
-    <ul className="hot-spots-list">
-      {ranking.map((row, index) => (
-        <HotSpotRow
-          highlighted={row.venueId === hoveredId}
-          key={row.venueId}
-          myVote={myVotes[row.venueId]}
-          onDismissSignInPrompt={() => setSignInPromptFor(null)}
-          onHover={onHover}
-          onSelect={onSelect}
-          onVote={vote}
-          rank={index + 1}
-          row={row}
-          selected={row.venueId === selectedId}
-          showSignInPrompt={signInPromptFor === row.venueId}
-        />
-      ))}
-    </ul>
-  );
-}
-
-function HotSpotRow({
-  row,
-  rank,
-  myVote,
-  selected,
-  highlighted,
-  showSignInPrompt,
-  onDismissSignInPrompt,
-  onHover,
-  onSelect,
-  onVote,
-}: {
-  row: HotSpotRanking;
-  rank: number;
-  myVote: 1 | -1 | undefined;
-  selected: boolean;
-  highlighted: boolean;
-  showSignInPrompt: boolean;
-  onDismissSignInPrompt: () => void;
-  onHover?: (venueId: string | null) => void;
-  onSelect: (venueId: string | null) => void;
-  onVote: (venueId: string, value: 1 | -1) => void;
-}) {
-  return (
-    <li>
-      <div
-        className={[
-          "hot-spot-row",
-          selected && "venue-row-selected",
-          highlighted && !selected && "venue-row-highlighted",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <span aria-hidden="true" className="hot-spot-rank">
-          #{rank}
-        </span>
-        <button
-          className="hot-spot-name"
-          onBlur={() => onHover?.(null)}
-          onClick={() => onSelect(row.venueId)}
-          onFocus={() => onHover?.(row.venueId)}
-          onMouseEnter={() => onHover?.(row.venueId)}
-          onMouseLeave={() => onHover?.(null)}
-          type="button"
-        >
-          {row.name}
-        </button>
-        <div className="hot-spot-votes">
-          <button
-            aria-label={`Upvote ${row.name}`}
-            aria-pressed={myVote === 1}
-            className={
-              myVote === 1
-                ? "hot-spot-vote hot-spot-vote-active"
-                : "hot-spot-vote"
-            }
-            onClick={() => onVote(row.venueId, 1)}
-            type="button"
-          >
-            ▲
-          </button>
-          <span className="hot-spot-score">{row.score}</span>
-          <button
-            aria-label={`Downvote ${row.name}`}
-            aria-pressed={myVote === -1}
-            className={
-              myVote === -1
-                ? "hot-spot-vote hot-spot-vote-active"
-                : "hot-spot-vote"
-            }
-            onClick={() => onVote(row.venueId, -1)}
-            type="button"
-          >
-            ▼
-          </button>
-        </div>
-      </div>
-      {showSignInPrompt ? (
-        <div className="hot-spot-signin-prompt">
-          <p>Sign in to vote.</p>
-          <GoogleSignInButton next="/?view=hotspots" />
-          <button
-            className="text-link"
-            onClick={onDismissSignInPrompt}
-            type="button"
-          >
-            Not now
-          </button>
-        </div>
-      ) : null}
-    </li>
+      <ol className="hot-spots-list">
+        {picks.map((venue, index) => (
+          <li key={venue.id}>
+            <div
+              className={[
+                "hot-spot-row",
+                venue.id === selectedId && "venue-row-selected",
+                venue.id === hoveredId &&
+                  venue.id !== selectedId &&
+                  "venue-row-highlighted",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <span aria-hidden="true" className="hot-spot-rank">
+                #{index + 1}
+              </span>
+              <button
+                className="hot-spot-name"
+                onBlur={() => onHover?.(null)}
+                onClick={() => onSelect(venue.id)}
+                onFocus={() => onHover?.(venue.id)}
+                onMouseEnter={() => onHover?.(venue.id)}
+                onMouseLeave={() => onHover?.(null)}
+                type="button"
+              >
+                {venue.name}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }

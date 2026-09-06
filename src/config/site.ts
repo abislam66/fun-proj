@@ -124,3 +124,17 @@ export const VOTE_RATE_LIMIT = {
 
 /** "This week" for the Hot Spots ranking — a rolling window, not a calendar reset. */
 export const HOT_SPOTS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Hot Spots This Week — a hand-curated, ordered Top 5. Static for now: the
+ * community-voted board (venue_votes, migration 0011) is deferred, so this
+ * slug list IS the board. Edit it to change the week's picks; any slug that
+ * doesn't match a published venue is silently skipped.
+ */
+export const HOT_SPOTS_THIS_WEEK = [
+  "blue-truck",
+  "chipotle-mexican-grill",
+  "honey",
+  "brood-coffee-truck",
+  "richies-cafe",
+] as const;

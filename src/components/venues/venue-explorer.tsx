@@ -239,10 +239,10 @@ export function VenueExplorer({
     ) : viewMode === "hotspots" ? (
       <HotSpotsPanel
         hoveredId={hoveredId}
-        isSignedIn={session !== null}
         onHover={setHoveredId}
         onSelect={selectFromList}
         selectedId={selectedId}
+        venues={venues}
       />
     ) : (
       <ResultsPanel

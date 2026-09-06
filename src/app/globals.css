@@ -1621,6 +1621,13 @@ button {
   text-align: center;
 }
 
+.hot-spots-intro {
+  margin: 0;
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-small);
+}
+
 .hot-spots-list {
   margin: 0;
   padding: 0;
@@ -1629,6 +1636,10 @@ button {
 
 .hot-spots-list li {
   border-bottom: 1px solid var(--color-border);
+}
+
+.hot-spots-list li:last-child {
+  border-bottom: 0;
 }
 
 .hot-spot-row {
