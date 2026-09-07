@@ -9,11 +9,12 @@ import { HOT_SPOTS_MAX } from "@/config/site";
 type VenueOption = { id: string; name: string };
 
 /**
- * Admin editor for the home page's "Hot Spots This Week" board. Up to
- * `HOT_SPOTS_MAX` ordered slots, each a published-venue picker; save
- * replaces the whole `hot_spots` table via the `updateHotSpots` action.
- * Leaving every slot empty clears the board (home page then shows the
- * `HOT_SPOTS_THIS_WEEK` config fallback).
+ * Admin editor for the "Hot Spots This Week" voting ballot — the set of
+ * venues students can upvote/downvote on the home Hot Spots tab. Up to
+ * `HOT_SPOTS_MAX` slots, each a published-venue picker; save replaces the
+ * whole `hot_spots` table via the `updateHotSpots` action. The slot order
+ * is only the tie-breaker — live votes decide the actual ranking. Leaving
+ * every slot empty falls back to the `HOT_SPOTS_THIS_WEEK` config list.
  */
 export function HotSpotsEditor({
   initialVenueIds,
@@ -78,9 +79,11 @@ export function HotSpotsEditor({
           <p className="eyebrow">Home page</p>
           <h1>Hot Spots This Week</h1>
           <p>
-            Pick up to {HOT_SPOTS_MAX} published venues, in order — #1 sits at
-            the top of the home page&rsquo;s Hot Spots tab. Leave every slot
-            empty to fall back to the built-in list.
+            Choose up to {HOT_SPOTS_MAX} published venues for this week&rsquo;s
+            voting ballot. Students upvote/downvote them on the home Hot Spots
+            tab and the list re-ranks by score; slot order here is just the
+            tie-breaker. Leave every slot empty to fall back to the built-in
+            list.
           </p>
         </div>
         <div className="admin-heading-actions">

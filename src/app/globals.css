@@ -1727,6 +1727,13 @@ button {
   text-align: center;
 }
 
+/* Shown in place of "0" for a ballot venue nobody has voted on yet. */
+.hot-spot-score-new {
+  color: var(--color-cherry);
+  font-size: var(--text-micro);
+  letter-spacing: 0.06em;
+}
+
 .hot-spot-signin-prompt {
   display: flex;
   flex-wrap: wrap;

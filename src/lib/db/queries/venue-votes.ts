@@ -9,7 +9,10 @@ export type HotSpotRanking = {
   venueId: string;
   slug: string;
   name: string;
+  /** Net of up/down votes in the rolling window; 0 for an unvoted venue. */
   score: number;
+  /** How many members voted (either way) in the window — 0 ⇒ show "NEW". */
+  voteCount: number;
 };
 
 export async function getUserVoteForVenue(
@@ -72,7 +75,12 @@ export async function deleteOwnVote(
   return row ?? null;
 }
 
-/** Ranked by net score over a rolling window ("this week" = last 7 days). */
+/**
+ * Every published venue that has been voted on in the rolling window
+ * ("this week" = last 7 days), ranked by net score. Venues with no votes
+ * don't appear here — for a fixed ballot that always shows every candidate
+ * (with "NEW"/0), use `getBallotRanking`.
+ */
 export async function getWeeklyVenueRanking(
   limit = 20,
 ): Promise<HotSpotRanking[]> {
@@ -83,6 +91,7 @@ export async function getWeeklyVenueRanking(
       slug: venues.slug,
       name: venues.name,
       score: sql<number>`sum(${venueVotes.value})::int`,
+      voteCount: sql<number>`count(*)::int`,
     })
     .from(venueVotes)
     .innerJoin(venues, eq(venues.id, venueVotes.venueId))
@@ -93,7 +102,83 @@ export async function getWeeklyVenueRanking(
     .orderBy(desc(sql`sum(${venueVotes.value})`))
     .limit(limit);
 
-  return rows.map((row) => ({ ...row, score: Number(row.score) }));
+  return rows.map((row) => ({
+    ...row,
+    score: Number(row.score),
+    voteCount: Number(row.voteCount),
+  }));
+}
+
+/**
+ * Net score + vote count for a specific set of venues over the rolling
+ * window. Missing from the returned maps ⇒ nobody has voted this week
+ * (score 0, count 0). The `venue_votes` unique(venue,user) constraint
+ * means one row per member per venue, so `count(*)` is distinct voters.
+ */
+export async function getVoteTalliesForVenues(
+  venueIds: string[],
+): Promise<Map<string, { score: number; voteCount: number }>> {
+  const result = new Map<string, { score: number; voteCount: number }>();
+  if (venueIds.length === 0) return result;
+
+  const since = new Date(Date.now() - HOT_SPOTS_WINDOW_MS);
+  const rows = await db
+    .select({
+      venueId: venueVotes.venueId,
+      score: sql<number>`sum(${venueVotes.value})::int`,
+      voteCount: sql<number>`count(*)::int`,
+    })
+    .from(venueVotes)
+    .where(
+      and(
+        inArray(venueVotes.venueId, venueIds),
+        gte(venueVotes.updatedAt, since),
+      ),
+    )
+    .groupBy(venueVotes.venueId);
+
+  for (const row of rows) {
+    result.set(row.venueId, {
+      score: Number(row.score),
+      voteCount: Number(row.voteCount),
+    });
+  }
+  return result;
+}
+
+/**
+ * The Hot Spots "ballot" — a fixed, ordered set of candidate venues (the
+ * admin-curated `hot_spots` list, or the config fallback), each carried
+ * with its live tally so brand-new candidates still render (as "NEW").
+ * Sorted by score desc; ties keep the given ballot order (stable sort).
+ * Non-published ids are dropped.
+ */
+export async function getBallotRanking(
+  venueIds: string[],
+): Promise<HotSpotRanking[]> {
+  if (venueIds.length === 0) return [];
+
+  const rows = await db
+    .select({ id: venues.id, slug: venues.slug, name: venues.name })
+    .from(venues)
+    .where(and(inArray(venues.id, venueIds), eq(venues.status, "published")));
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const tallies = await getVoteTalliesForVenues(venueIds);
+
+  return venueIds
+    .map((id) => byId.get(id))
+    .filter((row): row is (typeof rows)[number] => row != null)
+    .map((row) => {
+      const tally = tallies.get(row.id);
+      return {
+        venueId: row.id,
+        slug: row.slug,
+        name: row.name,
+        score: tally?.score ?? 0,
+        voteCount: tally?.voteCount ?? 0,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
 }
 
 /** This user's own votes for a batch of venues — keyed by venueId. */

@@ -1,50 +1,132 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
+import { getHotSpotsRanking, submitVenueVote } from "@/actions/votes";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { EmptyState } from "@/components/ui/primitives";
-import { HOT_SPOTS_THIS_WEEK } from "@/config/site";
-import type { Venue } from "@/lib/venues";
+import type { HotSpotRanking } from "@/lib/db/queries";
+
+type VoteState = Record<string, 1 | -1 | undefined>;
 
 /**
- * Hot Spots This Week — a hand-curated Top 5, swapped into the same results
- * sheet as ResultsPanel when viewMode === "hotspots". The board is the
- * admin-curated `hot_spots` table (`hotSpotVenueIds`, ordered); when that's
- * empty it falls back to the `HOT_SPOTS_THIS_WEEK` config slugs. Picks are
- * resolved against the venues VenueExplorer already loaded, so a
- * retired/unpublished pick just drops out. Filters don't apply here.
- * Tapping a row selects that venue on the map, same as a ResultsPanel row.
- *
- * The community-voted board (upvote/downvote, venue_votes, migration 0011)
- * is deferred — see Context/decisions.md. The vote server actions and
- * queries stay in the tree for that future build; nothing calls them yet.
+ * Hot Spots This Week — the community-voted board, swapped into the same
+ * results sheet as ResultsPanel when viewMode === "hotspots". The ballot
+ * (which venues are in the running) is the admin-curated `hot_spots` list
+ * with a config fallback; members upvote/downvote and the list re-sorts by
+ * live score. Fetched on demand when the tab opens — most visits never open
+ * it (see Context/decisions.md for the caching rationale). Tapping a name
+ * selects that venue on the map, same as a ResultsPanel row.
  */
 export function HotSpotsPanel({
-  venues,
-  hotSpotVenueIds = [],
   selectedId,
   hoveredId,
+  isSignedIn,
   onHover,
   onSelect,
 }: {
-  venues: Venue[];
-  hotSpotVenueIds?: string[];
   selectedId: string | null;
   hoveredId: string | null;
+  isSignedIn: boolean;
   onHover?: (venueId: string | null) => void;
   onSelect: (venueId: string | null) => void;
 }) {
-  const byId = new Map(venues.map((venue) => [venue.id, venue]));
-  const bySlug = new Map(venues.map((venue) => [venue.slug, venue]));
-  const picks = (
-    hotSpotVenueIds.length > 0
-      ? hotSpotVenueIds.map((id) => byId.get(id))
-      : HOT_SPOTS_THIS_WEEK.map((slug) => bySlug.get(slug))
-  ).filter((venue): venue is Venue => venue != null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [ranking, setRanking] = useState<HotSpotRanking[]>([]);
+  const [myVotes, setMyVotes] = useState<VoteState>({});
+  const [signInPromptFor, setSignInPromptFor] = useState<string | null>(null);
 
-  if (picks.length === 0) {
+  async function load() {
+    setStatus("loading");
+    const result = await getHotSpotsRanking();
+    if (!result.ok) {
+      setStatus("error");
+      return;
+    }
+    setRanking(result.data.ranking);
+    setMyVotes(result.data.myVotes);
+    setStatus("ready");
+  }
+
+  // Fetched once per panel mount — reopening the tab remounts this
+  // component and refetches, which is the only refresh path (no polling).
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function vote(venueId: string, value: 1 | -1) {
+    if (!isSignedIn) {
+      setSignInPromptFor(venueId);
+      return;
+    }
+    // Optimistic: mirror the server's toggle-off-on-repeat-tap and adjust
+    // the visible score locally so the UI doesn't wait on the round trip.
+    const previous = myVotes[venueId];
+    const next = previous === value ? undefined : value;
+    const delta = (next ?? 0) - (previous ?? 0);
+
+    setMyVotes((current) => ({ ...current, [venueId]: next }));
+    setRanking((current) =>
+      resort(
+        current.map((row) =>
+          row.venueId === venueId
+            ? {
+                ...row,
+                score: row.score + delta,
+                voteCount:
+                  row.voteCount +
+                  (previous === undefined && next !== undefined
+                    ? 1
+                    : previous !== undefined && next === undefined
+                      ? -1
+                      : 0),
+              }
+            : row,
+        ),
+      ),
+    );
+
+    const result = await submitVenueVote({ venueId, value });
+    if (!result.ok) {
+      // Roll back to the server truth by refetching — simpler and safer
+      // than unwinding the optimistic score math on an unknown failure.
+      void load();
+    }
+  }
+
+  if (status === "loading") {
+    return (
+      <p aria-live="polite" className="hot-spots-loading">
+        Loading Hot Spots…
+      </p>
+    );
+  }
+
+  if (status === "error") {
     return (
       <EmptyState
-        description="This week's board isn't ready yet — check back soon."
-        title="No Hot Spots yet"
+        action={
+          <button
+            className="text-link"
+            onClick={() => void load()}
+            type="button"
+          >
+            Try again
+          </button>
+        }
+        description="Something went wrong loading this week's board."
+        title="Couldn't load Hot Spots"
+      />
+    );
+  }
+
+  if (ranking.length === 0) {
+    return (
+      <EmptyState
+        description="This week's Hot Spots picks aren't set yet — check back soon."
+        title="Board's being set up"
       />
     );
   }
@@ -52,40 +134,138 @@ export function HotSpotsPanel({
   return (
     <>
       <p className="hot-spots-intro">
-        This week&rsquo;s five most talked-about spots on campus.
+        Vote the week&rsquo;s picks up or down. Tap a name to find it on the
+        map.
       </p>
       <ol className="hot-spots-list">
-        {picks.map((venue, index) => (
-          <li key={venue.id}>
-            <div
-              className={[
-                "hot-spot-row",
-                venue.id === selectedId && "venue-row-selected",
-                venue.id === hoveredId &&
-                  venue.id !== selectedId &&
-                  "venue-row-highlighted",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <span aria-hidden="true" className="hot-spot-rank">
-                #{index + 1}
-              </span>
-              <button
-                className="hot-spot-name"
-                onBlur={() => onHover?.(null)}
-                onClick={() => onSelect(venue.id)}
-                onFocus={() => onHover?.(venue.id)}
-                onMouseEnter={() => onHover?.(venue.id)}
-                onMouseLeave={() => onHover?.(null)}
-                type="button"
-              >
-                {venue.name}
-              </button>
-            </div>
-          </li>
+        {ranking.map((row, index) => (
+          <HotSpotRow
+            highlighted={row.venueId === hoveredId}
+            key={row.venueId}
+            myVote={myVotes[row.venueId]}
+            onDismissSignInPrompt={() => setSignInPromptFor(null)}
+            onHover={onHover}
+            onSelect={onSelect}
+            onVote={vote}
+            rank={index + 1}
+            row={row}
+            selected={row.venueId === selectedId}
+            showSignInPrompt={signInPromptFor === row.venueId}
+          />
         ))}
       </ol>
     </>
+  );
+}
+
+/** Stable re-sort by score desc — ties keep their current relative order. */
+function resort(rows: HotSpotRanking[]): HotSpotRanking[] {
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => b.row.score - a.row.score || a.index - b.index)
+    .map((entry) => entry.row);
+}
+
+function HotSpotRow({
+  row,
+  rank,
+  myVote,
+  selected,
+  highlighted,
+  showSignInPrompt,
+  onDismissSignInPrompt,
+  onHover,
+  onSelect,
+  onVote,
+}: {
+  row: HotSpotRanking;
+  rank: number;
+  myVote: 1 | -1 | undefined;
+  selected: boolean;
+  highlighted: boolean;
+  showSignInPrompt: boolean;
+  onDismissSignInPrompt: () => void;
+  onHover?: (venueId: string | null) => void;
+  onSelect: (venueId: string | null) => void;
+  onVote: (venueId: string, value: 1 | -1) => void;
+}) {
+  return (
+    <li>
+      <div
+        className={[
+          "hot-spot-row",
+          selected && "venue-row-selected",
+          highlighted && !selected && "venue-row-highlighted",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <span aria-hidden="true" className="hot-spot-rank">
+          #{rank}
+        </span>
+        <button
+          className="hot-spot-name"
+          onBlur={() => onHover?.(null)}
+          onClick={() => onSelect(row.venueId)}
+          onFocus={() => onHover?.(row.venueId)}
+          onMouseEnter={() => onHover?.(row.venueId)}
+          onMouseLeave={() => onHover?.(null)}
+          type="button"
+        >
+          {row.name}
+        </button>
+        <div className="hot-spot-votes">
+          <button
+            aria-label={`Upvote ${row.name}`}
+            aria-pressed={myVote === 1}
+            className={
+              myVote === 1
+                ? "hot-spot-vote hot-spot-vote-active"
+                : "hot-spot-vote"
+            }
+            onClick={() => onVote(row.venueId, 1)}
+            type="button"
+          >
+            ▲
+          </button>
+          {row.voteCount === 0 ? (
+            <span
+              className="hot-spot-score hot-spot-score-new"
+              title="No votes yet this week"
+            >
+              NEW
+            </span>
+          ) : (
+            <span className="hot-spot-score">{row.score}</span>
+          )}
+          <button
+            aria-label={`Downvote ${row.name}`}
+            aria-pressed={myVote === -1}
+            className={
+              myVote === -1
+                ? "hot-spot-vote hot-spot-vote-active"
+                : "hot-spot-vote"
+            }
+            onClick={() => onVote(row.venueId, -1)}
+            type="button"
+          >
+            ▼
+          </button>
+        </div>
+      </div>
+      {showSignInPrompt ? (
+        <div className="hot-spot-signin-prompt">
+          <p>Sign in to vote.</p>
+          <GoogleSignInButton next="/?view=hotspots" />
+          <button
+            className="text-link"
+            onClick={onDismissSignInPrompt}
+            type="button"
+          >
+            Not now
+          </button>
+        </div>
+      ) : null}
+    </li>
   );
 }

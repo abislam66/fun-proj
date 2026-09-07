@@ -62,6 +62,8 @@ export {
   upsertVote,
   deleteOwnVote,
   getWeeklyVenueRanking,
+  getVoteTalliesForVenues,
+  getBallotRanking,
   getUserVotesForVenues,
   type HotSpotRanking,
 } from "./venue-votes";

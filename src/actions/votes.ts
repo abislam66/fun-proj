@@ -1,14 +1,17 @@
 "use server";
 
+import { HOT_SPOTS_THIS_WEEK } from "@/config/site";
 import { getUser, requireMember } from "@/lib/auth";
 import { AuthError } from "@/lib/auth-guards";
 import {
   assertVoteAllowed,
   deleteOwnVote,
+  getBallotRanking,
+  getHotSpotVenueIds,
+  getPublishedVenues,
   getUserVoteForVenue,
   getUserVotesForVenues,
   getVenueById,
-  getWeeklyVenueRanking,
   upsertVote,
   type HotSpotRanking,
 } from "@/lib/db/queries";
@@ -74,15 +77,38 @@ export type HotSpotsData = {
 };
 
 /**
- * Read-only: this week's ranking, fetched on demand when the tab opens.
- * Anonymous visitors can view it (myVotes comes back empty); only
- * submitVenueVote requires a session.
+ * The ballot venue ids: the admin-curated `hot_spots` list, or — when that
+ * hasn't been set (or the table isn't there yet) — the `HOT_SPOTS_THIS_WEEK`
+ * config slugs resolved against currently-published venues.
+ */
+async function resolveBallot(): Promise<string[]> {
+  let ballot: string[] = [];
+  try {
+    ballot = await getHotSpotVenueIds();
+  } catch {
+    // hot_spots table missing / unreadable — fall through to the config.
+  }
+  if (ballot.length > 0) return ballot;
+
+  const published = await getPublishedVenues();
+  const idBySlug = new Map(published.map((venue) => [venue.slug, venue.id]));
+  return HOT_SPOTS_THIS_WEEK.map((slug) => idBySlug.get(slug)).filter(
+    (id): id is string => id != null,
+  );
+}
+
+/**
+ * Read-only: this week's Hot Spots board — the fixed ballot, each candidate
+ * carried with its live vote tally and re-sorted by score. Fetched on
+ * demand when the tab opens. Anonymous visitors can view it (myVotes comes
+ * back empty); only submitVenueVote requires a session.
  */
 export async function getHotSpotsRanking(): Promise<
   ActionResult<HotSpotsData>
 > {
   try {
-    const ranking = await getWeeklyVenueRanking();
+    const ballot = await resolveBallot();
+    const ranking = await getBallotRanking(ballot);
     const session = await getUser();
     if (!session) return { ok: true, data: { ranking, myVotes: {} } };
 

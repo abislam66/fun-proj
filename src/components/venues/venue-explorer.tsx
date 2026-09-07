@@ -84,13 +84,10 @@ export function VenueExplorer({
   venues,
   initialQuery,
   session = null,
-  hotSpotVenueIds = [],
 }: {
   venues: Venue[];
   initialQuery: string;
   session?: HeaderSession | null;
-  /** Ordered venue ids for the curated Hot Spots board; [] → config fallback. */
-  hotSpotVenueIds?: string[];
 }) {
   const initialParams = useMemo(
     () => new URLSearchParams(initialQuery),
@@ -241,12 +238,11 @@ export function VenueExplorer({
       />
     ) : viewMode === "hotspots" ? (
       <HotSpotsPanel
-        hotSpotVenueIds={hotSpotVenueIds}
         hoveredId={hoveredId}
+        isSignedIn={session !== null}
         onHover={setHoveredId}
         onSelect={selectFromList}
         selectedId={selectedId}
-        venues={venues}
       />
     ) : (
       <ResultsPanel

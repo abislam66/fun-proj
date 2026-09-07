@@ -7,6 +7,44 @@
 
 ---
 
+## 2026-09-06 — Hot Spots This Week is the real community vote board (ballot model)
+
+Reverses the two entries below (static Top 5 → admin-editable list) back to
+**live voting**, reusing the `venue_votes` infrastructure that was built but
+never wired up. The `hot_spots` table + `/admin/hot-spots` editor are kept,
+but repurposed: they're now the **ballot** (which venues are in the running
+this week), not a fixed ranking. The actual order comes from real votes.
+
+- **Scores start at 0.** Nothing is seeded — `venue_votes` is empty on prod.
+  Every ballot venue renders with a "NEW" badge (`voteCount === 0`) instead
+  of "0"; once it has any vote it shows the net score.
+- **Reused unchanged:** `submitVenueVote` (toggle/set/remove + rate limit +
+  `requireMember`), `getUserVotesForVenues`, `assertVoteAllowed`,
+  `getUserVoteForVenue`/`upsertVote`/`deleteOwnVote`.
+- **Added (same table):** `getVoteTalliesForVenues` (net score + voter count
+  for a set of ids, rolling 7-day window) and `getBallotRanking` (ballot ∩
+  published, joined to tallies, sorted by score desc, stable ties = ballot
+  order). `HotSpotRanking` gained `voteCount`. `getWeeklyVenueRanking` kept
+  (now also returns `voteCount`) but is currently unused.
+- **`getHotSpotsRanking` action** now resolves the ballot (curated
+  `hot_spots` → `HOT_SPOTS_THIS_WEEK` config fallback → published venue ids)
+  and returns `getBallotRanking` + the caller's own votes. `page.tsx` no
+  longer SSR-fetches the board — the panel fetches on mount like the
+  original.
+- **Panel** restored to the original voting UI (Y2K pixel `▲ NEW ▼`
+  controls, optimistic score+rank update mirroring the server toggle, sign-in
+  prompt) plus the "NEW" swap. Row tap still selects on the map.
+
+Migrations `0011` (venue_votes) + `0012` (hot_spots) applied by Claude to
+**both dev and prod** via `drizzle-kit migrate` (prod needed a one-time
+allow-rule in `.claude/settings.local.json`, local/untracked). The `0010`
+journal baseline held — no replay error.
+
+Not verified: a real member clicking the arrows on prod (needs a member
+session; Google OAuth prod config may still be pending). Data layer + read
+path verified on dev with a real inserted vote row (board re-ranked, then
+reverted on delete).
+
 ## 2026-09-06 — Hot Spots This Week board is admin-editable (DB-backed)
 
 Follow-up to the static-Top-5 entry below: the board is now curated from

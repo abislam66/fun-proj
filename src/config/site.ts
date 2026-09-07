@@ -125,15 +125,16 @@ export const VOTE_RATE_LIMIT = {
 /** "This week" for the Hot Spots ranking — a rolling window, not a calendar reset. */
 export const HOT_SPOTS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Max venues on the "Hot Spots This Week" board. */
+/** Max venues on the "Hot Spots This Week" voting ballot. */
 export const HOT_SPOTS_MAX = 5;
 
 /**
- * Hot Spots This Week — the fallback board used only when the admin-curated
- * `hot_spots` table is empty (fresh env, or the admin cleared it). Once an
- * admin saves the board in `/admin/hot-spots` that DB list wins. Any slug
- * here that doesn't match a published venue is silently skipped. The
- * community-voted board (venue_votes, migration 0011) is still deferred.
+ * Hot Spots This Week — the fallback voting ballot, used only when the
+ * admin-curated `hot_spots` table is empty (fresh env, or the admin cleared
+ * it). Once an admin saves a ballot in `/admin/hot-spots` that DB list
+ * wins. Members upvote/downvote these venues (venue_votes) and the board
+ * re-ranks by live score. Any slug here that doesn't match a published
+ * venue is silently skipped.
  */
 export const HOT_SPOTS_THIS_WEEK = [
   "blue-truck",

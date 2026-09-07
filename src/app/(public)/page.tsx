@@ -4,11 +4,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import type { HeaderSession } from "@/components/layout/user-avatar";
 import { VenueExplorer } from "@/components/venues/venue-explorer";
 import { getUser } from "@/lib/auth";
-import {
-  getHotSpotVenueIds,
-  getPublishedVenues,
-  toVenue,
-} from "@/lib/db/queries";
+import { getPublishedVenues, toVenue } from "@/lib/db/queries";
 import { initialsFromDisplayName } from "@/lib/profile";
 
 type PageProps = {
@@ -57,16 +53,6 @@ export default async function HomePage({ searchParams }: PageProps) {
     return <HomePageUnavailable />;
   }
 
-  // The curated Hot Spots board — a soft dependency: if it fails to load,
-  // the Hot Spots tab just falls back to its config default rather than
-  // taking the whole page down.
-  let hotSpotVenueIds: string[] = [];
-  try {
-    hotSpotVenueIds = await getHotSpotVenueIds();
-  } catch (error) {
-    console.error("Homepage: failed to load hot spots:", error);
-  }
-
   // A failed session check degrades to "signed out" — it never takes the
   // whole page down the way a failed venue query does above.
   let headerSession: HeaderSession | null = null;
@@ -84,7 +70,6 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   return (
     <VenueExplorer
-      hotSpotVenueIds={hotSpotVenueIds}
       initialQuery={params.toString()}
       session={headerSession}
       venues={venues}
