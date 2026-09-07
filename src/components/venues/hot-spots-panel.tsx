@@ -11,12 +11,13 @@ type VoteState = Record<string, 1 | -1 | undefined>;
 
 /**
  * Hot Spots This Week — the community-voted board, swapped into the same
- * results sheet as ResultsPanel when viewMode === "hotspots". The ballot
- * (which venues are in the running) is the admin-curated `hot_spots` list
- * with a config fallback; members upvote/downvote and the list re-sorts by
- * live score. Fetched on demand when the tab opens — most visits never open
- * it (see Context/decisions.md for the caching rationale). Tapping a name
- * selects that venue on the map, same as a ResultsPanel row.
+ * results sheet as ResultsPanel when viewMode === "hotspots". Every
+ * published venue competes: the list is all venues ranked by their live
+ * net vote score this week, and members upvote/downvote to re-rank it. A
+ * venue with no votes this week shows "NEW" instead of 0. Fetched on
+ * demand when the tab opens — most visits never open it (see
+ * Context/decisions.md for the caching rationale). Tapping a name selects
+ * that venue on the map, same as a ResultsPanel row.
  */
 export function HotSpotsPanel({
   selectedId,
@@ -125,8 +126,8 @@ export function HotSpotsPanel({
   if (ranking.length === 0) {
     return (
       <EmptyState
-        description="This week's Hot Spots picks aren't set yet — check back soon."
-        title="Board's being set up"
+        description="No venues to vote on yet — check back soon."
+        title="Nothing here yet"
       />
     );
   }
@@ -134,8 +135,8 @@ export function HotSpotsPanel({
   return (
     <>
       <p className="hot-spots-intro">
-        Vote the week&rsquo;s picks up or down. Tap a name to find it on the
-        map.
+        Every spot on campus, ranked by this week&rsquo;s votes. Tap a name to
+        find it on the map.
       </p>
       <ol className="hot-spots-list">
         {ranking.map((row, index) => (
@@ -158,12 +159,11 @@ export function HotSpotsPanel({
   );
 }
 
-/** Stable re-sort by score desc — ties keep their current relative order. */
+/** Re-sort to match the server: score desc, then name A→Z on ties. */
 function resort(rows: HotSpotRanking[]): HotSpotRanking[] {
-  return rows
-    .map((row, index) => ({ row, index }))
-    .sort((a, b) => b.row.score - a.row.score || a.index - b.index)
-    .map((entry) => entry.row);
+  return [...rows].sort(
+    (a, b) => b.score - a.score || a.name.localeCompare(b.name),
+  );
 }
 
 function HotSpotRow({

@@ -15,8 +15,6 @@ import {
   bulkUpdateVenueVeganFriendly,
   countPublishedVenuePhotos,
   deleteVenuePhotoById,
-  getHotSpots,
-  getPublishedVenues,
   getRatingById,
   getVenueById,
   getVenuePhotoById,
@@ -29,7 +27,6 @@ import {
   publishMemberVenuePhoto,
   rejectMemberVenuePhoto,
   removeRating,
-  replaceHotSpots,
   setVenuePhotoOrder,
   updateProblemReportStatus,
   updateVenue,
@@ -47,7 +44,6 @@ import {
   removeRatingSchema,
   resolveProblemReportSchema,
   resolveVenuePhotoSchema,
-  updateHotSpotsSchema,
   venueIdSchema,
   venueInputSchema,
   venuePhotoIdSchema,
@@ -456,47 +452,6 @@ export async function resolveVenuePhoto(raw: unknown): Promise<ActionResult> {
     }
 
     revalidateVenue(venue.slug);
-    return { ok: true, data: undefined };
-  } catch (error) {
-    return fail(error);
-  }
-}
-
-/**
- * Admin: the current Hot Spots This Week board as an ordered list of venue
- * ids (position 1 first). Empty when the admin hasn't set one — the public
- * panel then shows its config fallback.
- */
-export async function getHotSpotsBoard(): Promise<string[]> {
-  await requireAdmin();
-  const rows = await getHotSpots();
-  return rows.map((row) => row.venueId);
-}
-
-/**
- * Admin: replace the Hot Spots This Week board. `venueIds` is the ordered
- * pick list (first = #1); an empty array clears it. Every id must be an
- * existing published venue.
- */
-export async function updateHotSpots(raw: unknown): Promise<ActionResult> {
-  try {
-    await requireAdmin();
-    const { venueIds } = updateHotSpotsSchema.parse(raw);
-
-    const publishedIds = new Set(
-      (await getPublishedVenues()).map((venue) => venue.id),
-    );
-    const unknown = venueIds.filter((id) => !publishedIds.has(id));
-    if (unknown.length > 0) {
-      return {
-        ok: false,
-        error:
-          "Every pick must be a published venue. Remove retired/draft picks and try again.",
-      };
-    }
-
-    await replaceHotSpots(venueIds);
-    revalidateTag("hot-spots");
     return { ok: true, data: undefined };
   } catch (error) {
     return fail(error);

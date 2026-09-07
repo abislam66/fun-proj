@@ -61,10 +61,7 @@ export {
   assertVoteAllowed,
   upsertVote,
   deleteOwnVote,
-  getWeeklyVenueRanking,
-  getVoteTalliesForVenues,
-  getBallotRanking,
+  getAllVenuesRanking,
   getUserVotesForVenues,
   type HotSpotRanking,
 } from "./venue-votes";
-export { getHotSpots, getHotSpotVenueIds, replaceHotSpots } from "./hot-spots";

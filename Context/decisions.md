@@ -7,6 +7,40 @@
 
 ---
 
+## 2026-09-06 — Hot Spots drops the ballot: every published venue competes
+
+Supersedes the ballot-model entry below (same day). Site owner's call: no
+curated shortlist — the Hot Spots board is now **all published venues**,
+ranked by live `venue_votes` net score (highest first, name A→Z on ties),
+re-ranking as members vote. A venue with no votes in the rolling 7-day
+window shows "NEW" (unchanged). Voting itself is untouched: one row per
+member per venue, +1/-1/toggle-off via `submitVenueVote`.
+
+- **New:** `getAllVenuesRanking()` in `venue-votes.ts` — `venues LEFT JOIN
+venue_votes` (join carries the `updatedAt >= since` window predicate) →
+  `coalesce(sum(value),0)` score, `count(venue_votes.id)` voter count,
+  `where status = 'published'`, `order by score desc, name asc`. One query,
+  no per-id fan-out.
+- **Removed** (all ballot-only): `getBallotRanking`,
+  `getVoteTalliesForVenues`, `getWeeklyVenueRanking` (was already unused);
+  `resolveBallot` in `votes.ts`; `HOT_SPOTS_THIS_WEEK` + `HOT_SPOTS_MAX`
+  config; `/admin/hot-spots` page + `HotSpotsEditor` + `getHotSpotsBoard` /
+  `updateHotSpots` actions + `updateHotSpotsSchema` + the
+  `src/lib/db/queries/hot-spots.ts` read layer + the admin-nav "Hot Spots"
+  link + `.hot-spots-editor-*` CSS.
+- `getHotSpotsRanking` action just calls `getAllVenuesRanking()` +
+  `getUserVotesForVenues` now. Panel copy updated ("Every spot on campus,
+  ranked by this week's votes"); `resort()` matches the server sort exactly
+  (score desc, then `localeCompare`) so an optimistic toggle-off lands a
+  venue back in its alphabetical slot, not at the top of the NEW block.
+- **`hot_spots` table kept in the DB and in `schema.ts`** (with a RETIRED
+  comment) — no drop migration now, to avoid another prod migration for a
+  zero-value change. Slated for removal in a later migration (backlog).
+- **No migration, no schema change.** `venue_votes` (0011) already live on
+  dev + prod. Verified on dev: board returns all 83 published venues as
+  NEW; a real inserted vote row moves that venue to #1 (score 1, not NEW);
+  deleting it reverts to the alphabetical all-NEW order.
+
 ## 2026-09-06 — Hot Spots This Week is the real community vote board (ballot model)
 
 Reverses the two entries below (static Top 5 → admin-editable list) back to

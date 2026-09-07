@@ -1059,32 +1059,3 @@ a.button {
     grid-column: auto;
   }
 }
-
-/* Hot Spots This Week editor — ordered slot pickers. */
-.hot-spots-editor-list {
-  margin: 0 0 var(--spacing-md);
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--spacing-sm);
-}
-
-.hot-spots-editor-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.hot-spots-editor-rank {
-  flex-shrink: 0;
-  min-width: 2rem;
-  color: var(--color-ink-muted);
-  font-family: var(--font-data), monospace;
-  font-size: var(--text-small);
-  font-weight: 700;
-}
-
-.hot-spots-editor-field {
-  flex: 1;
-  min-width: 0;
-}

@@ -251,11 +251,12 @@ export const venueVotes = pgTable(
 );
 
 /**
- * Admin-curated "Hot Spots This Week" board — an ordered, hand-picked set
- * of up to 5 published venues shown on the home Hot Spots tab. `position`
- * (1..5) is the primary key, so the table holds at most 5 rows and its
- * order is intrinsic; the admin editor replaces the whole set on save.
- * Independent of `venue_votes` — this is editorial curation, not voting.
+ * RETIRED (2026-09-06) — was the admin-curated "Hot Spots This Week"
+ * ballot. The Hot Spots board now ranks *every* published venue by its
+ * live `venue_votes` score, so nothing reads or writes this table any
+ * more. Kept in the schema (and in the DB) only to avoid an immediate
+ * drop migration; slated for removal in a later migration. Do not build
+ * on it — see Context/backlog.md.
  */
 export const hotSpots = pgTable(
   "hot_spots",

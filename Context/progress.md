@@ -7,7 +7,7 @@
 
 ## Current status
 
-- **Map-first landing redesign + Hot Spots voting, as of 2026-09-05.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav (trimmed 2026-09-06): Home / Hot Spots This Week / avatar-or-profile-glyph (initials only — no photos); the "All Restaurants" nav link was dropped since the sheet handle already opens the list. Hot Spots This Week went through three shapes on 2026-09-06 and landed on **real community voting**: `venue_votes`-backed upvote/downvote, board re-ranks by live score, scores start at 0 shown as **"NEW"** (no seeded votes). The `hot_spots` table + `/admin/hot-spots` editor are kept as the **ballot** (which venues are in the running); `HOT_SPOTS_THIS_WEEK` config is the ballot fallback. Migrations `0011` (venue_votes) + `0012` (hot_spots) **applied to dev AND prod** by Claude (`drizzle-kit migrate`; prod via a local allow-rule in `.claude/settings.local.json`). Data layer + read path verified on dev with a real vote row; a member clicking the arrows on prod is unverified (needs member OAuth working on prod). The vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `0011`) stays in the tree unreferenced for the real build later. The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2, adjacent to the "no social graph" non-goal) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Deployed to `main` / `tueats.co` on 2026-09-06** (`a3b6606` redesign, `314f73d` deploy re-trigger, plus a nav-trim + static-Hot-Spots follow-up commit).
+- **Map-first landing redesign + Hot Spots voting, as of 2026-09-05.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav (trimmed 2026-09-06): Home / Hot Spots This Week / avatar-or-profile-glyph (initials only — no photos); the "All Restaurants" nav link was dropped since the sheet handle already opens the list. Hot Spots This Week went through four shapes on 2026-09-06 and landed on **real community voting over every published venue**: the board is all published venues ranked by live `venue_votes` net score (name A→Z tie-break), re-ranking as members upvote/downvote; scores start at 0 shown as **"NEW"** (no seeded votes). The 5-venue ballot was dropped — `getAllVenuesRanking()` is the whole board, and `/admin/hot-spots` + `HOT_SPOTS_THIS_WEEK` + `getBallotRanking`/`getWeeklyVenueRanking`/`getVoteTalliesForVenues` are removed. The `hot_spots` table stays in the DB (unused, RETIRED comment in `schema.ts`) to avoid a drop migration — slated for removal later. Migrations `0011` (venue_votes) + `0012` (hot_spots) were **applied to dev AND prod** by Claude earlier this day (`drizzle-kit migrate`; prod via a local allow-rule in `.claude/settings.local.json`); the all-venues change needs no migration. Data layer + re-rank verified on dev with a real vote row (83 venues all NEW → voted venue to #1 → revert on delete); a member clicking the arrows on prod is unverified (needs member OAuth working on prod). The vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `0011`) stays in the tree unreferenced for the real build later. The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2, adjacent to the "no social graph" non-goal) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Deployed to `main` / `tueats.co` on 2026-09-06** (`a3b6606` redesign, `314f73d` deploy re-trigger, plus a nav-trim + static-Hot-Spots follow-up commit).
 - **Phase:** Phase 2 in progress (truck directory + member accounts/ratings). Public reads, anonymous reports, admin auth, admin venue CRUD, member Google OAuth, ratings/reviews, member photo queue, and a private `/account` page (name, username, class year, own reviews) are in code. The account page lives on `feature/member-account-profile` until merged; it needs migration `0010_wild_frightful_four.sql` applied before that deploy.
 
 - **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place. The live venue table has grown past the original 69-row KML seed (74 rows now — 61 published/draft, 13 retired) via ordinary admin edits made outside this progress log between sessions; this doc previously understated that and has been corrected as of 2026-08-21 (see that date's entry).
@@ -48,6 +48,33 @@
   13. PostHog (2026-09-04, updated after merge): session recording being live is now confirmed (remote config returns a real `sessionRecording` object, not `false`). Still needs a human: browse tueats.co normally for a few seconds, then in the PostHog UI check that one real event has no `$ip`/`$geoip_*` properties and that a session recording appears with masked inputs — automated (Playwright) verification can't do this because PostHog's bot filter correctly drops every capture from a detectably-automated browser, see `Context/decisions.md` 2026-09-04 (post-merge entry).
 
 ---
+
+## 2026-09-06 — Hot Spots: drop the ballot, rank every published venue
+
+Same-day follow-up to the ballot-model entry below. Site owner: no curated
+shortlist — every published venue competes, ranked by its live
+`venue_votes` net score, re-ranking as members vote. "NEW" for zero-score
+(unchanged). Voting mechanics untouched (one row per member per venue,
++1/-1/toggle via `submitVenueVote`).
+
+- **New** `getAllVenuesRanking()` (`venue-votes.ts`): `venues LEFT JOIN
+venue_votes` with the 7-day window in the join predicate →
+  `coalesce(sum(value),0)` / `count(venue_votes.id)`, `status='published'`,
+  `order by score desc, name asc`. Single query. `getHotSpotsRanking`
+  action now just calls it + `getUserVotesForVenues`.
+- **Removed:** `getBallotRanking`, `getVoteTalliesForVenues`,
+  `getWeeklyVenueRanking`; `resolveBallot`; `HOT_SPOTS_THIS_WEEK` /
+  `HOT_SPOTS_MAX`; `/admin/hot-spots` page + `HotSpotsEditor` +
+  `getHotSpotsBoard` / `updateHotSpots` + `updateHotSpotsSchema` +
+  `queries/hot-spots.ts` + admin-nav link + `.hot-spots-editor-*` CSS.
+- Panel: intro copy → "Every spot on campus, ranked by this week's votes";
+  `resort()` now matches the server sort exactly (score desc, `localeCompare`
+  tie-break). `▲ NEW ▼` UI and map interaction unchanged.
+- `hot_spots` table left in the DB + `schema.ts` (RETIRED comment), no drop
+  migration — backlog'd for later removal.
+- **No migration.** `pnpm typecheck` / `lint` (0 errors) / `test` (185/185)
+  / `build` clean. Verified on dev: 83 published venues all "NEW"; a real
+  inserted vote row → that venue to #1 (score 1, not NEW); delete → reverts.
 
 ## 2026-09-06 — Hot Spots This Week: real community voting (ballot model)
 
