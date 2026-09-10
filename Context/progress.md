@@ -7,7 +7,9 @@
 
 ## Current status
 
-- **Map-first landing redesign + Hot Spots voting, as of 2026-09-05.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav (trimmed 2026-09-06): Home / Hot Spots This Week / avatar-or-profile-glyph (initials only — no photos); the "All Restaurants" nav link was dropped since the sheet handle already opens the list. Hot Spots This Week went through four shapes on 2026-09-06 and landed on **real community voting over every published venue**: the board is all published venues ranked by live `venue_votes` net score (name A→Z tie-break), re-ranking as members upvote/downvote; scores start at 0 shown as **"NEW"** (no seeded votes). The 5-venue ballot was dropped — `getAllVenuesRanking()` is the whole board, and `/admin/hot-spots` + `HOT_SPOTS_THIS_WEEK` + `getBallotRanking`/`getWeeklyVenueRanking`/`getVoteTalliesForVenues` are removed. The `hot_spots` table stays in the DB (unused, RETIRED comment in `schema.ts`) to avoid a drop migration — slated for removal later. Migrations `0011` (venue_votes) + `0012` (hot_spots) were **applied to dev AND prod** by Claude earlier this day (`drizzle-kit migrate`; prod via a local allow-rule in `.claude/settings.local.json`); the all-venues change needs no migration. Data layer + re-rank verified on dev with a real vote row (83 venues all NEW → voted venue to #1 → revert on delete); a member clicking the arrows on prod is unverified (needs member OAuth working on prod). The vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `0011`) stays in the tree unreferenced for the real build later. The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2, adjacent to the "no social graph" non-goal) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Deployed to `main` / `tueats.co` on 2026-09-06** (`a3b6606` redesign, `314f73d` deploy re-trigger, plus a nav-trim + static-Hot-Spots follow-up commit).
+- **Map-first landing redesign, as of 2026-09-05; "Places of the Week" replaces Hot Spots voting, as of 2026-09-10.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav: Home / **Places of the Week** / avatar-or-profile-glyph (initials only — no photos). **Hot Spots community voting never shipped publicly and was removed on 2026-09-10** (site owner's call — the 2026-09-08 unbounded-counter change was reverted before any push). In its place: **Places of the Week** — the top 5 published venues by a weighted (IMDb/Bayesian) student-rating score, computed client-side from the `studentRating` aggregates already in the venue payload (`rankPlacesByRating` in `src/lib/ratings.ts`; `m = PLACES_RATING_PRIOR_WEIGHT = 5`, `C` = mean star across all real ratings). No votes, no arrows, no server round-trip. Fewer than 5 show when fewer venues are rated; **prod currently has 0 ratings so the board shows its "Nothing rated yet" empty state** until reviews exist. Selecting a row still flies the map to that venue. The dormant vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `hot_spots` table, migrations `0011`/`0012`) stays in the tree, unreferenced, restored to its original ±1/toggle design (migration `0014` re-added the `value IN (-1,1)` check that the reverted 0013 had dropped — both applied to the live DB). The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Redesign deployed to `main` / `tueats.co` on 2026-09-06**; the Places-of-the-Week + search + member-locate work of 2026-09-10 is **not yet pushed/deployed** (pending site-owner review).
+- **Map search → suggestions → fly-to, as of 2026-09-10.** Typing in the floating map search field now drops a suggestions list under it (matching published venues, capped at 6; "Restaurant not found" when nothing matches). Picking one selects that venue on the map and opens its existing popup / mobile preview via the same `selectedId` path list rows use — it never navigates to `/eat/[slug]`. Reuses `filterVenues` for matching and `FilterBar` for the input (new optional `onSearchFocus`/`onSearchBlur` props).
+- **Member geolocation on the map, as of 2026-09-10.** After a signed-in member lands on the map, `MemberLocate` (`src/components/map/member-locate.tsx`) asks for browser geolocation **once per browser session** (`sessionStorage` flag). Granted + on-campus → drops a dot and eases the camera there, campus pins untouched. Denied / unavailable / timeout / off-campus / signed-out → silently stays on the campus view. Coordinates never leave the browser (no fetch, no PostHog, no storage, no logs) — matches `Specs/auth-security.md`'s geolocation rule. The manual `LocateControl` button is unchanged and still open to everyone.
 - **Phase:** Phase 2 in progress (truck directory + member accounts/ratings). Public reads, anonymous reports, admin auth, admin venue CRUD, member Google OAuth, ratings/reviews, member photo queue, and a private `/account` page (name, username, class year, own reviews) are in code. The account page lives on `feature/member-account-profile` until merged; it needs migration `0010_wild_frightful_four.sql` applied before that deploy.
 
 - **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place. The live venue table has grown past the original 69-row KML seed (74 rows now — 61 published/draft, 13 retired) via ordinary admin edits made outside this progress log between sessions; this doc previously understated that and has been corrected as of 2026-08-21 (see that date's entry).
@@ -48,6 +50,142 @@
   13. PostHog (2026-09-04, updated after merge): session recording being live is now confirmed (remote config returns a real `sessionRecording` object, not `false`). Still needs a human: browse tueats.co normally for a few seconds, then in the PostHog UI check that one real event has no `$ip`/`$geoip_*` properties and that a session recording appears with masked inputs — automated (Playwright) verification can't do this because PostHog's bot filter correctly drops every capture from a detectably-automated browser, see `Context/decisions.md` 2026-09-04 (post-merge entry).
 
 ---
+
+## 2026-09-10 — Compact venue name plates on the map
+
+Dense zones felt congested — every pill had a fixed 40px plate, 20px of
+padding on each side of the 13px label, and a 64px minimum width that
+padded short names out with dead space. Sized the cherry venue/cluster
+plates close to their text instead.
+
+- **`src/lib/map/venue-pill-icon.ts` only.** `LABEL_PAD_X` 20 → 11; new
+  `VENUE_PILL_HEIGHT` 26 and `VENUE_PILL_MIN_WIDTH` 40 for the baked
+  name plates (and the cluster "N spots" plate). `paintPill` now takes a
+  `pillHeight` arg so the dining 9-slice keeps its 64×40 geometry (its
+  stretch bands depend on it). `DINING_PILL_DOWNSCALE` 1.5 → 1.85 so the
+  info pins stay smaller than the shorter venue plate.
+- **No behavior change.** `VENUE_HEIGHT` mirrors the old height formula,
+  so the plate-bottom-to-stem-dot gap is identical — the box only loses
+  height off its top and hugs its text horizontally. Clustering, the
+  zoom-scale ramp, hover/select, and label placement are untouched.
+- Y2K chrome intact (cherry fill, ink border, offset shadow, halo, stem
+  + dot, 13px label). `tsc` clean, `pnpm lint` 0 errors, 190 tests pass.
+  Visually checked desktop + mobile on W Montgomery, Student Center,
+  Avery, and a selected pill. See `Context/decisions.md` (this date) and
+  `docs/design/map-and-pins.md`. Not yet pushed — rides with the
+  `feat/places-of-the-week` branch.
+
+## 2026-09-10 — Responsive mobile typography pass
+
+Small phones (iPhone 17 Pro, ~393px) rendered the fixed "mobile" type
+scale — 32px Display, 22px Title — which felt oversized. Made the scale
+fluid on phones while leaving tablet + desktop untouched. CSS-only; no
+device detection.
+
+- **`--text-display` / `--text-title` → `clamp()`** in `:root` (and the
+  mirrored `@theme inline` block). Each ramps from a smaller phone floor
+  (Display 27px, Title 19px) up to its current value by ~600px viewport
+  width, so anything ≥ large-phone is unchanged. Their line-heights became
+  unitless (1.2 / 1.3) so they track the clamped size.
+- **`--text-body` (16px), `--text-small` (13px), `--text-micro` (11px)
+  left fixed** — already at readable minimums; body must stay 16px so iOS
+  doesn't zoom focused inputs.
+- **Desktop guaranteed unchanged:** the existing `@media (min-width:64rem)`
+  block still hard-sets `--text-display: 2.5rem`, `--text-title: 1.5rem`,
+  etc., overriding the base clamp at ≥1024px. Verified with before/after
+  screenshots at 1280px — pixel-identical.
+- **Also clamped / tuned:** `.wordmark` (nav logo, 24→~21px on small
+  phones), `.detail-hero h1` / `.about-page h1` (clamp floor 2.25rem →
+  1.9rem; 8vw ramp + 4rem cap unchanged so tablet/desktop identical),
+  `.sign-in-gate h1`, `.about-lede`. `.empty-state h2` was relying on the
+  UA default (~24px) — pinned to `--text-title` so it's in-scale and
+  fluid (covers the Places of the Week "Nothing rated yet" state).
+- **Spacing:** under `@media (max-width:40rem)` only, the venue-detail /
+  about reading pages trim section padding one step (`--spacing-xl` →
+  `--spacing-lg`) and the empty-state well shrinks (17rem → 13rem).
+- **Surfaces audited:** landing/map (nav + wordmark; search/filters
+  already `--text-small`, untouched), search suggestions (small/micro,
+  untouched), Places of the Week (rows already small; empty-state h2
+  fixed), map mini-card + mobile preview sheet (venue name is
+  `--text-title` → now fluid), bottom sheet (handle label micro,
+  untouched), venue detail (hero + section headings fluid, padding
+  trimmed).
+- **Verified:** `tsc` clean · `pnpm lint` 0 errors · `pnpm build` clean ·
+  before/after Playwright screenshots at 393px (landing, sign-in gate,
+  about) and 1280px (desktop unchanged). Committed on
+  `feat/places-of-the-week`.
+
+## 2026-09-10 — Places of the Week (replaces Hot Spots voting) + search→map + member geolocation
+
+Three changes shipped together, all reusing existing architecture. Full
+rationale in `Context/decisions.md` 2026-09-10.
+
+### 1. "Places of the Week" replaces Hot Spots voting
+
+- **Reverted first:** the unpushed 2026-09-08 unbounded-counter voting
+  change — `git checkout HEAD` on `votes.ts`, `venue-votes.ts`,
+  `queries/index.ts`, `config/site.ts`, `schema.ts`, `globals.css`, and
+  the three `Context/*.md` files. Migration `0013` (dropped the ±1 check)
+  was already applied to the live DB, so it stays; **new migration `0014`
+  re-adds `venue_votes_value_range` `CHECK (value IN (-1,1))`** — applied
+  to the live DB. `venue_votes` is back to its original design, dormant.
+- **New ranking:** `rankPlacesByRating(venues, priorWeight?)` in
+  `src/lib/ratings.ts` — IMDb/Bayesian weighted mean
+  `score = (n·avg + m·C) / (n + m)`, `C` = mean star across every real
+  active rating on the board, `m = PLACES_RATING_PRIOR_WEIGHT` (5, in
+  `config/site.ts`). Only venues with ≥1 active rating are ranked; empty
+  board ⇒ `[]`. Ties: count desc, then name. Pure function, unit-tested
+  (5 new cases in `ratings.test.ts`, incl. "lone 5★ doesn't take #1").
+- **New panel:** `src/components/venues/places-of-the-week-panel.tsx`
+  (replaces `hot-spots-panel.tsx`, deleted). Client component, no fetch —
+  ranks the `venues` prop the explorer already has, slices to
+  `PLACES_OF_THE_WEEK_LIMIT` (5), renders rank / name / `4.6 ★ · 12`
+  readout. Row tap → `onSelect` → map fly-to (unchanged mechanism). Empty
+  state: "Nothing rated yet".
+- **Renames (user-facing "Hot Spots This Week" → "Places of the Week"):**
+  `ViewMode` `"hotspots"` → `"places"` (legacy `?view=hotspots` still
+  accepted, rewritten to `?view=places`); `onHotSpots`→`onPlaces`;
+  `openHotSpots`→`openPlaces`; `AnalyticsEvent.HotSpotsViewed` →
+  `PlacesOfWeekViewed` (`"places of the week viewed"`); `.hot-spot(s)-*`
+  CSS → `.places-*`. `header-nav.tsx`, `site-header.tsx`,
+  `venue-explorer.tsx` updated.
+- **Verified:** `rankPlacesByRating` unit tests; a live-DB script
+  (`.scratch/places-ranking.mjs`) — confirmed **prod `ratings` table is
+  empty** (board shows empty state), plus a synthetic mixed-shape board
+  showing a well-reviewed 4.6/n41 at #1 and a lone 5★/n1 pulled to #3.
+
+### 2. Search → map suggestions
+
+- `venue-explorer.tsx`: `searchFocused` state; `showSuggestions =
+  searchFocused && query.trim()`; `searchSuggestions` = `visibleVenues`
+  (already query+filter matched) sliced to 6, mapped to `{id, name,
+  location}`; `searchNotFound` when the visible set is empty.
+- `map-search-overlay.tsx`: renders the dropdown below `FilterBar` —
+  buttons per suggestion, or a "Restaurant not found" line. `onMouseDown`
+  `preventDefault` keeps input focus through the click; a blur guard in
+  the explorer keeps the list mounted while focus enters it (keyboard).
+- Pick → `selectFromSearch`: clears the query, closes the list, sets
+  `selectedId` (analytics `source: "search"`). No `/eat/[slug]` nav; the
+  existing map effects handle fly-to + popup (desktop mini-card / mobile
+  preview sheet). `filter-bar.tsx` gained optional
+  `onSearchFocus`/`onSearchBlur` passed to the search `<Input>`.
+
+### 3. Member geolocation
+
+- New `src/components/map/member-locate.tsx`, mounted in `venue-map.tsx`;
+  `isSignedIn` threaded `venue-explorer` → `venue-map-loader` →
+  `venue-map`. One `getCurrentPosition` per browser session
+  (`sessionStorage` key `tueats:member-locate-prompted`), signed-in only.
+  Granted + inside `CAMPUS_MAX_BOUNDS` → `.locate-dot` marker + `easeTo`
+  (zoom ≥ 15.5), pins untouched. Any failure / off-campus / signed-out →
+  silent, campus view stays. No coordinate ever leaves the browser.
+
+**Checks:** `tsc` clean · `pnpm lint` 0 errors (9 pre-existing `.scratch/`
+warnings) · `pnpm test` 190/190 · `pnpm build` clean.
+**Not verified in a real browser:** the suggestion→fly-to→popup flow on
+device, and the geolocation permission prompt / grant / deny paths — no
+signed-in member session available (member Google OAuth still unconfigured
+on prod). Nothing pushed or deployed.
 
 ## 2026-09-06 — Hot Spots: drop the ballot, rank every published venue
 

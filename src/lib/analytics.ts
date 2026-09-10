@@ -28,5 +28,5 @@ export const AnalyticsEvent = {
   ProblemReported: "problem reported",
   VenueDetailViewed: "venue detail viewed",
   VoteCast: "vote cast",
-  HotSpotsViewed: "hot spots viewed",
+  PlacesOfWeekViewed: "places of the week viewed",
 } as const;

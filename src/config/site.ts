@@ -123,8 +123,26 @@ export const VOTE_RATE_LIMIT = {
 } as const;
 
 /**
- * "This week" for the Hot Spots board — a rolling window, not a calendar
- * reset. Every published venue is ranked by its net `venue_votes` score
- * inside this window; a venue with no votes in it shows as "NEW".
+ * "This week" for the (currently dormant) `venue_votes` board — a rolling
+ * window, not a calendar reset. Kept for the unused vote infrastructure;
+ * the live "Places of the Week" ranking below uses student ratings, not
+ * votes.
  */
 export const HOT_SPOTS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * "Places of the Week" — how many top venues the board shows. Fewer appear
+ * when fewer venues have student ratings; the board never invents entries.
+ */
+export const PLACES_OF_THE_WEEK_LIMIT = 5;
+
+/**
+ * "Places of the Week" ranking — the Bayesian/IMDb prior weight `m` in
+ * `score = (n·avg + m·C) / (n + m)`, where `n` is a venue's rating count,
+ * `avg` its mean stars, and `C` the mean star across every real rating.
+ * It's the number of "average" ratings each venue is treated as starting
+ * with, so a lone 5★ can't outrank a venue with many strong ratings.
+ * Higher = more conservative (needs more real ratings to climb). Purely a
+ * ranking tuning constant — never shown, never stored.
+ */
+export const PLACES_RATING_PRIOR_WEIGHT = 5;

@@ -45,6 +45,8 @@ Click a zone (its badge, or anywhere inside its invisible hit polygon) → fly i
 
 Cherry **square name plate + leader-line-and-dot stem**, matching zone-label chrome (hard ink outline, flat offset shadow). White label text = venue name. Same cherry fill for every venue — do not recolor by open/closed. Clustered coinciding spots share one "N spots" plate.
 
+The plate is **sized close to its label** — a small comfortable side padding (`LABEL_PAD_X`), a height just tall enough to seat the 13px text, and only a token minimum width — so dense zones don't read as a congested wall of boxes. Long names still grow the plate as needed. Chrome, stem, dot, and label-placement/clustering logic are unchanged; only the box + text spacing is tight (`VENUE_PILL_MIN_WIDTH` / `VENUE_PILL_HEIGHT` / `LABEL_PAD_X` in `venue-pill-icon.ts`).
+
 **Decision split:**
 
 | Surface | Helps answer |
@@ -96,7 +98,7 @@ Meal-plan dining (Student Center food court, J&H dining hall, Morgan Hall food c
 | Aspect | Value |
 |--------|-------|
 | Data | `src/config/campus-dining.ts` — static markers on footprint centroids (Morgan pin sits between the North/South towers where the dining floor is) |
-| Look | Same square plate + line-and-dot stem at 2/3 venue-plate scale (same bitmap registered at a higher pixelRatio); white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text; whole layer at 65% `icon-opacity`/`text-opacity` so the static pins visibly recede behind zone marks and venue plates |
+| Look | Same square plate + line-and-dot stem, kept noticeably smaller than a venue plate (same bitmap registered at a higher pixelRatio — `DINING_PILL_DOWNSCALE`, bumped when the venue plate was made compact so the info pin still reads as subordinate); white surface fill, stone `#B8B4AA` border (matches building strokes), ink-secondary `#57534E` regular-weight text; whole layer at 65% `icon-opacity`/`text-opacity` so the static pins visibly recede behind zone marks and venue plates |
 | Behavior | Non-interactive: no hover, no click, no mini-card. Map-background clicks through them clear selection like any other map click |
 | Zones | Zoom-gated: layer `minzoom` 16 hides them at the campus overview (zoom 14.6) — they appear only at building-scale zoom. Hidden entirely (`visible` prop) once a zone is selected so venue pills take over |
 | Collision | Placed like zone labels: `icon/text-allow-overlap: true` + `ignore-placement` — always render once past `minzoom` (building labels at the same centroids would otherwise collide them away) |

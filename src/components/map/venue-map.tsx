@@ -8,6 +8,7 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import { CampusBuildingLayer } from "@/components/map/campus-building-layer";
 import { CampusDiningLayer } from "@/components/map/campus-dining-layer";
 import { LocateControl } from "@/components/map/locate-control";
+import { MemberLocate } from "@/components/map/member-locate";
 import { MapAttribution } from "@/components/map/map-attribution";
 import {
   MAP_ZONE_CLICK_LAYER_IDS,
@@ -63,6 +64,7 @@ export function VenueMap({
   hoveredId,
   backPath,
   selectedZones,
+  isSignedIn,
   onSelect,
   onHover,
   onClearSelection,
@@ -74,6 +76,8 @@ export function VenueMap({
   backPath: string;
   /** Zone filter selection — any number of zones can be active at once. */
   selectedZones: MapZoneKey[];
+  /** Signed-in members get a one-shot "locate me" on first map load. */
+  isSignedIn: boolean;
   onSelect: (venueId: string) => void;
   onHover: (venueId: string | null) => void;
   onClearSelection: () => void;
@@ -536,6 +540,9 @@ export function VenueMap({
         </button>
         <LocateControl map={map} />
       </div>
+
+      <MemberLocate enabled={isSignedIn} map={map} />
+
 
       {zonesActive ? (
         <p className="map-zone-label">

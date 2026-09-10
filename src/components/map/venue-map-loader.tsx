@@ -29,6 +29,7 @@ export function VenueMapLoader({
   hoveredId,
   backPath,
   selectedZones,
+  isSignedIn,
   onSelect,
   onHover,
   onClearSelection,
@@ -39,6 +40,8 @@ export function VenueMapLoader({
   hoveredId: string | null;
   backPath: string;
   selectedZones: MapZoneKey[];
+  /** Signed-in members get a one-shot "locate me" on first map load. */
+  isSignedIn: boolean;
   onSelect: (venueId: string) => void;
   onHover: (venueId: string | null) => void;
   onClearSelection: () => void;
@@ -48,6 +51,7 @@ export function VenueMapLoader({
     <VenueMap
       backPath={backPath}
       hoveredId={hoveredId}
+      isSignedIn={isSignedIn}
       onClearSelection={onClearSelection}
       onHover={onHover}
       onSelect={onSelect}

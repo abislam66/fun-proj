@@ -7,6 +7,143 @@
 
 ---
 
+## 2026-09-10 — Venue name plates sized close to their text (de-congest)
+
+Dense zones (Student Center ~18 pins, Avery ~10) read as a wall of
+boxes because each pill had a fixed 40px-tall plate and 20px of padding
+on *each* side of a 13px label, plus a 64px minimum width that padded
+short names ("Avery", "Wendy's") out with dead space.
+
+- **What changed, all in `src/lib/map/venue-pill-icon.ts`:** `LABEL_PAD_X`
+  20 → 11; new `VENUE_PILL_HEIGHT` (26) and `VENUE_PILL_MIN_WIDTH` (40)
+  used only by `buildVenuePillIcon` (which also draws cluster "N spots"
+  plates). `paintPill` took a `pillHeight` param so the dining 9-slice
+  can keep its own `PILL_HEIGHT`/`PILL_WIDTH` — its stretch/content bands
+  are tuned to 64×40 and must not move.
+- **Position is unchanged by construction.** `VENUE_HEIGHT` mirrors the
+  old `HEIGHT` formula with the smaller plate, so the gap between the
+  plate's bottom edge and the stem-dot tip (the map coordinate, via
+  `icon-anchor: "bottom"`) is byte-identical — only the *top* of the box
+  moves down. Clustering (`CLUSTER_RADIUS_PX`), the `icon-size` zoom
+  ramp, hover/select priority, and label placement are all untouched.
+  This was the explicit constraint: compact the box, not the behavior.
+- **`DINING_PILL_DOWNSCALE` 1.5 → 1.85** so the meal-plan info pins stay
+  visibly smaller than the now-shorter venue plate (they're subordinate
+  map furniture — see `docs/design/map-and-pins.md`). Without this bump
+  the dining plate (~26.7px) would have out-sized the venue plate (26px).
+- **Left alone:** cherry fill `#9D2235`, ink border, offset shadow,
+  selected halo, stem line + dot, `LABEL_FONT_SIZE` 13. Y2K chrome and
+  readability intact — verified on desktop + mobile across W Montgomery,
+  Student Center, and Avery.
+- **Not yet pushed** (rides with the unpushed 2026-09-10 Places/search/
+  locate work on `feat/places-of-the-week`).
+
+## 2026-09-10 — Mobile type is fluid via `clamp()`, only Display + Title
+
+The type scale had one set of "mobile" values for everything under
+1024px, so a 393px phone got the same 32px Display / 22px Title as a
+900px tablet — oversized on the phone. Fix: `clamp()` the two big tokens
+(`--text-display`, `--text-title`) so they scale with viewport width.
+
+- **Only Display + Title are fluid.** `--text-body` stays exactly `1rem`
+  — 16px is the readability baseline and iOS zooms any focused input with
+  a font under 16px. `--text-small` (13px) and `--text-micro` (11px) stay
+  fixed too: they're already near the readability floor, the user's
+  concern was big headings/chrome, and shrinking them further buys almost
+  nothing. This is the "do not make important text too small" guardrail.
+- **Desktop is deliberately untouched.** The pre-existing
+  `@media (min-width:64rem)` block hard-sets the desktop token values, so
+  it overrides the base `clamp()` at ≥1024px regardless. The `clamp()`
+  MAX equals the current mobile value and is reached by ~600px, so
+  tablets (768px) also render as before — the only band that changes is
+  ~320–600px. Confirmed with before/after screenshots.
+- **`clamp()` over a media-query breakpoint** because the file already
+  uses `clamp()` for fluid headings (`.detail-hero h1`, `.account-page
+  h1`) and it degrades smoothly across the whole phone range instead of
+  snapping at one width. No JS/device detection.
+- **Line-heights for the fluid tokens went unitless** (1.2 / 1.3) so they
+  track the clamped font size; they were only ever consumed as
+  `line-height: var(...)`, never in `calc()`, so this is safe.
+- **`.empty-state h2` had no explicit `font-size`** — it was inheriting
+  the UA `h2` default (~1.5em ≈ 24px). Pinned to `--text-title` so it
+  joins the scale (24px desktop, fluid on phones). This is what the
+  Places of the Week "Nothing rated yet" heading uses.
+
+## 2026-09-10 — "Places of the Week" replaces Hot Spots voting; search→map; member geolocation
+
+### Hot Spots voting is gone; "Places of the Week" is a read-only ratings ranking
+
+Site owner's call. Community upvote/downvote on venues never shipped to
+real users — it went through five shapes (2026-09-05 → 2026-09-08) and the
+owner ended it. The public board is now **"Places of the Week"**: the top
+5 published venues by a weighted student-rating score, a live read of the
+`ratings`/reviews data that already ships in the venue payload. No votes,
+no `venue_votes` reads, no server action, no new query.
+
+- **Why weighted, not raw average:** a lone 5★ must not top a
+  well-reviewed venue. `rankPlacesByRating` (`src/lib/ratings.ts`) uses
+  the standard IMDb/Bayesian form `score = (n·avg + m·C) / (n + m)` where
+  `C` is the mean star across **every real active rating on the board**
+  (no invented prior — computed from `Σ(avg·n)/Σn`) and `m` is
+  `PLACES_RATING_PRIOR_WEIGHT` (5, `config/site.ts`). Few ratings ⇒ score
+  sits near `C`; only a real body of ratings moves it away. `m` is the one
+  tuning knob — raise it to push thin-sample venues down harder.
+- **"Not enough data" is graceful, not padded:** only venues with ≥1
+  active rating are ranked; the board shows however many qualify (≤5), and
+  an all-unrated board renders an empty state. **Nothing is fabricated** —
+  no fake ratings, scores, or reviews. Prod's `ratings` table is currently
+  empty, so the live board is the empty state until reviews exist.
+- **"of the Week" is just the feature name** — this is a current ranking,
+  not a weekly snapshot. No history table, no cron. Revisit if the owner
+  wants frozen weekly winners later (would need a snapshot table).
+- **Client-side, zero round-trip:** the explorer already holds every
+  published venue with its `studentRating` aggregate, so the panel ranks
+  in `useMemo`. Consistent with "computed client-side so public pages stay
+  static/ISR" (CLAUDE.md).
+- **The 2026-09-08 unbounded-counter change was reverted, not built on**
+  (it was never pushed). `git checkout HEAD` on the seven touched files.
+  Migration `0013` (dropped the ±1 check) had already been applied to the
+  live DB, so it stays in the tree; **migration `0014` re-adds
+  `venue_votes_value_range`** and was applied to the live DB — `venue_votes`
+  is back to its original ±1/one-row-per-member/toggle design, dormant.
+  Kept (not dropped) per the owner: "infrastructure/table can remain
+  unused for now; do not drop production tables just for this change."
+- **Rename:** every user-facing "Hot Spots This Week" → "Places of the
+  Week" (nav label, panel copy). Internally `ViewMode` `"hotspots"` →
+  `"places"`, `?view=hotspots` still honored (rewritten to `?view=places`),
+  `AnalyticsEvent.HotSpotsViewed` → `PlacesOfWeekViewed`
+  (`"places of the week viewed"` — a rename, splits from the old event
+  string, which had ~no history).
+
+### Search suggestions reuse the existing selection/popup path
+
+Typing in the floating map search field shows a suggestions dropdown;
+picking one **selects the venue on the map** (fly-to + existing
+mini-card on desktop, preview sheet on mobile) and **does not** navigate
+to `/eat/[slug]`. Deliberately no second popup implementation — the pick
+just sets `selectedId`, exactly like a Places row or a pin tap, and the
+existing `venue-map.tsx` camera/mini-card effects do the rest. Matches
+DESIGN.md "rows select, never navigate." Suggestions are drawn straight
+from `visibleVenues` (already `filterVenues`-matched on name + cuisine +
+active chips), so anything shown stays visible once the query clears and
+survives the `selectedId`-visibility guard. "Restaurant not found" shows
+when the visible set is empty.
+
+### Member geolocation is client-only and one-shot per session
+
+`Specs/auth-security.md`: user geolocation "Never leaves the browser …
+no endpoint receives it, nothing stores it." `MemberLocate` honors that
+exactly — `getCurrentPosition` on the client, a dot + `easeTo`, and
+nothing else: no fetch, no PostHog capture, no DB/profile write, no log
+line carries a coordinate. Only a `sessionStorage` boolean
+(`tueats:member-locate-prompted`) is kept, so navigation/rerenders inside
+one signed-in visit don't re-prompt. Signed-out visitors are never asked
+(the existing manual `LocateControl` button still serves everyone).
+Off-campus coords (a reviewer opening from elsewhere) are ignored so the
+`CAMPUS_MAX_BOUNDS` clamp doesn't strand the camera at an edge. Every
+failure mode (denied / unavailable / timeout / no `navigator.geolocation`)
+falls through silently to the normal campus view.
+
 ## 2026-09-06 — Hot Spots drops the ballot: every published venue competes
 
 Supersedes the ballot-model entry below (same day). Site owner's call: no
