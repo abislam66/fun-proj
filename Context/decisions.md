@@ -7,6 +7,81 @@
 
 ---
 
+## 2026-09-10 — "Places of the Week" replaces Hot Spots voting; search→map; member geolocation
+
+### Hot Spots voting is gone; "Places of the Week" is a read-only ratings ranking
+
+Site owner's call. Community upvote/downvote on venues never shipped to
+real users — it went through five shapes (2026-09-05 → 2026-09-08) and the
+owner ended it. The public board is now **"Places of the Week"**: the top
+5 published venues by a weighted student-rating score, a live read of the
+`ratings`/reviews data that already ships in the venue payload. No votes,
+no `venue_votes` reads, no server action, no new query.
+
+- **Why weighted, not raw average:** a lone 5★ must not top a
+  well-reviewed venue. `rankPlacesByRating` (`src/lib/ratings.ts`) uses
+  the standard IMDb/Bayesian form `score = (n·avg + m·C) / (n + m)` where
+  `C` is the mean star across **every real active rating on the board**
+  (no invented prior — computed from `Σ(avg·n)/Σn`) and `m` is
+  `PLACES_RATING_PRIOR_WEIGHT` (5, `config/site.ts`). Few ratings ⇒ score
+  sits near `C`; only a real body of ratings moves it away. `m` is the one
+  tuning knob — raise it to push thin-sample venues down harder.
+- **"Not enough data" is graceful, not padded:** only venues with ≥1
+  active rating are ranked; the board shows however many qualify (≤5), and
+  an all-unrated board renders an empty state. **Nothing is fabricated** —
+  no fake ratings, scores, or reviews. Prod's `ratings` table is currently
+  empty, so the live board is the empty state until reviews exist.
+- **"of the Week" is just the feature name** — this is a current ranking,
+  not a weekly snapshot. No history table, no cron. Revisit if the owner
+  wants frozen weekly winners later (would need a snapshot table).
+- **Client-side, zero round-trip:** the explorer already holds every
+  published venue with its `studentRating` aggregate, so the panel ranks
+  in `useMemo`. Consistent with "computed client-side so public pages stay
+  static/ISR" (CLAUDE.md).
+- **The 2026-09-08 unbounded-counter change was reverted, not built on**
+  (it was never pushed). `git checkout HEAD` on the seven touched files.
+  Migration `0013` (dropped the ±1 check) had already been applied to the
+  live DB, so it stays in the tree; **migration `0014` re-adds
+  `venue_votes_value_range`** and was applied to the live DB — `venue_votes`
+  is back to its original ±1/one-row-per-member/toggle design, dormant.
+  Kept (not dropped) per the owner: "infrastructure/table can remain
+  unused for now; do not drop production tables just for this change."
+- **Rename:** every user-facing "Hot Spots This Week" → "Places of the
+  Week" (nav label, panel copy). Internally `ViewMode` `"hotspots"` →
+  `"places"`, `?view=hotspots` still honored (rewritten to `?view=places`),
+  `AnalyticsEvent.HotSpotsViewed` → `PlacesOfWeekViewed`
+  (`"places of the week viewed"` — a rename, splits from the old event
+  string, which had ~no history).
+
+### Search suggestions reuse the existing selection/popup path
+
+Typing in the floating map search field shows a suggestions dropdown;
+picking one **selects the venue on the map** (fly-to + existing
+mini-card on desktop, preview sheet on mobile) and **does not** navigate
+to `/eat/[slug]`. Deliberately no second popup implementation — the pick
+just sets `selectedId`, exactly like a Places row or a pin tap, and the
+existing `venue-map.tsx` camera/mini-card effects do the rest. Matches
+DESIGN.md "rows select, never navigate." Suggestions are drawn straight
+from `visibleVenues` (already `filterVenues`-matched on name + cuisine +
+active chips), so anything shown stays visible once the query clears and
+survives the `selectedId`-visibility guard. "Restaurant not found" shows
+when the visible set is empty.
+
+### Member geolocation is client-only and one-shot per session
+
+`Specs/auth-security.md`: user geolocation "Never leaves the browser …
+no endpoint receives it, nothing stores it." `MemberLocate` honors that
+exactly — `getCurrentPosition` on the client, a dot + `easeTo`, and
+nothing else: no fetch, no PostHog capture, no DB/profile write, no log
+line carries a coordinate. Only a `sessionStorage` boolean
+(`tueats:member-locate-prompted`) is kept, so navigation/rerenders inside
+one signed-in visit don't re-prompt. Signed-out visitors are never asked
+(the existing manual `LocateControl` button still serves everyone).
+Off-campus coords (a reviewer opening from elsewhere) are ignored so the
+`CAMPUS_MAX_BOUNDS` clamp doesn't strand the camera at an edge. Every
+failure mode (denied / unavailable / timeout / no `navigator.geolocation`)
+falls through silently to the normal campus view.
+
 ## 2026-09-06 — Hot Spots drops the ballot: every published venue competes
 
 Supersedes the ballot-model entry below (same day). Site owner's call: no

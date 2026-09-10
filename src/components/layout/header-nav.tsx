@@ -9,7 +9,7 @@ import {
   type HeaderSession,
 } from "@/components/layout/user-avatar";
 
-type ViewMode = "map" | "hotspots";
+type ViewMode = "map" | "places";
 
 /**
  * A nav item that degrades gracefully: from the homepage (where VenueExplorer
@@ -55,12 +55,12 @@ export function HeaderNav({
   session = null,
   viewMode = "map",
   onHome,
-  onHotSpots,
+  onPlaces,
 }: {
   session?: HeaderSession | null;
   viewMode?: ViewMode;
   onHome?: () => void;
-  onHotSpots?: () => void;
+  onPlaces?: () => void;
 }) {
   return (
     <nav aria-label="Primary navigation">
@@ -68,11 +68,11 @@ export function HeaderNav({
         Home
       </NavAction>
       <NavAction
-        active={viewMode === "hotspots"}
-        href="/?view=hotspots"
-        onClick={onHotSpots}
+        active={viewMode === "places"}
+        href="/?view=places"
+        onClick={onPlaces}
       >
-        Hot Spots This Week
+        Places of the Week
       </NavAction>
       <UserAvatar session={session} />
     </nav>

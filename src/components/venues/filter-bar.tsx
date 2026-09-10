@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { type FocusEvent as ReactFocusEvent, useId, useState } from "react";
 import { usePostHog } from "posthog-js/react";
 
 import { CUISINES, CUISINE_KEYS, type CuisineKey } from "@/config/cuisines";
@@ -27,6 +27,8 @@ export function FilterBar({
   onClear,
   active,
   searchPlaceholder = "Search food or a place",
+  onSearchFocus,
+  onSearchBlur,
 }: {
   filters: VenueFilters;
   onChange: (filters: VenueFilters) => void;
@@ -35,6 +37,9 @@ export function FilterBar({
   /** Whether any query/filter/zone is currently non-default. */
   active: boolean;
   searchPlaceholder?: string;
+  /** Optional — lets a caller drive a search-suggestions dropdown. */
+  onSearchFocus?: () => void;
+  onSearchBlur?: (event: ReactFocusEvent<HTMLInputElement>) => void;
 }) {
   // Menu options expand inline below the chip row — an in-panel drawer
   // that pushes the results down. Never a floating popover over the list.
@@ -82,7 +87,9 @@ export function FilterBar({
         </span>
         <span className="sr-only">Search venues or cuisines</span>
         <Input
+          onBlur={onSearchBlur}
           onChange={(event) => update("query", event.target.value)}
+          onFocus={onSearchFocus}
           placeholder={searchPlaceholder}
           type="search"
           value={filters.query}

@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  type FocusEvent as ReactFocusEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { usePostHog } from "posthog-js/react";
 
 import { VenueMapLoader } from "@/components/map/venue-map-loader";
@@ -8,8 +13,11 @@ import { SiteHeader } from "@/components/layout/site-header";
 import type { HeaderSession } from "@/components/layout/user-avatar";
 import { MobileSheet } from "@/components/ui/mobile-sheet";
 import { Button } from "@/components/ui/primitives";
-import { HotSpotsPanel } from "@/components/venues/hot-spots-panel";
-import { MapSearchOverlay } from "@/components/venues/map-search-overlay";
+import {
+  MapSearchOverlay,
+  type SearchSuggestion,
+} from "@/components/venues/map-search-overlay";
+import { PlacesOfTheWeekPanel } from "@/components/venues/places-of-the-week-panel";
 import { VenueList } from "@/components/venues/venue-list";
 import { VenuePreview } from "@/components/venues/venue-preview";
 import { AnalyticsEvent } from "@/lib/analytics";
@@ -24,9 +32,13 @@ import {
   filterVenues,
   parseVenueFilters,
   serializeVenueFilters,
+  venueLocationText,
 } from "@/lib/venues";
 
-type ViewMode = "map" | "hotspots";
+type ViewMode = "map" | "places";
+
+/** Cap on how many name matches the map search dropdown lists at once. */
+const SEARCH_SUGGESTION_LIMIT = 6;
 
 function ResultsPanel({
   venues,
@@ -98,9 +110,13 @@ export function VenueExplorer({
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    initialParams.get("view") === "hotspots" ? "hotspots" : "map",
-  );
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const view = initialParams.get("view");
+    // "hotspots" is the pre-2026-09-10 name for this view — still honored
+    // so old links/bookmarks land on Places of the Week.
+    return view === "places" || view === "hotspots" ? "places" : "map";
+  });
   // The results sheet now overlays the map at every breakpoint — map
   // dominates on load, so it starts collapsed everywhere, not just mobile.
   // A bookmarked "?view=restaurants" link opens straight to the list.
@@ -111,7 +127,7 @@ export function VenueExplorer({
   // room for both a browse view and a floating mini-card at once). On
   // desktop the mini-card handles the selection instead — the sheet stays
   // in whatever browse content it already had, so picking a venue never
-  // silently discards an open Hot Spots board or restaurant list.
+  // silently discards an open Places board or restaurant list.
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window === "undefined"
       ? false
@@ -134,8 +150,11 @@ export function VenueExplorer({
   // structurally blind to a pin tap. This is the one interaction on the
   // site autocapture genuinely cannot see; every other custom event here
   // just adds semantic state on top of what autocapture already gets free.
-  function captureVenueSelected(venueId: string, source: "map" | "list") {
-    const venue = visibleVenues.find((candidate) => candidate.id === venueId);
+  function captureVenueSelected(
+    venueId: string,
+    source: "map" | "list" | "search",
+  ) {
+    const venue = venues.find((candidate) => candidate.id === venueId);
     posthog.capture(AnalyticsEvent.VenueSelected, {
       venue_id: venueId,
       venue_type: venue?.type ?? null,
@@ -156,6 +175,27 @@ export function VenueExplorer({
     setSelectedId(venueId);
   }
 
+  // A search suggestion behaves like a list-row select — it never
+  // navigates to /eat/[slug]. Clearing the query widens the visible set
+  // back so the chosen venue survives the `selectedId`-visibility guard
+  // below, and the existing map effects fly to it and open its popup /
+  // mobile preview.
+  function selectFromSearch(venueId: string) {
+    captureVenueSelected(venueId, "search");
+    setFilters((current) => ({ ...current, query: "" }));
+    setSearchFocused(false);
+    setSelectedId(venueId);
+  }
+
+  function handleSearchBlur(event: ReactFocusEvent<HTMLInputElement>) {
+    // Keep the dropdown open while focus is moving into one of its
+    // suggestion buttons (mouse or keyboard); the button's own handler
+    // closes it.
+    const next = event.relatedTarget as HTMLElement | null;
+    if (next && next.closest(".search-suggestions")) return;
+    setSearchFocused(false);
+  }
+
   function clearFilters() {
     posthog.capture(AnalyticsEvent.FiltersCleared);
     setFilters(EMPTY_VENUE_FILTERS);
@@ -165,9 +205,9 @@ export function VenueExplorer({
     setViewMode("map");
   }
 
-  function openHotSpots() {
-    posthog.capture(AnalyticsEvent.HotSpotsViewed);
-    setViewMode("hotspots");
+  function openPlaces() {
+    posthog.capture(AnalyticsEvent.PlacesOfWeekViewed);
+    setViewMode("places");
     setSnap((current) => (current === "collapsed" ? "peek" : current));
   }
 
@@ -183,9 +223,24 @@ export function VenueExplorer({
   );
   const filtersActive = query.length > 0;
 
+  const trimmedQuery = filters.query.trim();
+  const showSuggestions = searchFocused && trimmedQuery.length > 0;
+  // Suggestions are just the already-filtered visible set (name + cuisine
+  // match, plus any active chips), capped — so anything shown is a real
+  // published venue that stays visible once the query is cleared.
+  const searchSuggestions = useMemo<SearchSuggestion[]>(() => {
+    if (!showSuggestions) return [];
+    return visibleVenues.slice(0, SEARCH_SUGGESTION_LIMIT).map((venue) => ({
+      id: venue.id,
+      name: venue.name,
+      location: venueLocationText(venue).text,
+    }));
+  }, [showSuggestions, visibleVenues]);
+  const searchNotFound = showSuggestions && visibleVenues.length === 0;
+
   useEffect(() => {
     const params = new URLSearchParams(query);
-    if (viewMode === "hotspots") params.set("view", "hotspots");
+    if (viewMode === "places") params.set("view", "places");
     const combined = params.toString();
     const next = combined ? `/?${combined}` : "/";
     window.history.replaceState(window.history.state, "", next);
@@ -236,13 +291,13 @@ export function VenueExplorer({
         onClose={() => setSelectedId(null)}
         venue={selectedVenue}
       />
-    ) : viewMode === "hotspots" ? (
-      <HotSpotsPanel
+    ) : viewMode === "places" ? (
+      <PlacesOfTheWeekPanel
         hoveredId={hoveredId}
-        isSignedIn={session !== null}
         onHover={setHoveredId}
         onSelect={selectFromList}
         selectedId={selectedId}
+        venues={venues}
       />
     ) : (
       <ResultsPanel
@@ -265,7 +320,7 @@ export function VenueExplorer({
       <h1 className="sr-only">TuEats — food around Temple University</h1>
       <SiteHeader
         onHome={goHome}
-        onHotSpots={openHotSpots}
+        onPlaces={openPlaces}
         session={session}
         viewMode={viewMode}
       />
@@ -273,6 +328,7 @@ export function VenueExplorer({
         <VenueMapLoader
           backPath={backPath}
           hoveredId={hoveredId}
+          isSignedIn={session !== null}
           onClearSelection={() => setSelectedId(null)}
           onHover={setHoveredId}
           onSelect={selectFromMap}
@@ -290,8 +346,14 @@ export function VenueExplorer({
         <MapSearchOverlay
           active={filtersActive}
           filters={filters}
+          notFound={searchNotFound}
           onChange={setFilters}
           onClear={clearFilters}
+          onPickSuggestion={selectFromSearch}
+          onSearchBlur={handleSearchBlur}
+          onSearchFocus={() => setSearchFocused(true)}
+          showSuggestions={showSuggestions}
+          suggestions={searchSuggestions}
         />
       </div>
       <div className="results-sheet-region">
