@@ -51,6 +51,30 @@
 
 ---
 
+## 2026-09-10 — Compact venue name plates on the map
+
+Dense zones felt congested — every pill had a fixed 40px plate, 20px of
+padding on each side of the 13px label, and a 64px minimum width that
+padded short names out with dead space. Sized the cherry venue/cluster
+plates close to their text instead.
+
+- **`src/lib/map/venue-pill-icon.ts` only.** `LABEL_PAD_X` 20 → 11; new
+  `VENUE_PILL_HEIGHT` 26 and `VENUE_PILL_MIN_WIDTH` 40 for the baked
+  name plates (and the cluster "N spots" plate). `paintPill` now takes a
+  `pillHeight` arg so the dining 9-slice keeps its 64×40 geometry (its
+  stretch bands depend on it). `DINING_PILL_DOWNSCALE` 1.5 → 1.85 so the
+  info pins stay smaller than the shorter venue plate.
+- **No behavior change.** `VENUE_HEIGHT` mirrors the old height formula,
+  so the plate-bottom-to-stem-dot gap is identical — the box only loses
+  height off its top and hugs its text horizontally. Clustering, the
+  zoom-scale ramp, hover/select, and label placement are untouched.
+- Y2K chrome intact (cherry fill, ink border, offset shadow, halo, stem
+  + dot, 13px label). `tsc` clean, `pnpm lint` 0 errors, 190 tests pass.
+  Visually checked desktop + mobile on W Montgomery, Student Center,
+  Avery, and a selected pill. See `Context/decisions.md` (this date) and
+  `docs/design/map-and-pins.md`. Not yet pushed — rides with the
+  `feat/places-of-the-week` branch.
+
 ## 2026-09-10 — Responsive mobile typography pass
 
 Small phones (iPhone 17 Pro, ~393px) rendered the fixed "mobile" type

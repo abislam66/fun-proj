@@ -18,8 +18,16 @@
  */
 
 const SCALE = 3; // raster oversample for crisp rendering at typical zoom
-const PILL_WIDTH = 64; // dining 9-slice base / venue-pill minimum width
-const PILL_HEIGHT = 40;
+const PILL_WIDTH = 64; // dining 9-slice base width
+const PILL_HEIGHT = 40; // dining 9-slice plate height
+// Cherry venue/cluster plates are sized close to their text so dense
+// zones stop feeling congested: a small width floor, and a plate only
+// tall enough to seat the 13px label with a little air above and below.
+// The dining 9-slice keeps the larger PILL_WIDTH/PILL_HEIGHT above — its
+// stretch bands are tuned to those — so only the baked name plates use
+// these two.
+const VENUE_PILL_MIN_WIDTH = 40;
+const VENUE_PILL_HEIGHT = 26;
 const STEM_LINE_WIDTH = 2.5;
 const STEM_LINE_HEIGHT = 9;
 const STEM_DOT_RADIUS = 3;
@@ -33,6 +41,12 @@ const PAD = 5;
 const HALO_WIDTH = 2.5;
 const HEIGHT =
   PAD + PILL_HEIGHT + STEM_LINE_HEIGHT + STEM_DOT_RADIUS * 2 + BORDER;
+// Same vertical budget as HEIGHT but for the shorter venue plate: the gap
+// between the plate's bottom edge and the stem-dot tip is identical, so
+// the compact plate sits exactly where the old one did relative to its
+// pin coordinate (icon-anchor: "bottom") — only the top of the box moves.
+const VENUE_HEIGHT =
+  PAD + VENUE_PILL_HEIGHT + STEM_LINE_HEIGHT + STEM_DOT_RADIUS * 2 + BORDER;
 
 const INK = "#171310";
 const VENUE_FILL = "#9D2235"; // --color-cherry
@@ -42,7 +56,9 @@ const VENUE_TEXT = "#ffffff";
 // Drawn at the old z18.5 GL text size; the layer's zoom-scaled
 // `icon-size` shrinks the whole sprite at lower zooms.
 const LABEL_FONT_SIZE = 13;
-const LABEL_PAD_X = 20;
+// Space between the text and each vertical plate edge. Small and
+// comfortable — enough to breathe, not the roomy chip it was.
+const LABEL_PAD_X = 11;
 
 // Campus-dining info pins: white surface + the campus-building stroke
 // stone, so they read as map furniture — never a tappable cherry venue.
@@ -139,10 +155,11 @@ function labelFont(): string {
   return `700 ${LABEL_FONT_SIZE}px ${family}`;
 }
 
-/** Paints halo + square plate + leader-line-and-dot stem (`pillWidth` in design units). */
+/** Paints halo + square plate + leader-line-and-dot stem (`pillWidth`/`pillHeight` in design units). */
 function paintPill(
   ctx: CanvasRenderingContext2D,
   pillWidth: number,
+  pillHeight: number,
   style: PillStyle,
 ) {
   const { fill, stroke, borderWidth, halo, stemStroke = INK } = style;
@@ -157,7 +174,7 @@ function paintPill(
       plateX - HALO_WIDTH,
       plateY - HALO_WIDTH,
       pillWidth + HALO_WIDTH * 2,
-      PILL_HEIGHT + HALO_WIDTH * 2,
+      pillHeight + HALO_WIDTH * 2,
     );
     ctx.fillStyle = halo;
     ctx.fill();
@@ -170,7 +187,7 @@ function paintPill(
     plateX + SHADOW_OFFSET,
     plateY + SHADOW_OFFSET,
     pillWidth - BORDER,
-    PILL_HEIGHT - BORDER,
+    pillHeight - BORDER,
   );
   ctx.fillStyle = SHADOW_COLOR;
   ctx.fill();
@@ -181,7 +198,7 @@ function paintPill(
     plateX + borderWidth / 2,
     plateY + borderWidth / 2,
     pillWidth - borderWidth,
-    PILL_HEIGHT - borderWidth,
+    pillHeight - borderWidth,
   );
   ctx.fillStyle = fill;
   ctx.fill();
@@ -192,7 +209,7 @@ function paintPill(
   // Stem — thin leader line ending in a small fill-colored dot at the
   // true coordinate (`icon-anchor: "bottom"`), matching zone labels.
   const cx = plateX + pillWidth / 2;
-  const stemTopY = plateY + PILL_HEIGHT;
+  const stemTopY = plateY + pillHeight;
   const stemBottomY = stemTopY + STEM_LINE_HEIGHT;
   ctx.beginPath();
   ctx.moveTo(cx, stemTopY);
@@ -222,22 +239,22 @@ export function buildVenuePillIcon(
   ctx.font = font;
   const textWidth = ctx.measureText(name).width;
   const pillWidth = Math.max(
-    PILL_WIDTH,
+    VENUE_PILL_MIN_WIDTH,
     Math.ceil(textWidth + LABEL_PAD_X * 2),
   );
   const width = pillWidth + PAD * 2 + SHADOW_OFFSET;
 
   canvas.width = width * SCALE;
-  canvas.height = HEIGHT * SCALE;
+  canvas.height = VENUE_HEIGHT * SCALE;
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
   ctx.font = font; // canvas resize resets state
 
-  paintPill(ctx, pillWidth, VENUE_PILL_STYLES[state]);
+  paintPill(ctx, pillWidth, VENUE_PILL_HEIGHT, VENUE_PILL_STYLES[state]);
 
   ctx.fillStyle = VENUE_TEXT;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(name, PAD + pillWidth / 2, PAD + PILL_HEIGHT / 2);
+  ctx.fillText(name, PAD + pillWidth / 2, PAD + VENUE_PILL_HEIGHT / 2);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -291,7 +308,7 @@ function drawPill(style: PillStyle): PillIconAsset {
   if (!ctx) throw new Error("2D canvas context unavailable");
 
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-  paintPill(ctx, PILL_WIDTH, style);
+  paintPill(ctx, PILL_WIDTH, PILL_HEIGHT, style);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
@@ -306,10 +323,11 @@ function drawPill(style: PillStyle): PillIconAsset {
   };
 }
 
-// Dining pins display at 2/3 the venue-pill footprint: same bitmap,
-// registered at a higher pixelRatio. The content/stretch bands are in
-// bitmap pixel space, so they need no adjustment.
-const DINING_PILL_DOWNSCALE = 1.5;
+// Dining pins stay visibly smaller than the (now compact) venue plate so
+// they keep receding as map furniture: same 9-slice bitmap, registered at
+// a higher pixelRatio. The content/stretch bands are in bitmap pixel
+// space, so they need no adjustment.
+const DINING_PILL_DOWNSCALE = 1.85;
 
 /** Neutral, non-interactive pill for meal-plan dining info pins. */
 export function buildDiningPillIcon(): PillIconAsset {

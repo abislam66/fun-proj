@@ -7,6 +7,37 @@
 
 ---
 
+## 2026-09-10 — Venue name plates sized close to their text (de-congest)
+
+Dense zones (Student Center ~18 pins, Avery ~10) read as a wall of
+boxes because each pill had a fixed 40px-tall plate and 20px of padding
+on *each* side of a 13px label, plus a 64px minimum width that padded
+short names ("Avery", "Wendy's") out with dead space.
+
+- **What changed, all in `src/lib/map/venue-pill-icon.ts`:** `LABEL_PAD_X`
+  20 → 11; new `VENUE_PILL_HEIGHT` (26) and `VENUE_PILL_MIN_WIDTH` (40)
+  used only by `buildVenuePillIcon` (which also draws cluster "N spots"
+  plates). `paintPill` took a `pillHeight` param so the dining 9-slice
+  can keep its own `PILL_HEIGHT`/`PILL_WIDTH` — its stretch/content bands
+  are tuned to 64×40 and must not move.
+- **Position is unchanged by construction.** `VENUE_HEIGHT` mirrors the
+  old `HEIGHT` formula with the smaller plate, so the gap between the
+  plate's bottom edge and the stem-dot tip (the map coordinate, via
+  `icon-anchor: "bottom"`) is byte-identical — only the *top* of the box
+  moves down. Clustering (`CLUSTER_RADIUS_PX`), the `icon-size` zoom
+  ramp, hover/select priority, and label placement are all untouched.
+  This was the explicit constraint: compact the box, not the behavior.
+- **`DINING_PILL_DOWNSCALE` 1.5 → 1.85** so the meal-plan info pins stay
+  visibly smaller than the now-shorter venue plate (they're subordinate
+  map furniture — see `docs/design/map-and-pins.md`). Without this bump
+  the dining plate (~26.7px) would have out-sized the venue plate (26px).
+- **Left alone:** cherry fill `#9D2235`, ink border, offset shadow,
+  selected halo, stem line + dot, `LABEL_FONT_SIZE` 13. Y2K chrome and
+  readability intact — verified on desktop + mobile across W Montgomery,
+  Student Center, and Avery.
+- **Not yet pushed** (rides with the unpushed 2026-09-10 Places/search/
+  locate work on `feat/places-of-the-week`).
+
 ## 2026-09-10 — Mobile type is fluid via `clamp()`, only Display + Title
 
 The type scale had one set of "mobile" values for everything under
