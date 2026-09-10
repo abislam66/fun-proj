@@ -7,6 +7,37 @@
 
 ---
 
+## 2026-09-10 — Mobile type is fluid via `clamp()`, only Display + Title
+
+The type scale had one set of "mobile" values for everything under
+1024px, so a 393px phone got the same 32px Display / 22px Title as a
+900px tablet — oversized on the phone. Fix: `clamp()` the two big tokens
+(`--text-display`, `--text-title`) so they scale with viewport width.
+
+- **Only Display + Title are fluid.** `--text-body` stays exactly `1rem`
+  — 16px is the readability baseline and iOS zooms any focused input with
+  a font under 16px. `--text-small` (13px) and `--text-micro` (11px) stay
+  fixed too: they're already near the readability floor, the user's
+  concern was big headings/chrome, and shrinking them further buys almost
+  nothing. This is the "do not make important text too small" guardrail.
+- **Desktop is deliberately untouched.** The pre-existing
+  `@media (min-width:64rem)` block hard-sets the desktop token values, so
+  it overrides the base `clamp()` at ≥1024px regardless. The `clamp()`
+  MAX equals the current mobile value and is reached by ~600px, so
+  tablets (768px) also render as before — the only band that changes is
+  ~320–600px. Confirmed with before/after screenshots.
+- **`clamp()` over a media-query breakpoint** because the file already
+  uses `clamp()` for fluid headings (`.detail-hero h1`, `.account-page
+  h1`) and it degrades smoothly across the whole phone range instead of
+  snapping at one width. No JS/device detection.
+- **Line-heights for the fluid tokens went unitless** (1.2 / 1.3) so they
+  track the clamped font size; they were only ever consumed as
+  `line-height: var(...)`, never in `calc()`, so this is safe.
+- **`.empty-state h2` had no explicit `font-size`** — it was inheriting
+  the UA `h2` default (~1.5em ≈ 24px). Pinned to `--text-title` so it
+  joins the scale (24px desktop, fluid on phones). This is what the
+  Places of the Week "Nothing rated yet" heading uses.
+
 ## 2026-09-10 — "Places of the Week" replaces Hot Spots voting; search→map; member geolocation
 
 ### Hot Spots voting is gone; "Places of the Week" is a read-only ratings ranking

@@ -51,6 +51,46 @@
 
 ---
 
+## 2026-09-10 — Responsive mobile typography pass
+
+Small phones (iPhone 17 Pro, ~393px) rendered the fixed "mobile" type
+scale — 32px Display, 22px Title — which felt oversized. Made the scale
+fluid on phones while leaving tablet + desktop untouched. CSS-only; no
+device detection.
+
+- **`--text-display` / `--text-title` → `clamp()`** in `:root` (and the
+  mirrored `@theme inline` block). Each ramps from a smaller phone floor
+  (Display 27px, Title 19px) up to its current value by ~600px viewport
+  width, so anything ≥ large-phone is unchanged. Their line-heights became
+  unitless (1.2 / 1.3) so they track the clamped size.
+- **`--text-body` (16px), `--text-small` (13px), `--text-micro` (11px)
+  left fixed** — already at readable minimums; body must stay 16px so iOS
+  doesn't zoom focused inputs.
+- **Desktop guaranteed unchanged:** the existing `@media (min-width:64rem)`
+  block still hard-sets `--text-display: 2.5rem`, `--text-title: 1.5rem`,
+  etc., overriding the base clamp at ≥1024px. Verified with before/after
+  screenshots at 1280px — pixel-identical.
+- **Also clamped / tuned:** `.wordmark` (nav logo, 24→~21px on small
+  phones), `.detail-hero h1` / `.about-page h1` (clamp floor 2.25rem →
+  1.9rem; 8vw ramp + 4rem cap unchanged so tablet/desktop identical),
+  `.sign-in-gate h1`, `.about-lede`. `.empty-state h2` was relying on the
+  UA default (~24px) — pinned to `--text-title` so it's in-scale and
+  fluid (covers the Places of the Week "Nothing rated yet" state).
+- **Spacing:** under `@media (max-width:40rem)` only, the venue-detail /
+  about reading pages trim section padding one step (`--spacing-xl` →
+  `--spacing-lg`) and the empty-state well shrinks (17rem → 13rem).
+- **Surfaces audited:** landing/map (nav + wordmark; search/filters
+  already `--text-small`, untouched), search suggestions (small/micro,
+  untouched), Places of the Week (rows already small; empty-state h2
+  fixed), map mini-card + mobile preview sheet (venue name is
+  `--text-title` → now fluid), bottom sheet (handle label micro,
+  untouched), venue detail (hero + section headings fluid, padding
+  trimmed).
+- **Verified:** `tsc` clean · `pnpm lint` 0 errors · `pnpm build` clean ·
+  before/after Playwright screenshots at 393px (landing, sign-in gate,
+  about) and 1280px (desktop unchanged). Committed on
+  `feat/places-of-the-week`.
+
 ## 2026-09-10 — Places of the Week (replaces Hot Spots voting) + search→map + member geolocation
 
 Three changes shipped together, all reusing existing architecture. Full

@@ -34,10 +34,17 @@
   --font-body: var(--font-rajdhani);
   --font-data: var(--font-share-tech-mono);
 
-  --text-display: 2rem;
-  --text-display--line-height: 2.5rem;
-  --text-title: 1.375rem;
-  --text-title--line-height: 1.75rem;
+  /* Display + Title fluidly shrink on narrow phones and reach their full
+     size by large-phone / small-tablet width (~600px). The
+     `min-width: 64rem` block further down still hard-sets the desktop
+     scale, so desktop typography is unchanged. Body / small / micro stay
+     fixed — they're already at readable minimums, and body must stay
+     16px so iOS doesn't zoom focused inputs. Line-heights for the fluid
+     tokens are unitless so they track the clamped size. */
+  --text-display: clamp(1.6875rem, 1.15rem + 2.4vw, 2rem);
+  --text-display--line-height: 1.2;
+  --text-title: clamp(1.1875rem, 0.83rem + 1.6vw, 1.375rem);
+  --text-title--line-height: 1.3;
   --text-body: 1rem;
   --text-body--line-height: 1.5rem;
   --text-small: 0.8125rem;
@@ -140,10 +147,17 @@
   --font-data: var(--font-share-tech-mono);
   --font-mono: var(--font-share-tech-mono);
 
-  --text-display: 2rem;
-  --text-display--line-height: 2.5rem;
-  --text-title: 1.375rem;
-  --text-title--line-height: 1.75rem;
+  /* Display + Title fluidly shrink on narrow phones and reach their full
+     size by large-phone / small-tablet width (~600px). The
+     `min-width: 64rem` block further down still hard-sets the desktop
+     scale, so desktop typography is unchanged. Body / small / micro stay
+     fixed — they're already at readable minimums, and body must stay
+     16px so iOS doesn't zoom focused inputs. Line-heights for the fluid
+     tokens are unitless so they track the clamped size. */
+  --text-display: clamp(1.6875rem, 1.15rem + 2.4vw, 2rem);
+  --text-display--line-height: 1.2;
+  --text-title: clamp(1.1875rem, 0.83rem + 1.6vw, 1.375rem);
+  --text-title--line-height: 1.3;
   --text-body: 1rem;
   --text-body--line-height: 1.5rem;
   --text-small: 0.8125rem;
@@ -408,6 +422,33 @@ button {
   .site-header nav {
     gap: var(--spacing-sm);
   }
+
+  /* The reading pages (venue detail, about) carry a lot of vertical air
+     between sections — comfortable on desktop, wasteful on a phone.
+     Trim the section rhythm one step (32px -> 24px) and the page's
+     trailing gap; the borders still keep sections visually distinct. */
+  .detail-page,
+  .about-page {
+    padding: var(--spacing-lg) 0 var(--spacing-2xl);
+  }
+
+  .detail-hero,
+  .detail-photos,
+  .detail-section {
+    padding-top: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+  }
+
+  .detail-hero {
+    padding-top: 0;
+  }
+
+  /* Empty states (e.g. Places of the Week with no ratings yet) don't need
+     a 17rem well plus 32px padding on a small screen. */
+  .empty-state {
+    min-height: 13rem;
+    padding: var(--spacing-lg);
+  }
 }
 
 .wordmark {
@@ -415,7 +456,8 @@ button {
   display: inline-flex;
   align-items: baseline;
   font-family: var(--font-signature), var(--font-display), sans-serif;
-  font-size: 1.5rem;
+  /* Eases down on small phones; back to 1.5rem by ~640px and on desktop. */
+  font-size: clamp(1.3rem, 1.05rem + 1.1vw, 1.5rem);
   font-weight: 400;
   letter-spacing: 0.03em;
   color: #f5ece6;
@@ -1858,6 +1900,11 @@ button {
 .empty-state h2 {
   margin: var(--spacing-md) 0 0.25rem;
   font-family: var(--font-display), sans-serif;
+  /* Was relying on the UA default (~1.5em); pin it to the fluid title
+     token so it matches the rest of the scale (24px on desktop, easing
+     down on small phones). */
+  font-size: var(--text-title);
+  line-height: 1.2;
 }
 
 .empty-state p {
@@ -1910,8 +1957,8 @@ button {
 .sign-in-gate h1 {
   margin: 0 0 var(--spacing-sm);
   font-family: var(--font-display), sans-serif;
-  font-size: 1.75rem;
-  line-height: 1.1;
+  font-size: clamp(1.4rem, 1.05rem + 1.5vw, 1.75rem);
+  line-height: 1.15;
   letter-spacing: -0.03em;
 }
 
@@ -2166,7 +2213,10 @@ button {
 .about-page h1 {
   margin: 0;
   font-family: var(--font-display), sans-serif;
-  font-size: clamp(2.25rem, 8vw, 4rem);
+  /* Lower floor (was 2.25rem) so the hero isn't oversized on ~360-400px
+     phones; the 8vw ramp and 4rem cap are unchanged, so tablet and
+     desktop render exactly as before. */
+  font-size: clamp(1.9rem, 8vw, 4rem);
   line-height: 0.98;
   letter-spacing: -0.05em;
 }
@@ -2508,7 +2558,7 @@ button {
   max-width: 35rem;
   margin: var(--spacing-lg) 0 var(--spacing-2xl);
   color: var(--color-ink-secondary);
-  font-size: 1.18rem;
+  font-size: clamp(1rem, 0.92rem + 0.45vw, 1.18rem);
   line-height: 1.55;
 }
 
