@@ -8,59 +8,43 @@ export default async function AboutPage() {
       <SiteHeader />
       <main className="about-page">
         <p className="eyebrow">About the guide</p>
-        <h1>Campus food, without the guesswork.</h1>
+        <h1>Discover food options with ease.</h1>
         <p className="about-lede">
-          TuEats is a small, community-built guide to food trucks and other
-          off-meal-plan food around Temple University&apos;s main campus.
+          TuEats is a community-built guide to food trucks, cafes and
+          restaurants around Temple University&apos;s main campus.
         </p>
 
         <section>
-          <h2>Why it exists</h2>
+          <h2>Why we built it</h2>
           <p>
-            Campus food changes quickly. A familiar cart moves, posted hours
-            drift, and a great lunch can hide one block away. TuEats puts the
-            useful details in one place: where to go, what kind of food is
-            there, and whether it is usually open.
+            Within a few weeks on being on campus, everybody has a favorite
+            place to eat and you end up not trying new places. We built TuEats
+            to help you discover all the cuisines available on campus.
           </p>
         </section>
         <section>
           <h2>How the information works</h2>
           <p>
-            Listings are curated and periodically checked. Hours are always a
-            guide, not a promise. If something looks wrong, use the report link
-            on the venue page so it can be checked.
+            Listings are curated and periodically checked. Rate the places
+            you've been to and share your thoughts with the class! If something
+            looks wrong, use the report link on the venue page so we can check
+            it.
           </p>
         </section>
         <section>
           <h2>Signing in</h2>
           <p>
-            Browsing the map, search, and filters never requires an account.
-            Opening a specific place&rsquo;s full page does, using Google
-            sign-in through Supabase. We only ever see your name and email from
-            Google to create your account &mdash; your email is never shown to
-            anyone or stored outside of authentication, and your Google password
-            is never seen by TuEats at all. Once you&apos;re signed in, tap the
-            profile icon in the header to open your account: change your name,
-            username, and class year, and see every rating you&apos;ve posted.
+            Everyone can create an account using their Google account. Accounts
+            are needed to rate, comment, and add photos to places.
           </p>
         </section>
         <section>
-          <h2>Cookies &amp; analytics</h2>
+          <h2>Hosting an event with free food?</h2>
           <p>
-            We use a cookie only to keep you signed in &mdash; neither analytics
-            tool we use sets one. Vercel Web Analytics just counts page views.
-            PostHog counts page views too, and also records clicks and a handful
-            of specific actions &mdash; which filters you use, when you view or
-            select a place, and if you rate a place, add a photo, or report a
-            problem &mdash; to help us see what&rsquo;s actually useful. It
-            never records what you type: a masked session replay may capture how
-            you move through the site, but every typed value (search, reviews,
-            report notes) is replaced with a placeholder before it ever leaves
-            your browser. None of this runs on our internal admin tools. Both
-            analytics tools stay fully anonymous &mdash; no account id, display
-            name, or email ever reaches either &mdash; and PostHog is further
-            configured to discard IP addresses and skip location lookups. There
-            are no advertising trackers on TuEats.
+            Student orgs, clubs, and anyone putting out free food on campus can
+            get featured here. Email{" "}
+            <a href="mailto:rafiat.amir@temple.edu">rafiat.amir@temple.edu</a>{" "}
+            with what, when, and where — we&apos;ll take a look.
           </p>
         </section>
         <aside className="about-note">
