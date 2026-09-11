@@ -7,9 +7,10 @@
 
 ## Current status
 
-- **Map-first landing redesign, as of 2026-09-05; "Places of the Week" replaces Hot Spots voting, as of 2026-09-10.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav: Home / **Places of the Week** / avatar-or-profile-glyph (initials only — no photos). **Hot Spots community voting never shipped publicly and was removed on 2026-09-10** (site owner's call — the 2026-09-08 unbounded-counter change was reverted before any push). In its place: **Places of the Week** — the top 5 published venues by a weighted (IMDb/Bayesian) student-rating score, computed client-side from the `studentRating` aggregates already in the venue payload (`rankPlacesByRating` in `src/lib/ratings.ts`; `m = PLACES_RATING_PRIOR_WEIGHT = 5`, `C` = mean star across all real ratings). No votes, no arrows, no server round-trip. Fewer than 5 show when fewer venues are rated; **prod currently has 0 ratings so the board shows its "Nothing rated yet" empty state** until reviews exist. Selecting a row still flies the map to that venue. The dormant vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `hot_spots` table, migrations `0011`/`0012`) stays in the tree, unreferenced, restored to its original ±1/toggle design (migration `0014` re-added the `value IN (-1,1)` check that the reverted 0013 had dropped — both applied to the live DB). The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Redesign deployed to `main` / `tueats.co` on 2026-09-06**; the Places-of-the-Week + search + member-locate work of 2026-09-10 is **not yet pushed/deployed** (pending site-owner review).
+- **Map-first landing redesign, as of 2026-09-05; "Places of the Week" replaces Hot Spots voting, as of 2026-09-10.** The public homepage no longer shows a persistent list — the map dominates at every breakpoint, search/filters float over it, and a results sheet (used on desktop too now, not just mobile) opens via the sheet's swipe-up handle. Top nav: Home / **Places of the Week** / avatar-or-profile-glyph (initials only — no photos). **Hot Spots community voting never shipped publicly and was removed on 2026-09-10** (site owner's call — the 2026-09-08 unbounded-counter change was reverted before any push). In its place: **Places of the Week** — the top 5 published venues by a weighted (IMDb/Bayesian) student-rating score, computed client-side from the `studentRating` aggregates already in the venue payload (`rankPlacesByRating` in `src/lib/ratings.ts`; `m = PLACES_RATING_PRIOR_WEIGHT = 5`, `C` = mean star across all real ratings). No votes, no arrows, no server round-trip. Fewer than 5 show when fewer venues are rated; **as of 2026-09-10, prod has 3 real ratings (Maxi's Pizza, 7-Eleven, Green truck in front of SAC), each n=1** — the board is live with real content, not the empty state, though the ranking math hasn't yet been exercised against any venue with more than one rating. Selecting a row still flies the map to that venue. The dormant vote infra (`src/actions/votes.ts`, `venue-votes.ts`, `vote.ts`, `venueVotes` schema, `hot_spots` table, migrations `0011`/`0012`) stays in the tree, unreferenced, restored to its original ±1/toggle design (migration `0014` re-added the `value IN (-1,1)` check that the reverted 0013 had dropped — both applied to the live DB). The redesign was a genuine spec gap (not in any `Specs/` file, mid-Phase-2) shipped with explicit site-owner sign-off — see `Context/decisions.md` and `Context/backlog.md`. **Redesign deployed to `main` / `tueats.co` on 2026-09-06; the Places-of-the-Week + search + member-locate work, and the compact-pill pass, merged to `main` (`d29990f`) and deployed to `tueats.co` on 2026-09-10** — this doc previously said that work was "not yet pushed/deployed" for several hours after the merge; corrected, see `Context/decisions.md` (2026-09-10).
 - **Map search → suggestions → fly-to, as of 2026-09-10.** Typing in the floating map search field now drops a suggestions list under it (matching published venues, capped at 6; "Restaurant not found" when nothing matches). Picking one selects that venue on the map and opens its existing popup / mobile preview via the same `selectedId` path list rows use — it never navigates to `/eat/[slug]`. Reuses `filterVenues` for matching and `FilterBar` for the input (new optional `onSearchFocus`/`onSearchBlur` props).
 - **Member geolocation on the map, as of 2026-09-10.** After a signed-in member lands on the map, `MemberLocate` (`src/components/map/member-locate.tsx`) asks for browser geolocation **once per browser session** (`sessionStorage` flag). Granted + on-campus → drops a dot and eases the camera there, campus pins untouched. Denied / unavailable / timeout / off-campus / signed-out → silently stays on the campus view. Coordinates never leave the browser (no fetch, no PostHog, no storage, no logs) — matches `Specs/auth-security.md`'s geolocation rule. The manual `LocateControl` button is unchanged and still open to everyone.
+- **Production-readiness pass, 2026-09-10 (branch `fix/prod-readiness-oauth-reports-price`, not yet merged).** Three trust issues found and fixed in code: (1) `/auth/callback` silently swallowed OAuth/exchange errors — now logs and surfaces "Sign-in didn't go through" via a new `auth_error` query flag; the actual Google-sign-in-doesn't-work-on-prod blocker itself is external dashboard config (Google Cloud + Supabase), documented with exact values in this date's `decisions.md` entry, not something fixable in code — confirmed 3 real ratings already exist on prod, so sign-in works at least some of the time. (2) `ReportProblemForm` was UI-only (never called the already-fully-built `reportProblem` server action) — wired up, verified end-to-end against the live DB (insert → visible in admin queue → resolved). (3) The `$12` `PLACEHOLDER_PRICE_RANGE` shown on every venue was fake — removed (no real price data exists anywhere; not a new pricing system). See `Context/decisions.md` (2026-09-10) for the full diagnosis and external-config checklist.
 - **Phase:** Phase 2 in progress (truck directory + member accounts/ratings). Public reads, anonymous reports, admin auth, admin venue CRUD, member Google OAuth, ratings/reviews, member photo queue, and a private `/account` page (name, username, class year, own reviews) are in code. The account page lives on `feature/member-account-profile` until merged; it needs migration `0010_wild_frightful_four.sql` applied before that deploy.
 
 - **Phase:** Phase 1 implementation. Public reads, anonymous reports, admin auth, and admin venue CRUD are all wired to real Drizzle/Supabase (`tueats-dev`) — no mock data paths remain anywhere in the app. Campus MapLibre map (cuisine pins, locate, attribution, curated 2D building footprints) is in place. The live venue table has grown past the original 69-row KML seed (74 rows now — 61 published/draft, 13 retired) via ordinary admin edits made outside this progress log between sessions; this doc previously understated that and has been corrected as of 2026-08-21 (see that date's entry).
@@ -51,6 +52,88 @@
 
 ---
 
+## 2026-09-10 — Production-readiness pass: OAuth, Report a Problem, fake price
+
+Three trust-affecting issues fixed before pushing real traffic. Branch
+`fix/prod-readiness-oauth-reports-price`, not yet merged/deployed.
+
+- **`/auth/callback` was silently swallowing failures.** It never read
+  Google/Supabase's `error`/`error_description` params, and swallowed any
+  `exchangeCodeForSession` error too — either way it redirected back with
+  no session and zero feedback. Now: both failure modes are
+  `console.error`'d (error code/message only, never the `code` param or
+  a token) and redirect with a new `auth_error=1` flag via a pure,
+  tested `buildCallbackRedirectUrl()` (`src/lib/auth-callback.ts` — had
+  to live outside `route.ts` itself since Next's typed route handlers
+  only permit HTTP-method exports). `SignInGate` shows "Sign-in didn't
+  go through — try again." when the flag is present; both gated pages
+  (`/eat/[slug]`, `/account`) thread it through. No architecture change
+  — still `signInWithOAuth` → the one route handler →
+  `exchangeCodeForSession`, exactly as before. 4 new unit tests
+  (`src/lib/auth-callback.test.ts`).
+- **The actual "why doesn't sign-in work" root cause is external, not
+  code** — traced the full chain (`GoogleSignInButton` →
+  `/auth/callback` → `ensureMemberProfile` → `submitRating`/
+  `submitVenuePhoto`, both already `requireMember()` + correctly
+  `revalidateTag("venues")`, the same tag Places of the Week reads) and
+  confirmed it's sound. 3 real ratings already exist on prod (Maxi's
+  Pizza, 7-Eleven, Green truck in front of SAC), so sign-in has
+  completed successfully at least a few times — this isn't necessarily
+  broken everywhere. Left as an open item for the site owner: confirm
+  Vercel Production's `NEXT_PUBLIC_SUPABASE_URL` project ref matches
+  `.env.local`'s current `opzhasvvgjkfnddfleys` (a discrepancy against
+  an earlier session's notes recording a different ref,
+  `ehuhoitlezcijbbfkzan`, was found and flagged, unresolved), and
+  complete/verify the Google Cloud OAuth Client + Supabase provider +
+  redirect-URL-allowlist config. Exact dashboard steps in this date's
+  `decisions.md` entry.
+- **Doc staleness found and corrected** while treating current `main`
+  as ground truth per instruction: `Specs/auth-security.md` still said
+  ratings/reviews/photos were "planned, not implemented" (false since
+  2026-09-01); `Context/progress.md`'s own Current-status block still
+  said the 2026-09-10 work was "not yet pushed/deployed" (false, merged
+  at `d29990f`) — both fixed, see this date's `decisions.md` entry.
+- **`ReportProblemForm` was a dead end** — `report-problem-form.tsx`'s
+  submit handler only flipped local state and fired a PostHog event; it
+  never called a server action, so a "Thanks, we'll check the details"
+  message was shown for a report that was never saved anywhere. The
+  entire backend already existed and needed zero new infrastructure
+  (`src/actions/reports.ts`'s `reportProblem`: validate → venue check →
+  anonymous-by-design → salted IP hash → Postgres rate limit → insert;
+  plus a full admin queue already in `/admin`'s dashboard). Wired the
+  form to it (`venueId` now passed down from `venue-detail.tsx`, matching
+  the adjacent `AddVenuePhotoForm` pattern), added `pending`/`error`
+  state so a failure doesn't silently show success, and wired up the
+  real hidden honeypot input the schema already required but the form
+  never sent. **Verified end-to-end against the live DB** (not just
+  reviewed): inserted a real `[TEST]`-labeled report for a real venue,
+  confirmed it appeared via `listProblemReports("open")` (the same call
+  the admin dashboard makes), then resolved it via
+  `updateProblemReportStatus` (the same call the admin "Dismissed"
+  button makes) — no test artifact left open. Schema validation
+  (honeypot rejection, invalid-kind rejection) already had full test
+  coverage in `src/lib/validation/venue.test.ts` before this session
+  touched anything; no new action-level test file was added since no
+  test anywhere in this repo mocks the DB layer and introducing that
+  pattern for one bugfix would be inconsistent with the rest of the
+  suite.
+- **Removed the fake `$12` price** (`PLACEHOLDER_PRICE_RANGE`, added
+  2026-08-25 as a one-off "just for now" placeholder) from both render
+  sites (map mini-card, mobile/desktop preview sheet). No real price
+  data exists anywhere — not in the `venues` schema, not in the admin
+  form, and `Specs/features.md` explicitly lists per-venue pricing as a
+  non-goal — so this is a removal, not a new pricing system.
+  `.venue-preview-meta` switched from `justify-content: space-between`
+  to `flex-start` so `OpenStatus` doesn't end up looking stray as the
+  sole remaining child; the map mini-card's meta group degrades cleanly
+  as-is. Visually verified on desktop + mobile — no layout shift beyond
+  the intended one, no dollar sign anywhere.
+- `tsc` clean, `pnpm lint` 0 errors, **194/194 tests pass** (190 + 4
+  new), `pnpm build` clean. What I could not test: an actual Google
+  OAuth click-through (no test Google account/browser here) — not
+  claimed as tested. The signed-in geolocation "Allow" path stays
+  unverified for the same reason; its code is unchanged.
+
 ## 2026-09-10 — Compact venue name plates on the map
 
 Dense zones felt congested — every pill had a fixed 40px plate, 20px of
@@ -72,8 +155,8 @@ plates close to their text instead.
   + dot, 13px label). `tsc` clean, `pnpm lint` 0 errors, 190 tests pass.
   Visually checked desktop + mobile on W Montgomery, Student Center,
   Avery, and a selected pill. See `Context/decisions.md` (this date) and
-  `docs/design/map-and-pins.md`. Not yet pushed — rides with the
-  `feat/places-of-the-week` branch.
+  `docs/design/map-and-pins.md`. Merged to `main` (`d29990f`) and live
+  on `tueats.co` as of this date.
 
 ## 2026-09-10 — Responsive mobile typography pass
 

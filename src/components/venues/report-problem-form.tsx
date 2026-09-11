@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePostHog } from "posthog-js/react";
 
+import { reportProblem } from "@/actions/reports";
 import { Button } from "@/components/ui/primitives";
 import { AnalyticsEvent } from "@/lib/analytics";
 
@@ -13,8 +14,27 @@ const REASONS = [
   ["other", "Something else"],
 ] as const;
 
-export function ReportProblemForm({ venueName }: { venueName: string }) {
+// Visually hidden but still in normal tab/DOM order (unlike display:none,
+// which some bots know to skip) — real users never see or fill this field;
+// a filled value fails the server's max-length-0 check.
+const HONEYPOT_STYLE = {
+  position: "absolute",
+  left: "-9999px",
+  width: "1px",
+  height: "1px",
+  overflow: "hidden",
+} as const;
+
+export function ReportProblemForm({
+  venueId,
+  venueName,
+}: {
+  venueId: string;
+  venueName: string;
+}) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const posthog = usePostHog();
 
@@ -40,11 +60,30 @@ export function ReportProblemForm({ venueName }: { venueName: string }) {
       className="report-form"
       onSubmit={(event) => {
         event.preventDefault();
-        const reason = new FormData(event.currentTarget).get("reason");
-        posthog.capture(AnalyticsEvent.ProblemReported, {
-          reason: typeof reason === "string" ? reason : "closed",
+        const formData = new FormData(event.currentTarget);
+        const reason = formData.get("reason");
+        const note = formData.get("note");
+        const website = formData.get("website");
+        const kind = typeof reason === "string" ? reason : "closed";
+
+        setPending(true);
+        setError(null);
+        void reportProblem({
+          venueId,
+          kind,
+          note: typeof note === "string" && note.trim() ? note : undefined,
+          website: typeof website === "string" ? website : "",
+        }).then((result) => {
+          setPending(false);
+          if (!result.ok) {
+            setError(result.error);
+            return;
+          }
+          // Only counted once it's actually persisted — previously this
+          // fired (and the "Thanks" message showed) unconditionally.
+          posthog.capture(AnalyticsEvent.ProblemReported, { reason: kind });
+          setSubmitted(true);
         });
-        setSubmitted(true);
       }}
     >
       <fieldset>
@@ -67,9 +106,24 @@ export function ReportProblemForm({ venueName }: { venueName: string }) {
         </span>
         <textarea maxLength={500} name="note" rows={4} />
       </label>
+      <input
+        aria-hidden="true"
+        autoComplete="off"
+        name="website"
+        style={HONEYPOT_STYLE}
+        tabIndex={-1}
+        type="text"
+      />
+      {error ? <p className="form-error">{error}</p> : null}
       <div className="report-actions">
-        <Button type="submit">Send report</Button>
-        <Button onClick={() => setOpen(false)} variant="ghost">
+        <Button disabled={pending} type="submit">
+          Send report
+        </Button>
+        <Button
+          disabled={pending}
+          onClick={() => setOpen(false)}
+          variant="ghost"
+        >
           Cancel
         </Button>
       </div>

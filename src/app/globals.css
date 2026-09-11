@@ -1089,14 +1089,6 @@ button {
   margin-left: auto;
 }
 
-/* Price reads like a data readout (DESIGN.md: data = mono). */
-.map-mini-card-price {
-  color: var(--color-ink);
-  font-family: var(--font-data), monospace;
-  font-size: var(--text-small);
-  font-weight: 600;
-}
-
 /* Wordless "this goes somewhere" affordance — the whole card is the
    link; a hover on the card fills the disc. */
 .map-mini-card-go {
@@ -1386,15 +1378,10 @@ button {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  /* Single child now that the fake price is gone — flex-start keeps
+     OpenStatus pinned left instead of centering with no counterweight. */
+  justify-content: flex-start;
   gap: var(--spacing-sm);
-}
-
-.venue-preview-price {
-  color: var(--color-ink);
-  font-family: var(--font-data), monospace;
-  font-size: var(--text-small);
-  font-weight: 600;
 }
 
 .venue-preview-cta {

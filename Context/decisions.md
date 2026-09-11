@@ -7,6 +7,84 @@
 
 ---
 
+## 2026-09-10 — Google OAuth diagnosis: code fixed, real blocker is external config
+
+Asked to determine exactly why member Google sign-in isn't confirmed
+working on prod, fix everything fixable in code, and give exact
+dashboard values for anything I can't do myself.
+
+- **Traced the full flow** (`GoogleSignInButton` → `signInWithOAuth` →
+  `/auth/callback` → `exchangeCodeForSession` → `ensureMemberProfile` →
+  `submitRating`/`submitVenuePhoto`) and confirmed the architecture is
+  sound end to end, including that a new rating's `revalidateTag("venues")`
+  correctly invalidates the exact cache Places of the Week reads — once
+  sign-in succeeds, everything downstream already works with zero
+  further code changes.
+- **Real bug, fixed:** `/auth/callback` never read `error`/
+  `error_description` and swallowed any `exchangeCodeForSession` failure,
+  so a failed attempt silently dumped the user back where they started
+  with no feedback and nothing in logs to diagnose from a user report.
+  Now both failure modes are logged (error code/message only — never the
+  `code` param or a token) and surfaced via a new `auth_error=1` redirect
+  flag → a short message on `SignInGate`. No change to the OAuth
+  mechanism itself, per instruction.
+- **The real blocker is external dashboard configuration**, which
+  `Context/progress.md` has stated, unrevised, across five+ dated entries
+  spanning two weeks: a Google Cloud OAuth Client, the Google provider
+  enabled in Supabase, and `/auth/callback` on Supabase's redirect
+  allow-list. Exact values (current Supabase project ref
+  `opzhasvvgjkfnddfleys`, read from `.env.local`):
+  1. Google Cloud Console → Credentials → OAuth Client → **Authorized
+     redirect URIs** must include
+     `https://opzhasvvgjkfnddfleys.supabase.co/auth/v1/callback` (Google
+     redirects to *Supabase's* callback, not `tueats.co` — the detail
+     most likely to be set wrong).
+  2. Supabase Dashboard → Authentication → Providers → Google → enabled,
+     with that Client ID/Secret.
+  3. Supabase Dashboard → Authentication → URL Configuration → Site URL
+     `https://tueats.co`; Redirect URLs include `https://tueats.co/auth/callback`
+     and `http://localhost:3000/auth/callback`.
+- **Open discrepancy, unresolved, flagged for the site owner:** an
+  earlier session's notes recorded the production Supabase project ref
+  as `ehuhoitlezcijbbfkzan`; `.env.local` right now reads
+  `opzhasvvgjkfnddfleys` — a different value. Did not attempt to
+  determine which is authoritative (no tool access to Vercel's actual
+  configured Production env var values) — asked the site owner to
+  confirm Vercel Production's `NEXT_PUBLIC_SUPABASE_URL` directly. If
+  it's the old ref, that mismatch alone could explain inconsistent
+  sign-in.
+- **Not a full explanation either way:** 3 real ratings already exist on
+  production (Maxi's Pizza, 7-Eleven, Green truck in front of SAC) as of
+  this session, which requires a completed sign-in — so this is not
+  necessarily broken for everyone, just unconfirmed/inconsistent.
+
+## 2026-09-10 — Corrected stale docs found during a production-readiness pass
+
+Asked to audit/fix Google OAuth, "Report a problem," and a fake price
+display before pushing real traffic. Before touching code, inspected
+current `main` (post `d29990f`) as ground truth per instruction, and
+found two docs actively describing things that no longer match reality:
+
+- **`Specs/auth-security.md`**'s User Model & Authorization sections
+  still said ratings/reviews/proposals/photos were "planned, not
+  implemented" — false since the 2026-09-01 ship (`submitRating`,
+  `deleteRating`, `submitVenuePhoto` are all live, `requireMember()`-gated,
+  with real ownership checks). Corrected to distinguish what's actually
+  live (ratings/reviews, photos, `/account`) from what's still unbuilt
+  (venue proposals, review-report moderation).
+- **`Context/progress.md`**'s Current-status block said the 2026-09-10
+  Places-of-the-Week/search/geolocation work, and (from my own edit
+  earlier the same day) the compact-pill pass, were both "not yet
+  pushed/deployed" — false; both merged to `main` at `d29990f` and are
+  live on `tueats.co`. Also corrected "prod currently has 0 ratings" to
+  the real count (3, as of this check) now that real ratings exist.
+
+Neither was a judgment call worth debating — just doc drift after a
+merge landed without a follow-up doc pass. Noting it here (rather than
+silently fixing) because the stale "not deployed"/"not implemented"
+language could otherwise mislead the next session into re-doing already
+shipped work, or avoiding testing something that's actually live.
+
 ## 2026-09-10 — Venue name plates sized close to their text (de-congest)
 
 Dense zones (Student Center ~18 pins, Avery ~10) read as a wall of

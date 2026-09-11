@@ -24,7 +24,6 @@ import {
   OpenStatus,
   PaymentTag,
 } from "@/components/venues/venue-bits";
-import { PLACEHOLDER_PRICE_RANGE } from "@/components/venues/venue-preview";
 import {
   MAP_ZONE_KEYS,
   MAP_ZONES,
@@ -675,9 +674,6 @@ export function VenueMap({
                   <div className="map-mini-card-footer">
                     <OpenStatus venue={poppedVenue} />
                     <span className="map-mini-card-meta">
-                      <span className="map-mini-card-price">
-                        {PLACEHOLDER_PRICE_RANGE}
-                      </span>
                       {/* Arrow-only affordance; the whole card is the link. */}
                       <span aria-hidden="true" className="map-mini-card-go">
                         <svg

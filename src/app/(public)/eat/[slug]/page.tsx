@@ -24,7 +24,7 @@ const loadVenue = cache(getVenueBySlug);
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ auth_error?: string; from?: string }>;
 };
 
 export async function generateMetadata({
@@ -62,7 +62,13 @@ export default async function VenueDetailPage({
 
   const session = await getUser();
   if (!session) {
-    return <SignInGate next={`/eat/${slug}`} venueName={row.name} />;
+    return (
+      <SignInGate
+        authError={query.auth_error === "1"}
+        next={`/eat/${slug}`}
+        venueName={row.name}
+      />
+    );
   }
 
   const [reviews, ownRow] = await Promise.all([
