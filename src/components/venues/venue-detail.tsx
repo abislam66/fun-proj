@@ -179,7 +179,7 @@ export function VenueDetail({
             <strong>{verified ?? "Not yet verified"}</strong>
           </div>
           {venue.status !== "retired" ? (
-            <ReportProblemForm venueName={venue.name} />
+            <ReportProblemForm venueId={venue.id} venueName={venue.name} />
           ) : null}
         </section>
       </main>

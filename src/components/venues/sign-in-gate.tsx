@@ -10,11 +10,14 @@ import { AnalyticsEvent } from "@/lib/analytics";
  * internal path.
  */
 export function SignInGate({
+  authError,
   next,
   venueName,
   title,
   message,
 }: {
+  /** Set when `/auth/callback` redirected back here after a failed attempt. */
+  authError?: boolean;
   next: string;
   venueName?: string;
   title?: string;
@@ -36,6 +39,11 @@ export function SignInGate({
         <section className="sign-in-gate">
           <h1>{heading}</h1>
           <p>{body}</p>
+          {authError ? (
+            <p className="form-error">
+              Sign-in didn&rsquo;t go through — try again.
+            </p>
+          ) : null}
           <GoogleSignInButton next={next} />
         </section>
       </main>

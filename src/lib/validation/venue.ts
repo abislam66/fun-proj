@@ -188,6 +188,19 @@ export const bulkSetCuisineSchema = z
   })
   .strict();
 
+/**
+ * Bulk-set venue type across many venues. A single scalar column like
+ * isHalal/isVeganFriendly above (not an array like cuisines), so this
+ * overwrites just `type` — reuses `venueTypeSchema` rather than a second,
+ * drifting copy of the enum.
+ */
+export const bulkSetTypeSchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(200),
+    type: venueTypeSchema,
+  })
+  .strict();
+
 export const problemKindSchema = z.enum([
   "closed",
   "moved",

@@ -12,6 +12,7 @@ import {
   bulkAddVenueCuisine,
   bulkRemoveVenueCuisine,
   bulkUpdateVenueHalal,
+  bulkUpdateVenueType,
   bulkUpdateVenueVeganFriendly,
   countPublishedVenuePhotos,
   deleteVenuePhotoById,
@@ -38,6 +39,7 @@ import { uniqueSlug } from "@/lib/slug";
 import {
   bulkSetCuisineSchema,
   bulkSetHalalSchema,
+  bulkSetTypeSchema,
   bulkSetVeganFriendlySchema,
   finalizeVenuePhotoUploadSchema,
   reorderVenuePhotosSchema,
@@ -356,6 +358,24 @@ export async function bulkSetVenueVeganFriendly(
     await requireAdmin();
     const { ids, isVeganFriendly } = bulkSetVeganFriendlySchema.parse(raw);
     const updated = await bulkUpdateVenueVeganFriendly(ids, isVeganFriendly);
+
+    revalidateTag("venues");
+    for (const row of updated) revalidateTag(`venue:${row.slug}`);
+
+    return { ok: true, data: { updatedIds: updated.map((row) => row.id) } };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+/** Admin: bulk-set venue type on many venues in one action (used by the admin list's bulk selection). */
+export async function bulkSetVenueType(
+  raw: unknown,
+): Promise<ActionResult<{ updatedIds: string[] }>> {
+  try {
+    await requireAdmin();
+    const { ids, type } = bulkSetTypeSchema.parse(raw);
+    const updated = await bulkUpdateVenueType(ids, type);
 
     revalidateTag("venues");
     for (const row of updated) revalidateTag(`venue:${row.slug}`);

@@ -16,11 +16,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AccountPage() {
+type PageProps = {
+  searchParams: Promise<{ auth_error?: string }>;
+};
+
+export default async function AccountPage({ searchParams }: PageProps) {
+  const query = await searchParams;
   const session = await getUser();
   if (!session) {
     return (
       <SignInGate
+        authError={query.auth_error === "1"}
         message="Sign in to change your name, username, and class year, and to see every rating you've posted."
         next="/account"
         title="Sign in to open your account"

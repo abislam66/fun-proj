@@ -10,10 +10,6 @@ import {
 } from "@/components/venues/venue-bits";
 import type { Venue } from "@/lib/venues";
 
-// Placeholder until venues carry real price data (user call, 2026-08-25:
-// "just for now, make it $12") — every preview shows this value.
-export const PLACEHOLDER_PRICE_RANGE = "$12";
-
 export function VenuePreview({
   venue,
   backPath,
@@ -53,7 +49,6 @@ export function VenuePreview({
       </div>
       <div className="venue-preview-meta">
         <OpenStatus venue={venue} />
-        <span className="venue-preview-price">{PLACEHOLDER_PRICE_RANGE}</span>
       </div>
       <Link
         className="button button-primary venue-preview-cta"

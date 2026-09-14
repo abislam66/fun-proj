@@ -6,6 +6,7 @@ import { Fragment, useMemo, useState } from "react";
 import {
   bulkSetVenueCuisine,
   bulkSetVenueHalal,
+  bulkSetVenueType,
   bulkSetVenueVeganFriendly,
   resolveProblemReport,
   resolveVenuePhoto,
@@ -57,6 +58,18 @@ const BULK_BOOLEAN_FIELDS: BulkBooleanField[] = [
       bulkSetVenueVeganFriendly({ ids, isVeganFriendly }),
   },
 ];
+
+/** Matches the single-venue editor's Venue type options (venue-editor.tsx). */
+const VENUE_TYPE_LABELS: Record<VenueRow["type"], string> = {
+  truck: "Food truck",
+  restaurant: "Restaurant",
+  cafe: "Cafe",
+  vending: "Vending",
+  convenience: "Convenience store",
+};
+const VENUE_TYPE_KEYS = Object.keys(
+  VENUE_TYPE_LABELS,
+) as VenueRow["type"][];
 
 function venueMissingHours(venue: AdminVenueRow): boolean {
   const hours = venue.hours as Record<string, unknown> | null;
@@ -112,6 +125,7 @@ export function AdminDashboard({
   const [bulkCuisine, setBulkCuisine] = useState<CuisineKey>(
     CUISINE_KEYS[0] ?? "other",
   );
+  const [bulkType, setBulkType] = useState<VenueRow["type"]>("truck");
 
   function toggleCompletenessFlag(flag: CompletenessFlag) {
     setCompletenessFlags((current) => {
@@ -338,6 +352,45 @@ export function AdminDashboard({
             : venue.cuisines.filter((item) => item !== cuisine);
         return { ...venue, cuisines };
       }),
+    );
+    setBulkNoticeIsError(false);
+    setBulkNotice(
+      `Updated ${result.data.updatedIds.length} venue${result.data.updatedIds.length === 1 ? "" : "s"}.`,
+    );
+    clearSelection();
+  }
+
+  /**
+   * Bulk-set venue type on the selected venues. Type is a single scalar
+   * column (like isHalal/isVeganFriendly), so this overwrites just that
+   * field per venue — cuisines, dietary flags, hours, location, and every
+   * other field are untouched, same guarantee `applyBulkBoolean` gives.
+   */
+  async function applyBulkType() {
+    const ids = [...selectedIds];
+    const type = bulkType;
+    const label = VENUE_TYPE_LABELS[type];
+    const confirmed = window.confirm(
+      `Set ${ids.length} selected venue${ids.length === 1 ? "" : "s"} to type "${label}"?`,
+    );
+    if (!confirmed) return;
+
+    setBulkPending(true);
+    setBulkNotice("");
+    const result = await bulkSetVenueType({ ids, type });
+    setBulkPending(false);
+
+    if (!result.ok) {
+      setBulkNoticeIsError(true);
+      setBulkNotice(result.error);
+      return;
+    }
+
+    const updated = new Set(result.data.updatedIds);
+    setVenues((current) =>
+      current.map((venue) =>
+        updated.has(venue.id) ? { ...venue, type } : venue,
+      ),
     );
     setBulkNoticeIsError(false);
     setBulkNotice(
@@ -597,6 +650,30 @@ export function AdminDashboard({
             >
               Remove cuisine
             </Button>
+            <span aria-hidden="true" className="admin-bulk-divider" />
+            <label>
+              <span className="sr-only">Venue type to set</span>
+              <select
+                className="admin-select"
+                onChange={(event) =>
+                  setBulkType(event.target.value as VenueRow["type"])
+                }
+                value={bulkType}
+              >
+                {VENUE_TYPE_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {VENUE_TYPE_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              disabled={bulkPending}
+              onClick={() => void applyBulkType()}
+              variant="secondary"
+            >
+              Set type
+            </Button>
           </div>
         ) : null}
 
@@ -633,6 +710,7 @@ export function AdminDashboard({
                 </th>
                 <th>Venue</th>
                 <th>Status</th>
+                <th>Type</th>
                 <th>Halal</th>
                 <th>Vegan</th>
                 <th>Zone</th>
@@ -668,6 +746,7 @@ export function AdminDashboard({
                       {venue.status}
                     </span>
                   </td>
+                  <td>{VENUE_TYPE_LABELS[venue.type]}</td>
                   <td>
                     {venue.isHalal ? (
                       <span className="admin-status halal-tag">Halal</span>

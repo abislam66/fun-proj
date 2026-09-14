@@ -11,13 +11,17 @@
 
 > **2026-08-28 update:** V1 originally shipped with no student/member accounts
 > at all. A `member` role now exists for real, created automatically on first
-> Google sign-in (see Identity Strategy below) — but it's intentionally
-> minimal: a profile row and nothing else. Ratings, reviews, venue proposals,
-> and everything else the `member` row was originally speced for below are
-> **still a planned post-V1 phase**, not implemented. See
-> `Context/decisions.md` (2026-08-28) for why login-walling and Google OAuth,
-> both previously ruled out below, were reversed, and (2026-08-18 entries)
-> for why V1 originally shipped admin-only.
+> Google sign-in (see Identity Strategy below). **2026-09-01 update:**
+> ratings/reviews (create/edit/delete own) and member photo submission are
+> now implemented and live — see `Context/decisions.md` (2026-09-01).
+> Venue proposals and public review-reporting/moderation are still a
+> planned post-V1 phase, not implemented. See `Context/decisions.md`
+> (2026-08-28) for why login-walling and Google OAuth, both previously
+> ruled out below, were reversed, and (2026-08-18 entries) for why V1
+> originally shipped admin-only.
+> **2026-09-10 correction:** this section had drifted stale — it kept
+> describing ratings/reviews/photos as unimplemented for a week after they
+> shipped. Corrected; see `Context/decisions.md` (2026-09-10).
 
 | Question | Decision |
 |----------|----------|
@@ -154,13 +158,13 @@ from `signInWithPassword`/`updateUser`.
 | Role | Permissions |
 |------|-------------|
 | Anonymous | Read the map, list, search, filters, and venue cards/names. Cannot open an individual venue's detail page. Nothing else. |
-| Member (any Google-authenticated visitor) | Everything anonymous can do, plus open venue detail pages (`/eat/[slug]`) and submit venue problem reports from them. That's it today — create/edit/delete **own** rating & review, venue proposals, report reviews, and account management are all still **planned, not implemented** (unchanged from the original post-V1 scope; only the identity mechanism and the detail-page gate are new). |
+| Member (any Google-authenticated visitor) | Everything anonymous can do, plus open venue detail pages (`/eat/[slug]`), submit venue problem reports, create/edit/delete **own** rating & review, submit venue photos (admin-moderated queue), and manage their own `/account` page (name, username, class year). Venue proposals and reporting/moderating other members' reviews are still **planned, not implemented**. |
 | Admin (the only privileged role) | Venue CRUD (draft/publish/retire/verify), Google snapshot capture, resolve problem reports. |
 
 - **Enforcement point:** the top of every server action — `requireAdmin()` before any logic runs. Route middleware guards `/admin` for UX only; it is **not** the security boundary (server actions re-check, always). The `/eat/[slug]` sign-in gate is enforced in the page component itself (`getUser()` before any venue data renders) — server-side, not a client click-handler, so a shared/bookmarked/directly-typed URL is gated exactly the same as a click from the homepage.
 - **Default posture:** deny by default. Deny-all RLS on every table neutralizes the PostgREST surface; a new server action starts from "who may call this?" not "who shouldn't?".
 - **Role escalation:** `role = admin` is set only by direct database access by the maintainer. No app surface — UI, action, or API — can grant or change roles. Signing in via any method (Google OAuth, password, or password recovery) never grants it. `ensureMemberProfile()` (the only auto-provisioning code path in the app) is hardcoded to `role: "member"` — there is no code path from a Google account to `admin`, regardless of the account's email domain or name.
-- **Ownership checks:** N/A still — no member-owned content exists yet (a `profiles` row and a session, nothing else). Applies once ratings/reviews/proposals actually ship — mutations must filter by `user_id = session user` in the query itself, not just an if-check before it.
+- **Ownership checks:** apply now that ratings/reviews/photos exist — `submitRating`/`deleteRating`/`submitVenuePhoto` all filter by `user_id = session user` in the query itself, not just an if-check before it. Still N/A for venue proposals, which haven't shipped.
 
 ---
 
