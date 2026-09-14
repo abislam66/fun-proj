@@ -4,6 +4,7 @@ import { CAMPUS_BOUNDS } from "@/config/site";
 import {
   bulkSetCuisineSchema,
   bulkSetHalalSchema,
+  bulkSetTypeSchema,
   bulkSetVeganFriendlySchema,
   reportProblemSchema,
   venueInputSchema,
@@ -196,6 +197,43 @@ describe("bulkSetCuisineSchema", () => {
         action: "add",
         status: "published",
       }),
+    ).toThrow();
+  });
+});
+
+describe("bulkSetTypeSchema", () => {
+  const ids = [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+  ];
+
+  it("accepts a list of venue ids and a real venue type", () => {
+    const parsed = bulkSetTypeSchema.parse({ ids, type: "cafe" });
+    expect(parsed.ids).toEqual(ids);
+    expect(parsed.type).toBe("cafe");
+  });
+
+  it("rejects an empty id list", () => {
+    expect(() =>
+      bulkSetTypeSchema.parse({ ids: [], type: "truck" }),
+    ).toThrow();
+  });
+
+  it("rejects non-uuid ids", () => {
+    expect(() =>
+      bulkSetTypeSchema.parse({ ids: ["not-a-uuid"], type: "truck" }),
+    ).toThrow();
+  });
+
+  it("rejects a type that isn't in the venue_type enum", () => {
+    expect(() =>
+      bulkSetTypeSchema.parse({ ids, type: "food-court" }),
+    ).toThrow();
+  });
+
+  it("rejects unknown keys (strict)", () => {
+    expect(() =>
+      bulkSetTypeSchema.parse({ ids, type: "truck", status: "published" }),
     ).toThrow();
   });
 });

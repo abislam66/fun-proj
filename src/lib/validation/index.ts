@@ -11,6 +11,7 @@ export {
   bulkSetHalalSchema,
   bulkSetVeganFriendlySchema,
   bulkSetCuisineSchema,
+  bulkSetTypeSchema,
   problemKindSchema,
   reportProblemSchema,
   resolveProblemReportSchema,

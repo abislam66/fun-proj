@@ -212,6 +212,18 @@ export async function bulkUpdateVenueVeganFriendly(
     .returning();
 }
 
+/** Bulk admin edit: sets `type` for many venues in one statement — nothing else changes. */
+export async function bulkUpdateVenueType(
+  ids: string[],
+  type: VenueRow["type"],
+): Promise<VenueRow[]> {
+  return db
+    .update(venues)
+    .set({ type, updatedAt: new Date() })
+    .where(inArray(venues.id, ids))
+    .returning();
+}
+
 /**
  * Bulk admin edit: adds one cuisine tag to many venues' `cuisines` array —
  * a no-op (not a duplicate) on any row that already has it, and every
