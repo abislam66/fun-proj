@@ -23,10 +23,7 @@ const LABEL_LAYER_ID = "map-zones-label";
 
 export const MAP_ZONE_LAYER_IDS = [HIT_LAYER_ID, LABEL_LAYER_ID] as const;
 
-export const MAP_ZONE_CLICK_LAYER_IDS = [
-  HIT_LAYER_ID,
-  LABEL_LAYER_ID,
-] as const;
+export const MAP_ZONE_CLICK_LAYER_IDS = [HIT_LAYER_ID, LABEL_LAYER_ID] as const;
 
 const CHERRY = "#9D2235";
 

@@ -299,7 +299,7 @@ The `/about` page must plainly disclose:
 
 ---
 
-## What Claude Code Should Never Do
+## What Contributors Should Never Do
 
 - Never put secrets (API keys, service-role keys, JWT secrets) in the client or the repository.
 - Never disable or weaken access-control policies to make a feature work.

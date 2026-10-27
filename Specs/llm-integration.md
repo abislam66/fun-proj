@@ -17,7 +17,7 @@ Activation is gated on **all four** of:
 3. A budget decision: LLM API usage is **new spend**, which the "existing subscriptions only" constraint currently forbids — activating AI means consciously amending that constraint in `overview.md`.
 4. This file's deferred sections are filled in and merged via PR *before* implementation starts.
 
-**Until then, Claude Code must not:** add AI dependencies (`ai`, `@ai-sdk/*`, provider SDKs), create `src/lib/ai/`, add AI-related env vars, or build UI affordances that assume a future AI feature.
+**Until then, contributors must not:** add AI dependencies (`ai`, `@ai-sdk/*`, provider SDKs), create `src/lib/ai/`, add AI-related env vars, or build UI affordances that assume a future AI feature.
 
 Everything below is the **pre-agreed shape** the feature takes *if* activated — recorded now so activation is a decision, not a design scramble.
 
@@ -43,7 +43,7 @@ Everything below is the **pre-agreed shape** the feature takes *if* activated �
 | Setting | Value |
 |---------|-------|
 | Provider | Deferred to activation — abstracted behind the Vercel AI SDK, so this is config, not architecture. |
-| Model | Small/fast tier (e.g., Claude Haiku class). Both tasks are short, structured, low-stakes generations — frontier reasoning is wasted here. Final ID chosen at activation against current offerings. |
+| Model | Small/fast tier. Both tasks are short, structured, low-stakes generations — frontier reasoning is wasted here. Final ID chosen at activation against current offerings. |
 | Why this model | Cost and latency dominate; the quality ceiling for "pick a lunch spot and say why" is low. |
 | Swappable? | Yes — one provider/model config value via the AI SDK; prompts and Zod output schemas are provider-neutral. |
 

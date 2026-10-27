@@ -2,7 +2,7 @@
 
 > **OpenOwls SDD** — Read by the system architect and software engineers.
 > Defines the folder structure, key design decisions, and implementation details.
-> Claude Code uses this file to understand how the codebase is organized.
+> This file describes how the codebase is organized.
 
 ---
 

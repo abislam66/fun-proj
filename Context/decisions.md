@@ -177,7 +177,7 @@ no `venue_votes` reads, no server action, no new query.
 - **Client-side, zero round-trip:** the explorer already holds every
   published venue with its `studentRating` aggregate, so the panel ranks
   in `useMemo`. Consistent with "computed client-side so public pages stay
-  static/ISR" (CLAUDE.md).
+  static/ISR" (CONTRIBUTING.md).
 - **The 2026-09-08 unbounded-counter change was reverted, not built on**
   (it was never pushed). `git checkout HEAD` on the seven touched files.
   Migration `0013` (dropped the ±1 check) had already been applied to the
@@ -284,9 +284,9 @@ this week), not a fixed ranking. The actual order comes from real votes.
   controls, optimistic score+rank update mirroring the server toggle, sign-in
   prompt) plus the "NEW" swap. Row tap still selects on the map.
 
-Migrations `0011` (venue_votes) + `0012` (hot_spots) applied by Claude to
+Migrations `0011` (venue_votes) + `0012` (hot_spots) applied to
 **both dev and prod** via `drizzle-kit migrate` (prod needed a one-time
-allow-rule in `.claude/settings.local.json`, local/untracked). The `0010`
+allow-rule in a local tool settings file, local/untracked). The `0010`
 journal baseline held — no replay error.
 
 Not verified: a real member clicking the arrows on prod (needs a member
@@ -695,7 +695,7 @@ a real `CUISINES` key; Cafe is not — it was deliberately reworked back in
 `filterVenues` checks `venue.type === "cafe"`, not a cuisines-array
 membership). Bulk-adding "Cafe" the way this feature adds "Halal" would
 mean flipping a venue's fundamental type, not appending a tag — a
-different, much bigger operation (and arguably premature: `CLAUDE.md`'s
+different, much bigger operation (and arguably premature: `CONTRIBUTING.md`'s
 phase discipline defers new venue-type work to milestone ③, and retyping
 an existing truck as a cafe isn't reversible the way an array tag is).
 Built the bulk tool against `CUISINE_KEYS` only, added a schema test
@@ -1156,13 +1156,13 @@ rate limits, then `revalidateTag`.
 ## 2026-08-28 — Reversed two explicit auth rules to add member Google sign-in + a login-wall on venue pages
 
 `Specs/auth-security.md` said, in three separate places (the anonymous-access
-non-goal, the Identity Strategy table, and the "What Claude Code Should Never
+non-goal, the Identity Strategy table, and the "What Contributors Should Never
 Do" list), that login-walling was a non-goal and that social login would
 never be added. The site owner explicitly asked for both anyway — Google
 sign-in via Supabase Auth, required to open `/eat/[slug]` but not to browse
 the map/list/search — and, when I flagged the conflict, chose to override the
 specs rather than scale the request down. `Specs/auth-security.md` and
-`CLAUDE.md` were updated in the same session to match what actually shipped,
+`CONTRIBUTING.md` were updated in the same session to match what actually shipped,
 rather than leaving them describing a rule the code now violates.
 
 **What actually changed, concretely:**
@@ -1432,7 +1432,7 @@ Added venue image upload. Two scoping decisions worth recording:
 upload images." V1 has no student/member accounts at all
 (`auth-security.md`'s explicit V1 note) — there's no auth surface to gate
 a user upload behind, and building one would mean pulling milestone ②
-(accounts) forward, which `CLAUDE.md`'s phase-discipline rule forbids
+(accounts) forward, which `CONTRIBUTING.md`'s phase-discipline rule forbids
 while milestone ① is still incomplete. Only the admin half was built;
 user-submitted photos wait for the accounts phase, same as ratings/reviews.
 
@@ -1822,7 +1822,7 @@ seed:kml` — it's idempotent (dedupes by exact name or ~15m coordinate proximit
 per `Specs/domain-knowledge.md`'s gyro-truck-dedup rule) so re-running is safe.
 **Not yet updated:** `Specs/domain-knowledge.md:89,102` still documents the old
 live URL as current — `Specs/` isn't touched without explicit instruction
-(`CLAUDE.md:11`), so this is flagged here rather than silently fixed. Worth an
+(`CONTRIBUTING.md:11`), so this is flagged here rather than silently fixed. Worth an
 explicit spec-update pass at some point.
 
 ---
