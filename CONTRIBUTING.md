@@ -1,6 +1,6 @@
-# CLAUDE.md
+# Contributing to TuEats
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is the working guide for anyone contributing code to this repository.
 
 ## What this repository is
 
@@ -15,7 +15,7 @@ The project is **spec-first**: `Specs/` is a complete, mutually consistent SDD a
 - `Context/progress.md` — running log, newest entries first. Add a dated entry after any meaningful unit of work (this satisfies the progress rule in `Specs/conventions.md`), and keep the "Current status / Next up" block at the top accurate — it is the fastest way for a fresh session to orient.
 - `Context/backlog.md` — deliberately deferred items, each with a revisit trigger. Add a row whenever something is skipped "for later"; scan the triggers when planning new work. It is not a roadmap — planned work lives in `Specs/features.md`.
 - `Context/decisions.md` — append-only log of decisions too small for a `Specs/` change but important enough that silently reversing them would cause confusion (the _why_, not the _what_ or _when_). Add an entry whenever you make a call like this; check it before "fixing" something that looks broken but might be intentional.
-- New markdown docs (beyond `Specs/`, which stays spec-first) default into `Context/` rather than the repo root — e.g. `Context/DESIGN.md`. `CLAUDE.md` itself stays at the root since Claude Code only auto-loads it from there.
+- New markdown docs (beyond `Specs/`, which stays spec-first) default into `Context/` rather than the repo root — e.g. `Context/DESIGN.md`. This guide (`CONTRIBUTING.md`) stays at the root.
 
 ## Which spec answers what
 

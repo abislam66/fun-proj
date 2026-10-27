@@ -2,7 +2,7 @@
 
 > **OpenOwls SDD** — Read by engineers and the AI coding assistant.
 > Defines how code is written on this project. These rules apply to every file, every session.
-> Claude Code must follow these conventions without being reminded each time.
+> All contributors must follow these conventions without being reminded each time.
 
 ---
 
@@ -117,7 +117,7 @@
 
 ---
 
-## What Claude Code Should Never Do
+## What Contributors Should Never Do
 
 - Never modify files in `Specs/` without explicit instruction.
 - Never skip writing tests to save time.

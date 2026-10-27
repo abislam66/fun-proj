@@ -2,7 +2,7 @@
 
 > **OpenOwls SDD** — Read by engineers and DevOps-minded team members.
 > Defines how the application is built, configured, and deployed across environments.
-> Claude Code uses this file to understand deployment targets and avoid environment-specific mistakes.
+> This file describes deployment targets and avoid environment-specific mistakes.
 
 ---
 

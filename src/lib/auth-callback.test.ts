@@ -14,7 +14,11 @@ describe("buildCallbackRedirectUrl", () => {
   });
 
   it("omits auth_error on success", () => {
-    const url = buildCallbackRedirectUrl("https://tueats.co", "/account", false);
+    const url = buildCallbackRedirectUrl(
+      "https://tueats.co",
+      "/account",
+      false,
+    );
     expect(url.searchParams.has("auth_error")).toBe(false);
   });
 

@@ -542,7 +542,6 @@ export function VenueMap({
 
       <MemberLocate enabled={isSignedIn} map={map} />
 
-
       {zonesActive ? (
         <p className="map-zone-label">
           {selectedZones.length === 1

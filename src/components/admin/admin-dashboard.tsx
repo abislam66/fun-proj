@@ -67,9 +67,7 @@ const VENUE_TYPE_LABELS: Record<VenueRow["type"], string> = {
   vending: "Vending",
   convenience: "Convenience store",
 };
-const VENUE_TYPE_KEYS = Object.keys(
-  VENUE_TYPE_LABELS,
-) as VenueRow["type"][];
+const VENUE_TYPE_KEYS = Object.keys(VENUE_TYPE_LABELS) as VenueRow["type"][];
 
 function venueMissingHours(venue: AdminVenueRow): boolean {
   const hours = venue.hours as Record<string, unknown> | null;

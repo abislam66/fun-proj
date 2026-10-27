@@ -214,9 +214,7 @@ describe("bulkSetTypeSchema", () => {
   });
 
   it("rejects an empty id list", () => {
-    expect(() =>
-      bulkSetTypeSchema.parse({ ids: [], type: "truck" }),
-    ).toThrow();
+    expect(() => bulkSetTypeSchema.parse({ ids: [], type: "truck" })).toThrow();
   });
 
   it("rejects non-uuid ids", () => {

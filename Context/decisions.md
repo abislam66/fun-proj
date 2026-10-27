@@ -37,7 +37,7 @@ dashboard values for anything I can't do myself.
   1. Google Cloud Console → Credentials → OAuth Client → **Authorized
      redirect URIs** must include
      `https://opzhasvvgjkfnddfleys.supabase.co/auth/v1/callback` (Google
-     redirects to *Supabase's* callback, not `tueats.co` — the detail
+     redirects to _Supabase's_ callback, not `tueats.co` — the detail
      most likely to be set wrong).
   2. Supabase Dashboard → Authentication → Providers → Google → enabled,
      with that Client ID/Secret.
@@ -89,7 +89,7 @@ shipped work, or avoiding testing something that's actually live.
 
 Dense zones (Student Center ~18 pins, Avery ~10) read as a wall of
 boxes because each pill had a fixed 40px-tall plate and 20px of padding
-on *each* side of a 13px label, plus a 64px minimum width that padded
+on _each_ side of a 13px label, plus a 64px minimum width that padded
 short names ("Avery", "Wendy's") out with dead space.
 
 - **What changed, all in `src/lib/map/venue-pill-icon.ts`:** `LABEL_PAD_X`
@@ -101,7 +101,7 @@ short names ("Avery", "Wendy's") out with dead space.
 - **Position is unchanged by construction.** `VENUE_HEIGHT` mirrors the
   old `HEIGHT` formula with the smaller plate, so the gap between the
   plate's bottom edge and the stem-dot tip (the map coordinate, via
-  `icon-anchor: "bottom"`) is byte-identical — only the *top* of the box
+  `icon-anchor: "bottom"`) is byte-identical — only the _top_ of the box
   moves down. Clustering (`CLUSTER_RADIUS_PX`), the `icon-size` zoom
   ramp, hover/select priority, and label placement are all untouched.
   This was the explicit constraint: compact the box, not the behavior.
@@ -137,7 +137,7 @@ The type scale had one set of "mobile" values for everything under
   ~320–600px. Confirmed with before/after screenshots.
 - **`clamp()` over a media-query breakpoint** because the file already
   uses `clamp()` for fluid headings (`.detail-hero h1`, `.account-page
-  h1`) and it degrades smoothly across the whole phone range instead of
+h1`) and it degrades smoothly across the whole phone range instead of
   snapping at one width. No JS/device detection.
 - **Line-heights for the fluid tokens went unitless** (1.2 / 1.3) so they
   track the clamped font size; they were only ever consumed as
@@ -177,7 +177,7 @@ no `venue_votes` reads, no server action, no new query.
 - **Client-side, zero round-trip:** the explorer already holds every
   published venue with its `studentRating` aggregate, so the panel ranks
   in `useMemo`. Consistent with "computed client-side so public pages stay
-  static/ISR" (CLAUDE.md).
+  static/ISR" (CONTRIBUTING.md).
 - **The 2026-09-08 unbounded-counter change was reverted, not built on**
   (it was never pushed). `git checkout HEAD` on the seven touched files.
   Migration `0013` (dropped the ±1 check) had already been applied to the
@@ -284,9 +284,9 @@ this week), not a fixed ranking. The actual order comes from real votes.
   controls, optimistic score+rank update mirroring the server toggle, sign-in
   prompt) plus the "NEW" swap. Row tap still selects on the map.
 
-Migrations `0011` (venue_votes) + `0012` (hot_spots) applied by Claude to
+Migrations `0011` (venue_votes) + `0012` (hot_spots) applied to
 **both dev and prod** via `drizzle-kit migrate` (prod needed a one-time
-allow-rule in `.claude/settings.local.json`, local/untracked). The `0010`
+allow-rule in a local tool settings file, local/untracked). The `0010`
 journal baseline held — no replay error.
 
 Not verified: a real member clicking the arrows on prod (needs a member
@@ -695,7 +695,7 @@ a real `CUISINES` key; Cafe is not — it was deliberately reworked back in
 `filterVenues` checks `venue.type === "cafe"`, not a cuisines-array
 membership). Bulk-adding "Cafe" the way this feature adds "Halal" would
 mean flipping a venue's fundamental type, not appending a tag — a
-different, much bigger operation (and arguably premature: `CLAUDE.md`'s
+different, much bigger operation (and arguably premature: `CONTRIBUTING.md`'s
 phase discipline defers new venue-type work to milestone ③, and retyping
 an existing truck as a cafe isn't reversible the way an array tag is).
 Built the bulk tool against `CUISINE_KEYS` only, added a schema test
@@ -1156,13 +1156,13 @@ rate limits, then `revalidateTag`.
 ## 2026-08-28 — Reversed two explicit auth rules to add member Google sign-in + a login-wall on venue pages
 
 `Specs/auth-security.md` said, in three separate places (the anonymous-access
-non-goal, the Identity Strategy table, and the "What Claude Code Should Never
+non-goal, the Identity Strategy table, and the "What Contributors Should Never
 Do" list), that login-walling was a non-goal and that social login would
 never be added. The site owner explicitly asked for both anyway — Google
 sign-in via Supabase Auth, required to open `/eat/[slug]` but not to browse
 the map/list/search — and, when I flagged the conflict, chose to override the
 specs rather than scale the request down. `Specs/auth-security.md` and
-`CLAUDE.md` were updated in the same session to match what actually shipped,
+`CONTRIBUTING.md` were updated in the same session to match what actually shipped,
 rather than leaving them describing a rule the code now violates.
 
 **What actually changed, concretely:**
@@ -1432,7 +1432,7 @@ Added venue image upload. Two scoping decisions worth recording:
 upload images." V1 has no student/member accounts at all
 (`auth-security.md`'s explicit V1 note) — there's no auth surface to gate
 a user upload behind, and building one would mean pulling milestone ②
-(accounts) forward, which `CLAUDE.md`'s phase-discipline rule forbids
+(accounts) forward, which `CONTRIBUTING.md`'s phase-discipline rule forbids
 while milestone ① is still incomplete. Only the admin half was built;
 user-submitted photos wait for the accounts phase, same as ratings/reviews.
 
@@ -1822,7 +1822,7 @@ seed:kml` — it's idempotent (dedupes by exact name or ~15m coordinate proximit
 per `Specs/domain-knowledge.md`'s gyro-truck-dedup rule) so re-running is safe.
 **Not yet updated:** `Specs/domain-knowledge.md:89,102` still documents the old
 live URL as current — `Specs/` isn't touched without explicit instruction
-(`CLAUDE.md:11`), so this is flagged here rather than silently fixed. Worth an
+(`CONTRIBUTING.md:11`), so this is flagged here rather than silently fixed. Worth an
 explicit spec-update pass at some point.
 
 ---

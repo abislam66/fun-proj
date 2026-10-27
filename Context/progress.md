@@ -27,7 +27,7 @@
 - **`is_halal` and `is_vegan_friendly` added as of 2026-08-27** — both plain booleans, default false, admin-editable checkboxes in `/admin/venues/[id]`, filter chips on the public filter bar, small "Halal" tag on cards/detail (mirroring the existing "Cash Only" tag pattern). `is_halal` is deliberately never auto-set by any script — user determines this by hand. `is_vegan_friendly` was researched venue-by-venue against official menus/delivery-platform listings; 8 of 49 published venues currently qualify (Chopsticks Express, Yummy Phở, CAVA, BurgerFi, Saladworks, Zen Japanese Food Fast, Panda Express, QDOBA) — see `Context/decisions.md` for the evidence bar used and what got excluded despite partial signals (e.g. Champ's Diner's conflicting reviews, Maple Star's vegetarian-only udon).
 - **Vercel Web Analytics added as of 2026-08-27** — `@vercel/analytics`'s `<Analytics />` in the root layout (`src/app/layout.tsx`), covering the whole app including `/admin`. No prior analytics existed (checked first). Needs a real Vercel deploy to start reporting — nothing shows in the dashboard until then.
 - **Production domain is `tueats.co` as of 2026-08-27** — `NEXT_PUBLIC_SITE_URL` and Supabase's Site URL/redirect allow-list point at it; `metadataBase` set accordingly. `tueats.vercel.app` still resolves to the same deployment (not removed).
-- **Member accounts + a login-wall on venue pages, as of 2026-08-28.** A real reversal of two previously-explicit rules in `Specs/auth-security.md` ("no login-walling," "no social login") — the site owner asked for it directly, I flagged the conflict, they chose to override the specs, so the specs (and `CLAUDE.md`) were updated to match rather than left describing a rule the code now breaks. Google OAuth via Supabase Auth, self-service, any Google account (no `@temple.edu` gate) — auto-creates a `profiles` row (`role: "member"`, never `admin`) on first sign-in through the one route handler in the app, `src/app/auth/callback/route.ts`. `/eat/[slug]` requires a session, checked server-side in the page component; the map/list/search stay fully anonymous. Full rationale and what changed: `Context/decisions.md` 2026-08-28.
+- **Member accounts + a login-wall on venue pages, as of 2026-08-28.** A real reversal of two previously-explicit rules in `Specs/auth-security.md` ("no login-walling," "no social login") — the site owner asked for it directly, I flagged the conflict, they chose to override the specs, so the specs (and `CONTRIBUTING.md`) were updated to match rather than left describing a rule the code now breaks. Google OAuth via Supabase Auth, self-service, any Google account (no `@temple.edu` gate) — auto-creates a `profiles` row (`role: "member"`, never `admin`) on first sign-in through the one route handler in the app, `src/app/auth/callback/route.ts`. `/eat/[slug]` requires a session, checked server-side in the page component; the map/list/search stay fully anonymous. Full rationale and what changed: `Context/decisions.md` 2026-08-28.
 - **Member ratings/reviews + photo queue as of 2026-09-01 (TUE-12).** Signed-in members can leave a 1–5 star rating with optional review text (one row per user per venue) and submit gallery photos that stay pending until an admin approves them. Public strip still shows published photos only. Storage is still Vercel Blob; no Supabase Storage. Venue proposals and Google snapshots are still out of this slice. Forms cannot be used in production until Google OAuth dashboard config is finished (same blocker as 2026-08-28).
 - **Zone overlays removed from the public map + admin bulk cuisine editing, as of 2026-09-04.** The overview map no longer draws zone fill/outline/dashed corridor lines — only the invisible click-hit polygon and the badge/label plate remain (zone geometry, filtering, and badge counts unchanged). Admin's bulk-selection bar can now add/remove a single cuisine tag across many venues at once (Halal/Vegan Friendly bulk-editing already existed; this generalizes it to any `CUISINES` key, including "Cafe" — which coexists with, and is independent of, the `venue.type === "cafe"` filter). See this date's decisions.md entry and the changelog entry below.
 - **N Broad St zone split into Avery, Morgan Hall, and Susquehanna, as of 2026-09-04.** 16 venues reassigned. Originally committed on its own unmerged branch (`feat/zone-reorg-avery-morgan-susquehanna`) while its DB update went live independently — leaving every other branch's `MAP_ZONES` missing these three keys despite the DB already using them, which crashed `venueLocationText` for those 16 venues. Cherry-picked (`1c5b586`) onto `feat/zone-overlay-cleanup-and-bulk-cuisine` to fix that. See this date's changelog entry above and `Context/decisions.md`.
@@ -152,11 +152,11 @@ plates close to their text instead.
   height off its top and hugs its text horizontally. Clustering, the
   zoom-scale ramp, hover/select, and label placement are untouched.
 - Y2K chrome intact (cherry fill, ink border, offset shadow, halo, stem
-  + dot, 13px label). `tsc` clean, `pnpm lint` 0 errors, 190 tests pass.
-  Visually checked desktop + mobile on W Montgomery, Student Center,
-  Avery, and a selected pill. See `Context/decisions.md` (this date) and
-  `docs/design/map-and-pins.md`. Merged to `main` (`d29990f`) and live
-  on `tueats.co` as of this date.
+  - dot, 13px label). `tsc` clean, `pnpm lint` 0 errors, 190 tests pass.
+    Visually checked desktop + mobile on W Montgomery, Student Center,
+    Avery, and a selected pill. See `Context/decisions.md` (this date) and
+    `docs/design/map-and-pins.md`. Merged to `main` (`d29990f`) and live
+    on `tueats.co` as of this date.
 
 ## 2026-09-10 — Responsive mobile typography pass
 
@@ -240,9 +240,9 @@ rationale in `Context/decisions.md` 2026-09-10.
 ### 2. Search → map suggestions
 
 - `venue-explorer.tsx`: `searchFocused` state; `showSuggestions =
-  searchFocused && query.trim()`; `searchSuggestions` = `visibleVenues`
+searchFocused && query.trim()`; `searchSuggestions` = `visibleVenues`
   (already query+filter matched) sliced to 6, mapped to `{id, name,
-  location}`; `searchNotFound` when the visible set is empty.
+location}`; `searchNotFound` when the visible set is empty.
 - `map-search-overlay.tsx`: renders the dropdown below `FilterBar` —
   buttons per suggestion, or a "Restaurant not found" line. `onMouseDown`
   `preventDefault` keeps input focus through the click; a blur guard in
@@ -314,9 +314,9 @@ kept as the **ballot**; order now comes from real votes.
 - Panel restored to the original `▲ NEW ▼` voting UI + "NEW" swap for
   `voteCount === 0`. Optimistic score/rank update mirrors the server toggle.
 
-**Migrations `0011` + `0012` applied to dev and prod** by Claude via
+**Migrations `0011` + `0012` applied to dev and prod** via
 `drizzle-kit migrate` (prod allowed through a local
-`.claude/settings.local.json` rule; `0010` baseline held, no replay).
+a local tool settings file rule; `0010` baseline held, no replay).
 `pnpm typecheck` / `lint` / `test` (185/185) / `build` clean. Read path +
 data layer verified on dev with a real inserted vote (Honey Truck +1 →
 jumps to #1, delete → reverts). Real member vote on prod not verified
@@ -349,7 +349,7 @@ are applied and an admin signs in. **Not pushed** — migrate → deploy.
 `prettier --write` on the commit set (real violations existed in the
 redesign files; `core.autocrlf=true` was masking them locally as 384-file
 CRLF noise). Verified `pnpm typecheck` / `lint` / `test` (185/185) /
-`build` before pushing. Junk left untracked (`.claude/`, `.scratch/`,
+`build` before pushing. Junk left untracked (`.scratch/`,
 `AGENTS.md`, `_robocopy.log`, `skills-lock.json`, `truck photos/`).
 
 The first push (`a3b6606`) hit a transient GitHub `cannot lock ref`
@@ -733,7 +733,7 @@ Two pieces of work, one small and one large.
 
 **1. Domain audit for `tueats.co`.** Confirmed nothing was hardcoded to `tueats.vercel.app` in application code (only in `Specs/`/`Context/` docs, left alone) — the domain was already fully env-var-driven via `NEXT_PUBLIC_SITE_URL`. Added `metadataBase` to the root layout (`src/app/layout.tsx`) so OG/canonical resolution has a real base once those tags exist, since there wasn't one before. Gave the site owner the exact Vercel env var and Supabase Auth URL-configuration changes needed — both since completed on their end.
 
-**2. Google OAuth for regular users + a login-wall on `/eat/[slug]`.** The site owner asked for this directly; `Specs/auth-security.md` explicitly ruled out both social login and login-walling in three separate places. Flagged the conflict, the site owner chose to override the specs rather than scale down, so `Specs/auth-security.md` and `CLAUDE.md` were rewritten in the same session to describe what actually shipped. Full technical rationale, what changed, and why the old rules existed in the first place: `Context/decisions.md` 2026-08-28.
+**2. Google OAuth for regular users + a login-wall on `/eat/[slug]`.** The site owner asked for this directly; `Specs/auth-security.md` explicitly ruled out both social login and login-walling in three separate places. Flagged the conflict, the site owner chose to override the specs rather than scale down, so `Specs/auth-security.md` and `CONTRIBUTING.md` were rewritten in the same session to describe what actually shipped. Full technical rationale, what changed, and why the old rules existed in the first place: `Context/decisions.md` 2026-08-28.
 
 Shape of the implementation: `supabase.auth.signInWithOAuth({ provider: "google" })` client-side → Google → Supabase's hosted callback → `src/app/auth/callback/route.ts` (the one route handler in the app — OAuth's redirect handshake has no server-action equivalent) → `exchangeCodeForSession` → `ensureMemberProfile()` auto-creates a `profiles` row (`role: "member"`, hardcoded, never `admin`) → redirect to a validated `next` path (open-redirect-checked the same way the venue page's existing `from` back-link param already was). `/eat/[slug]` checks `getUser()` server-side before rendering any venue data, showing a `SignInGate` ("Sign in to explore this spot" / "Continue with Google") instead when logged out — gated in the page component, not a client click-handler, so a shared/typed URL is caught the same way. The middleware's session-refresh matcher, previously `/admin/:path*` only, was widened to run site-wide (except static assets and the callback route itself) — otherwise a member's session would silently stop refreshing on public pages after Supabase's ~1h access-token TTL, since only middleware/route-handlers (never Server Components) can persist a refreshed cookie.
 
@@ -1402,7 +1402,7 @@ Preview pins failed to render (broken relative `<img>` paths) and the CSS teardr
 Design consultation from `Specs/overview.md` + `Specs/features.md` + competitive research. Direction locked and documented:
 
 - **`DESIGN.md`** — source of truth: Cherry Compass aesthetic, Temple-adjacent cherry `#9D2235` on cool stone neutrals, Cabinet Grotesk + Satoshi + JetBrains Mono, map+bottom-sheet IA, Framer + deferred GSAP motion budget, anti-patterns (no Temple marks, no cream+serif AI default, no photo-feed home).
-- **`CLAUDE.md`** — Design System pointer; router table now includes `DESIGN.md`.
+- **`CONTRIBUTING.md`** — Design System pointer; router table now includes `DESIGN.md`.
 - **`public/pins/`** — soft-teardrop SVGs for default / open / closed / unknown / selected / retired.
 - **`docs/design/map-and-pins.md`** — OpenFreeMap Positron, campus bbox, symbol-layer strategy, density/motion notes.
 - **`docs/design/previews/cherry-compass.html`** — font + color + pin + home/detail mock preview.
@@ -1420,4 +1420,4 @@ Full spec suite written in one session, with the decision trail:
 - **Seed data verified:** Temple's Google My Map KML export works (~40 trucks with coordinates + blurbs, My Maps ID captured in `domain-knowledge.md`). Real zone structure identified (Norris St corridor, Montgomery Ave corridor, 12th St spur). The five near-identical gyro trucks became the canonical dedup/slug test case.
 - **Budget reality:** existing Supabase Pro plan hosts prod (backups, no pausing); dev project on a free org; everything else free tier. No new spend.
 - **Dropped along the way:** Diamond Dollars payment tracking, detail-page mini-map, AI features (deferred behind the 4-condition gate in `llm-integration.md`).
-- Also: root `CLAUDE.md` created (spec router + cross-cutting rules); `Context/` logging system established.
+- Also: root `CONTRIBUTING.md` created (spec router + cross-cutting rules); `Context/` logging system established.

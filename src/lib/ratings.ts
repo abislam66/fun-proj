@@ -1,7 +1,4 @@
-import {
-  MAX_VENUE_PHOTOS,
-  PLACES_RATING_PRIOR_WEIGHT,
-} from "@/config/site";
+import { MAX_VENUE_PHOTOS, PLACES_RATING_PRIOR_WEIGHT } from "@/config/site";
 
 export type StudentRatingSummary = {
   average: number;
@@ -102,9 +99,7 @@ export function rankPlacesByRating(
     })
     .sort(
       (a, b) =>
-        b.score - a.score ||
-        b.count - a.count ||
-        a.name.localeCompare(b.name),
+        b.score - a.score || b.count - a.count || a.name.localeCompare(b.name),
     );
 }
 
