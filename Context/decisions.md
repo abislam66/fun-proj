@@ -37,7 +37,7 @@ dashboard values for anything I can't do myself.
   1. Google Cloud Console → Credentials → OAuth Client → **Authorized
      redirect URIs** must include
      `https://opzhasvvgjkfnddfleys.supabase.co/auth/v1/callback` (Google
-     redirects to *Supabase's* callback, not `tueats.co` — the detail
+     redirects to _Supabase's_ callback, not `tueats.co` — the detail
      most likely to be set wrong).
   2. Supabase Dashboard → Authentication → Providers → Google → enabled,
      with that Client ID/Secret.
@@ -89,7 +89,7 @@ shipped work, or avoiding testing something that's actually live.
 
 Dense zones (Student Center ~18 pins, Avery ~10) read as a wall of
 boxes because each pill had a fixed 40px-tall plate and 20px of padding
-on *each* side of a 13px label, plus a 64px minimum width that padded
+on _each_ side of a 13px label, plus a 64px minimum width that padded
 short names ("Avery", "Wendy's") out with dead space.
 
 - **What changed, all in `src/lib/map/venue-pill-icon.ts`:** `LABEL_PAD_X`
@@ -101,7 +101,7 @@ short names ("Avery", "Wendy's") out with dead space.
 - **Position is unchanged by construction.** `VENUE_HEIGHT` mirrors the
   old `HEIGHT` formula with the smaller plate, so the gap between the
   plate's bottom edge and the stem-dot tip (the map coordinate, via
-  `icon-anchor: "bottom"`) is byte-identical — only the *top* of the box
+  `icon-anchor: "bottom"`) is byte-identical — only the _top_ of the box
   moves down. Clustering (`CLUSTER_RADIUS_PX`), the `icon-size` zoom
   ramp, hover/select priority, and label placement are all untouched.
   This was the explicit constraint: compact the box, not the behavior.
@@ -137,7 +137,7 @@ The type scale had one set of "mobile" values for everything under
   ~320–600px. Confirmed with before/after screenshots.
 - **`clamp()` over a media-query breakpoint** because the file already
   uses `clamp()` for fluid headings (`.detail-hero h1`, `.account-page
-  h1`) and it degrades smoothly across the whole phone range instead of
+h1`) and it degrades smoothly across the whole phone range instead of
   snapping at one width. No JS/device detection.
 - **Line-heights for the fluid tokens went unitless** (1.2 / 1.3) so they
   track the clamped font size; they were only ever consumed as
